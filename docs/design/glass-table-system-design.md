@@ -29,7 +29,7 @@ Glass Table becomes a Mac app in three layers: a typed seat wire out of the game
 
 | Requirement | Target | Lowest layer that tests it (0080) |
 |---|---|---|
-| Rule 3: the page never receives hidden data | the wire module imports player-view and owner-view types only; `seat.jsonl` holds no DM-view field or value | test, no model |
+| Rule 3: the page never receives hidden data | the wire module imports player-view and owner-view types only; `seat-wire.jsonl` holds no DM-view field or value | test, no model |
 | Rule 4: the die shows only the engine's number | the roll stage takes a roll by id and has no random source | test, no model: replay, faces against the engine log |
 | Nothing lost on reload or a dropped socket | the page's state is rebuilt from the host's log from `seq` 0 | test, no model |
 | Install without Terminal, for the parts that are ours | one signed and notarised DMG | a person |
@@ -58,7 +58,7 @@ Glass Table becomes a Mac app in three layers: a typed seat wire out of the game
  │   agents ◄──► game loop ◄──► WebSeat ─┘                      │
  │     │             │ stdio      │ appends                     │
  │     │             ▼            ▼                             │
- │     │      nat20-api-server   run folder (seat.jsonl, …)     │
+ │     │      nat20-api-server   run folder (seat-wire.jsonl, …)     │
  └─────┼────────────────────────────────────────────────────────┘
        ▼
   Claude Code (the player's own, through TurnSession)
@@ -90,7 +90,9 @@ JSON messages over one WebSocket on `127.0.0.1`, a random port, a per-launch tok
 | page to host | `resume` | last `seq` seen | new |
 | page to host | lobby requests | list packs, pick, sign-in state, start | new |
 
-Every `event` is appended to `seat.jsonl` in the run folder before it is sent. That file gives reload and reconnect (replay from `seq`) and the fixtures for the page's tests.
+Every `event` is appended to `seat-wire.jsonl` in the run folder before it is sent. That file gives reload and reconnect (replay from `seq`) and the fixtures for the page's tests.
+
+It is a new file, apart from `seat.jsonl`. That one exists since Milestone 12: `{at, kind, text}` for each thing the seat drew, read by the language scan in `game/src/play/exit.ts` and by Vera's reads. `WebSeat` keeps writing it, with the text the page shows, so the scan and the run tooling read an app run as they read a terminal run.
 
 ### 4.3 What is missing at the seat today
 
@@ -111,7 +113,7 @@ The engine already returns all of this to the loop in player or owner view. The 
 | Death saves | the two counts; each save as an own roll | `life_state` | the counts from the contract's `death_saves` |
 | Level-up | each choice with a player-facing line | numbered lines | content, not wire: the Russian lines do not exist |
 
-**Rule 3.** Each added field is copied from a view the projection already produced; the wire module never builds a view. A leak scan over `seat.jsonl` runs beside the one over agent inputs. Narration is still model text behind the existing guard; the app neither adds to that risk nor removes it.
+**Rule 3.** Each added field is copied from a view the projection already produced; the wire module never builds a view. A leak scan over `seat-wire.jsonl` runs beside the one over agent inputs. Narration is still model text behind the existing guard; the app neither adds to that risk nor removes it.
 
 ## 5. The page
 
@@ -124,7 +126,7 @@ One pure function, `reduce(view, message) -> view`: no DOM, no clock, no network
 - an `own` roll opens the roll stage first; its token appears after;
 - spent moves leave the dock (Stas, 2026-11-20).
 
-A recorded `seat.jsonl` replayed through it gives the exact screen at any `seq`. That is the main test surface.
+A recorded `seat-wire.jsonl` replayed through it gives the exact screen at any `seq`. That is the main test surface.
 
 ### 5.2 Parts
 
@@ -183,7 +185,7 @@ What changes for it: one data root (`REPO` in `game/src/paths.ts` comes from `im
 
 | What | Layer |
 |---|---|
-| The wire carries only player-view and owner-view types; the hash matches; leak scan over `seat.jsonl` | test, no model |
+| The wire carries only player-view and owner-view types; the hash matches; leak scan over `seat-wire.jsonl` | test, no model |
 | The scripted scene shows the same lines at the Ink seat with structured events added | test, no model |
 | The scripted scene over the socket equals the in-process run; resume at every `seq` gives the same final screen | test, no model |
 | Reducer: every `HumanPrompt` kind puts up its dock form | test, no model |
@@ -191,7 +193,7 @@ What changes for it: one data root (`REPO` in `game/src/paths.ts` comes from `im
 | A fight in the app; event to paint under 100 ms | a live run smaller than the exit run (`play:card`) |
 | Install, sign-in state, first turn | a person |
 
-The fixtures are recorded after `WebSeat` exists: the scripted scene (no model) and one bench fight. The runs of 2026-11-19 and 2026-11-20 that the prototype quotes have no `seat.jsonl`. WebKit and not Chromium, because the app renders in WKWebView.
+The fixtures are recorded after `WebSeat` exists: the scripted scene (no model) and one bench fight. The runs of 2026-11-19 and 2026-11-20 that the prototype quotes have no `seat-wire.jsonl`. WebKit and not Chromium, because the app renders in WKWebView.
 
 ## 10. Trade-offs
 
@@ -219,7 +221,7 @@ Order by dependency. Sizes and the calendar are Yan's (scope §7).
 | 2 | Rows | the scope and design are on main |
 | 3 | Spike: Tauri, the compiled loop and the server, signed, notarised, one live call, launched from Finder. Merges no game code | a report, item by item, from Stas's Mac |
 | 4 | Structured seat events beside the text | the scripted scene is identical at the Ink seat |
-| 5 | Seat wire, `WebSeat`, `seat.jsonl`, resume, leak scan; records the fixtures | the scripted scene over the socket equals the in-process run |
+| 5 | Seat wire, `WebSeat`, `seat-wire.jsonl`, resume, leak scan; records the fixtures | the scripted scene over the socket equals the in-process run |
 | 6 | Page 1: reducer, story, dock, turn, roll stage | WebKit replay of the scripted fixture |
 | 7 | Page 2: lenses, inspectors, cards with votes, the other moments | replay of the bench fight; Vera on the changed lines |
 | 8 | Lobby and Claude sign-in states (beside 6 and 7) | states drawn from a fake provider |

@@ -10,7 +10,7 @@ Stas opens an app from the Dock, sees the Glass Table he picked, and plays a con
 ## 2. In
 
 1. **Structured seat events.** The data the design §4.3 lists, beside today's formatted text. The terminal seat is unchanged.
-2. **The seat wire and `WebSeat`.** Schemas with a hash, a WebSocket on 127.0.0.1, `seat.jsonl` in the run folder, resume by `seq`, a leak scan over `seat.jsonl`.
+2. **The seat wire and `WebSeat`.** Schemas with a hash, a WebSocket on 127.0.0.1, `seat-wire.jsonl` in the run folder, resume by `seq`, a leak scan over `seat-wire.jsonl`.
 3. **The page.** The prototype's structure: story, dock in its forms, roll tokens and roll stage, «Где все», «Дорога», «Лист», «Люди», cards with votes, and the moments the prototype draws (reaction, the Narrator's question, surrender, night, level-up, falling to 0, a fallen companion).
 4. **The lobby.** Adventure and character, Claude's sign-in state, start.
 5. **The shell and the package.** One signed and notarised DMG with the shell, the compiled loop, the engine binaries and the content.
@@ -32,7 +32,7 @@ Each row with its lowest layer (decision 0080):
 
 1. The scripted scene shows the same lines at the Ink seat with structured events added: test, no model.
 2. The scripted scene over the socket equals the in-process run, and resume by `seq` after a dropped socket loses no event: test, no model.
-3. `seat.jsonl` holds no DM-view field or value (Rule 3): test, no model.
+3. `seat-wire.jsonl` holds no DM-view field or value (Rule 3): test, no model.
 4. Replay of the scripted fixture and of one bench fight fixture on Playwright's WebKit project; every roll face equals the engine log (Rule 4): test, no model.
 5. The DMG builds, is signed and notarised, and starts the bundled loop and server with no checkout, Rust or Node: CI on a hosted macOS arm64 runner (test, no model), then Stas installs it (a person).
 6. Vera (fallback) reads the app's new lines (lobby, sign-in states, stop cards, card votes): a person.

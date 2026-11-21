@@ -13,7 +13,7 @@ Facts checked: the boundary is `Seat` in `game/src/table/types.ts`; the loop com
 ## Options
 
 ### A. A web page in a Tauri shell, our JSON over a local WebSocket
-- Pro: the page opens in a plain browser against a recorded `seat.jsonl`, so a cloud thread tests it on Linux CI with no Mac and no model.
+- Pro: the page opens in a plain browser against a recorded `seat-wire.jsonl`, so a cloud thread tests it on Linux CI with no Mac and no model.
 - Pro: about 55 MB to download; the system's own web view; native window and menus.
 - Pro: one language for the wire and the page; zod schemas, one hash.
 - Con: the glass is a CSS imitation. It does not refract and will not follow Apple's material when it changes.
@@ -38,12 +38,12 @@ Facts checked: the boundary is `Seat` in `game/src/table/types.ts`; the loop com
 
 ## Decision
 
-A. The page must stay testable where the work is done, and that outweighs the material for a first build. The wire is our own JSON, shaped as the events already are (text, a state snapshot, one call per decision), so a later mapping to AG-UI or a native client reading the same `seat.jsonl` fixtures stays cheap. 0016's rejection of a client on the engine contract stands unchanged; this record settles only its deferred part, and only for a local client.
+A. The page must stay testable where the work is done, and that outweighs the material for a first build. The wire is our own JSON, shaped as the events already are (text, a state snapshot, one call per decision), so a later mapping to AG-UI or a native client reading the same `seat-wire.jsonl` fixtures stays cheap. 0016's rejection of a client on the engine contract stands unchanged; this record settles only its deferred part, and only for a local client.
 
 ## Consequences
 
-- A second contract with its own hash, in `game/src/seat-wire/`. It carries player-view and owner-view data only; a leak scan over `seat.jsonl` joins the existing visibility checks. It is not the engine contract, so Rule 1 does not govern it; the design §4 does.
-- The run folder gains `seat.jsonl`.
+- A second contract with its own hash, in `game/src/seat-wire/`. It carries player-view and owner-view data only; a leak scan over `seat-wire.jsonl` joins the existing visibility checks. It is not the engine contract, so Rule 1 does not govern it; the design §4 does.
+- The run folder gains `seat-wire.jsonl`, beside the existing `seat.jsonl`, which keeps its shape and its readers.
 - Two seats to keep: the terminal seat stays for CI, benches and unattended runs.
 - The page's CI runs on Playwright's WebKit project, the nearest thing on Linux to the app's WKWebView.
 - A spike checks the unverified combination before any app code is built (scope §6).
