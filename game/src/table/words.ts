@@ -493,6 +493,8 @@ export interface UiWords {
   stoppingFor(why: string): string;
   /** Why: the run's time limit. */
   timeLimit(minutes: number): string;
+  /** Why, in the window (`--seat web`): Ctrl+C in the terminal that runs the table. */
+  stoppedAtHost: string;
   /** The situation panel's title as an overlay. */
   panelTitle: string;
   /** The input row while the engine starts. */
@@ -624,6 +626,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     engineStarting: "The engine is starting",
     stoppingFor: (why) => `Stopping: ${why}.`,
     timeLimit: (minutes) => `the ${minutes}-minute time limit`,
+    stoppedAtHost: "it was stopped on the computer",
     panelTitle: "Panel",
     pickerTitle: "Commands · ↑/↓ move · Enter runs · Tab completes · Esc closes",
     noCommandStarts: (draft) => `No command starts with ${draft}. /help lists them all.`,
@@ -750,6 +753,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     engineStarting: "Стол готовится",
     stoppingFor: (why) => `Игра останавливается: ${why}.`,
     timeLimit: (minutes) => `вышло отведённое время, ${plural(minutes, "минута", "минуты", "минут")}`,
+    stoppedAtHost: "её остановили на компьютере",
     panelTitle: "Обстановка",
     pickerTitle: "Команды · ↑/↓ выбор · Enter выполняет · Tab дописывает · Esc закрывает",
     noCommandStarts: (draft) => `Нет команды, которая начинается с ${draft}. /help покажет все.`,

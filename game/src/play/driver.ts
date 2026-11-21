@@ -315,6 +315,8 @@ Ctrl+C here stops the run after the decision in flight.`);
     } catch (error) {
       engine?.close();
       ink?.stop();
+      await web?.close();
+      await pageHost?.close();
       throw error;
     }
   })();
@@ -378,6 +380,8 @@ Ctrl+C here stops the run after the decision in flight.`);
     if (table.ended) process.exit(130);
     console.log("\nStopping after the decision in flight (Ctrl+C again exits at once).");
     table.end("stopped with Ctrl+C", "operator");
+    // The window's open ask ends now, as the terminal's does: nobody need answer it for the table to stop.
+    web?.stopAsking(UI_WORDS[language].stoppedAtHost);
   };
   if (!ink) process.on("SIGINT", interrupted);
   // A pack with a campaign file runs the living world: the AI players get the road tools (AGT-80).
@@ -410,11 +414,13 @@ Ctrl+C here stops the run after the decision in flight.`);
       // The table keeps the first reason, so the quit that frees a waiting prompt doesn't replace it.
       const stop = () => {
         table.end(`the ${limit}-minute time limit`, "time_limit");
-        ink?.stopAsking(UI_WORDS[language].timeLimit(limit));
+        (ink ?? web)?.stopAsking(UI_WORDS[language].timeLimit(limit));
       };
       if (limit > 0) deadline = setTimeout(stop, limit * 60_000);
     }
     // A seat shows the scene's number in its header, or on the road the place's name; the terminal prints progress only when nobody plays in it.
+    // The window's human sits at this terminal too: no scene ids there either (Rule 3).
+    if (web) return;
     if (ink) {
       if (p.kind === "scene_start" && campaign) {
         const scene = pack.adventure.scenes.find((s) => s.id === p.scene);
@@ -612,7 +618,7 @@ Ctrl+C here stops the run after the decision in flight.`);
   // The report is the DM's view (monster Hit Points, lines said to AI players only), so the terminal
   // you just played in shows only how the run ended; the rest stays in the run folder.
   const kept = record.roster ? `\n${record.roster.saved_sha256 ? `Your party is saved as ${record.roster.name}: --roster ${record.roster.name} plays it again.` : `The party was not saved (${record.roster.not_saved}).`}` : "";
-  console.log(ink ? `\nThe run is over: ${record.ended}. ${verdictLine}${kept}\n${written}` : `\n${[...verdictBlock(verdict).slice(1, -1), "", report].join("\n")}\n\n${written}`);
+  console.log(ink || web ? `\nThe run is over: ${record.ended}. ${verdictLine}${kept}\n${written}` : `\n${[...verdictBlock(verdict).slice(1, -1), "", report].join("\n")}\n\n${written}`);
   for (const line of uploaded) console.log(line);
   process.exitCode = failure || (checked && !checked.passed) ? 1 : 0;
 }

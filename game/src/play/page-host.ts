@@ -29,7 +29,10 @@ export function servePage(root = PAGE_DIR): Promise<PageHost> {
       return;
     }
     res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "cache-control": "no-store" });
-    createReadStream(file).pipe(res);
+    // A file that goes between the check and the read (a page build during a run) fails this request only.
+    createReadStream(file)
+      .on("error", () => res.destroy())
+      .pipe(res);
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
