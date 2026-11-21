@@ -97,6 +97,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0086](0086-merchant-death-outcome.md) | When the Merchant dies the Blades decide at once (bring the purse in, or take it), the wagon goes on, and the gate is a changed arrival line | Accepted | 2026-11-13 | Stas |
 | [0089](0089-card-pick-fight-first.md) | The DM picks a card that can come to a fight first, then continuity, then the clearest problem; prompt only | Accepted | 2026-11-18 | Stas |
 | [0090](0090-local-web-client-in-a-shell.md) | The first client is a local web page in a Tauri shell, on our own JSON seat wire over a local WebSocket; settles the deferred part of 0016 for a local client | Proposed | 2026-11-21 | Claude proposed; Stas on merge |
+| [0091](0091-table-moves-to-chatgpt.md) | The table moves to ChatGPT through Sign in with ChatGPT, the Narrator on gpt-6.1-terra; Claude stays only in the judge and analysis | Proposed | 2026-11-21 | Stas (thread); on merge |
 
 ## Open questions to watch
 
