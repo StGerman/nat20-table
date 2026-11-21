@@ -505,7 +505,7 @@ export interface UiWords {
   pickerCount(shown: number, total: number): string;
   suggestQuestion: { answer(name: string): string; surrender(name: string): string; other(name: string): string };
   /** The Glass Table page's die finish switch: what it says for each finish (the terminal has no die). */
-  dieFinish: { chrome: string; wire: string };
+  dieFinish: { chrome: string; wire: string; glass: string };
   panel: {
     explore: string;
     paused: string;
@@ -636,7 +636,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       surrender: (name) => `They offer to surrender. What does ${name} do?`,
       other: (name) => `What does ${name} do or say?`,
     },
-    dieFinish: { chrome: "Die: mirror", wire: "Die: see-through" },
+    dieFinish: { chrome: "Die: mirror", wire: "Die: see-through", glass: "Die: glass" },
     panel: {
       explore: "Explore",
       paused: "Paused",
@@ -763,7 +763,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       surrender: (name) => `Враги готовы сдаться. Что делает ${name}?`,
       other: (name) => `Что ${name} делает или говорит?`,
     },
-    dieFinish: { chrome: "Кубик: зеркальный", wire: "Кубик: прозрачный" },
+    dieFinish: { chrome: "Кубик: зеркальный", wire: "Кубик: прозрачный", glass: "Кубик: стеклянный" },
     panel: {
       explore: "Без боя",
       paused: "Пауза",
