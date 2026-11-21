@@ -214,6 +214,35 @@ impl Session {
     /// Loads a scene file already read and checked, carrying `party` in, and logs
     /// `scene_loaded`. Nothing changes on a refusal.
     fn enter_scene(&mut self, scene: &SceneFile, party: &[Handle]) -> Result<(), ApiError> {
+        // A person of the story the world remembers dead is not there: a later scene that
+        // places them again (the Silent Mill's reeve, on the green and at the wrap-up) leaves
+        // them out. A fight the scene is built around keeps its participants, as before.
+        let fights = |handle: &str| {
+            scene
+                .encounters
+                .iter()
+                .any(|e| e.participants.iter().any(|p| p.0 == handle))
+        };
+        let dead = |c: &nat20_api_contract::SceneCreature| {
+            !fights(&c.handle.0)
+                && c.npc
+                    .as_deref()
+                    .is_some_and(|npc| self.remembers(&world::killed_deed(npc)))
+        };
+        let living;
+        let scene = if scene.creatures.iter().any(dead)
+            || scene.spawns.iter().any(|s| s.creatures.iter().any(dead))
+        {
+            let mut kept = scene.clone();
+            kept.creatures.retain(|c| !dead(c));
+            for spawn in &mut kept.spawns {
+                spawn.creatures.retain(|c| !dead(c));
+            }
+            living = kept;
+            &living
+        } else {
+            scene
+        };
         // The place NPCs stay as the party leaves them (API-48); a refused load puts the
         // campaign back as it was.
         let campaign_before = self.campaign.clone();

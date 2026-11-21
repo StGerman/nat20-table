@@ -139,3 +139,34 @@ test("the green: the reeve and the miller stand in the scene, named in Russian w
     close();
   }
 });
+
+test("a reeve the world remembers dead is not on the green again; the miller still is", async () => {
+  const site = { map: "wend", place: "pells_mill" };
+  const runDir = mkdtempSync(path.join(tmpdir(), "pack-"));
+  const first = await GameEngine.start({ pack: PACK, runDir, seed: 1, site });
+  let roster;
+  try {
+    assert.ok((await first.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" })).ok);
+    const saved = await first.request("dm", { cmd: "save_roster" });
+    assert.ok(saved.result?.cmd === "save_roster");
+    roster = saved.result.roster;
+  } finally {
+    first.close();
+  }
+  // The world a party left after the reeve died on an earlier visit.
+  const world = roster.world as unknown as { state: { memory: { deeds?: Record<string, unknown> } } };
+  world.state.memory.deeds = { killed_osric_hale: { by: ["bren"], day: 1, contract: 1 } };
+  const again = await GameEngine.start({ pack: PACK, runDir, seed: 1, site, roster });
+  try {
+    const loaded = await again.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" });
+    assert.ok(loaded.ok, loaded.error?.message);
+    const state = await again.request("dm", { cmd: "get_state" });
+    assert.ok(state.result?.cmd === "get_state" && state.result.state.view === "dm");
+    const here = state.result.state.creatures.map((c) => c.handle);
+    assert.ok(!here.includes("osric_hale"), "the dead reeve is not placed");
+    assert.ok(here.includes("bertil_pell"), "the miller is");
+  } finally {
+    again.close();
+    rmSync(runDir, { recursive: true });
+  }
+});
