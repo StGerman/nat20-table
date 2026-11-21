@@ -14,4 +14,4 @@ Depends on: nothing; every other row of this milestone waits on it.
 
 ## Status
 
-todo. No code until Stas says go. Waits on Stas: his go, an Apple Developer account (99 USD a year; Apple's own review time is not ours to shorten) and one evening at the Mac, 60 to 90 min.
+partial. Stas said go 2026-11-21 09:26Z. The spike's harness is in `game/spike/glass-table/` (`run.sh` builds, signs, launches and prints the report; the `spike-glass-table` workflow builds it ad-hoc on a hosted Apple Silicon runner with no model call). Waits on Stas: one evening at the Mac, 60 to 90 min, ad-hoc first, then with his Developer ID and notary profile once the Apple Developer account is active. Done when his report is in this file.

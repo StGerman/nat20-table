@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Glass Table Spike</title>
+<style>
+  :root { color-scheme: light dark; font: 14px -apple-system, system-ui, sans-serif; }
+  body { margin: 24px; }
+  li { margin: 6px 0; }
+  .ok::before { content: "ok   "; color: #2a7; font-family: ui-monospace, monospace; }
+  .fail::before { content: "FAIL "; color: #c33; font-family: ui-monospace, monospace; }
+  .detail { color: GrayText; font-size: 12px; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>CON-20 spike</h1>
+<p id="state">Waiting for the host…</p>
+<ol id="items"></ol>
+<script src="page.js"></script>
+</body>
+</html>
