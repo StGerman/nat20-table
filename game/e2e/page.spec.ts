@@ -63,7 +63,7 @@ for (const w of WIRES) {
 }
 
 // Every finish (Stas, 2026-11-21) turns in place and lands on the engine's face, numbers upright.
-for (const [finish, label] of [["chrome", "Die: mirror"], ["wire", "Die: see-through"], ["glass", "Die: glass"]] as const) {
+for (const [finish, label] of [["chrome", "Die: mirror"], ["wire", "Die: wire"], ["glass", "Die: glass"]] as const) {
   test(`the ${finish} die rises, turns and lands on the engine's face`, async ({ page }) => {
     await page.addInitScript((f) => localStorage.setItem("nat20.die-finish", f), finish);
     const w = WIRES[0];
@@ -76,15 +76,15 @@ for (const [finish, label] of [["chrome", "Die: mirror"], ["wire", "Die: see-thr
   });
 }
 
-test("the finish switch goes mirror, see-through, glass and round again, and the choice outlasts a reload", async ({ page }) => {
+test("the finish switch goes mirror, wire, glass and round again, and the choice outlasts a reload", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await replay(page, WIRES[1], 40);
   const finish = page.locator('[data-test="finish"]');
   await expect(finish).toHaveText("Кубик: зеркальный");
   await finish.click();
-  await expect(finish).toHaveText("Кубик: прозрачный");
+  await expect(finish).toHaveText("Кубик: проволочный");
   await replay(page, WIRES[1], 40);
-  await expect(finish).toHaveText("Кубик: прозрачный");
+  await expect(finish).toHaveText("Кубик: проволочный");
   await finish.click();
   await expect(finish).toHaveText("Кубик: стеклянный");
   await finish.click();

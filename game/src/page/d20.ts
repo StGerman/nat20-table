@@ -160,11 +160,11 @@ void main() {
   bool inCell = all(greaterThan(vUv, vec2(0.0))) && all(lessThan(vUv, vec2(1.0)));
   if (glass) {
     // The far side: a faint fill and its edges through the glass, never its numbers.
-    if (!gl_FrontFacing) { o = vec4(mix(uWall, vec3(1.0), 0.5), 0.06 + 0.35 * edge); return; }
+    if (!gl_FrontFacing) { o = vec4(mix(uWall, vec3(1.0), 0.6), 0.08 + 0.45 * edge); return; }
     float f = pow(1.0 - max(dot(nl, -view), 0.0), 2.0);
     // Through the glass the studio is bent and cooled; on the surface it is reflected.
     vec3 col = mix(studio(refract(view, nl, 0.66)) * vec3(0.78, 0.88, 0.96), studio(reflect(view, nl)), 0.2 + 0.65 * f);
-    float alpha = 0.32 + 0.55 * f + 0.4 * edge;
+    float alpha = 0.42 + 0.5 * f + 0.5 * edge;
     col = mix(col, vec3(1.0), edge * 0.8);
     // Large numbers (the cell read nearer its centre) in the page's text colour, with a thin outline
     // in its background colour cut sharp from a slightly thickened copy: they read on any page.
