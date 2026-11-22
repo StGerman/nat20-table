@@ -7,21 +7,33 @@ struct PhoneRoot: View {
     private let shell = Shell.shared
 
     var body: some View {
-        @Bindable var shell = shell
+        if let table = shell.table {
+            Tabs(shell: shell, table: table)
+        } else {
+            ConnectScreen(shell: shell)
+        }
+    }
+}
+
+struct Tabs: View {
+    @Bindable var shell: Shell
+    let table: Table
+
+    var body: some View {
         let tabs = shell.chrome?.tabs
         let stage = shell.chrome?.stage == true
         TabView(selection: $shell.screen) {
             Tab(tabs?.story ?? "Рассказ", systemImage: "book", value: Screen.story) {
-                ContentScreen(shell: shell, content: shell.story)
+                ContentScreen(shell: shell, content: table.story)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         Chips(shell: shell)
                     }
             }
             Tab(tabs?.`where` ?? "Где все", systemImage: "map", value: Screen.place) {
-                ContentScreen(shell: shell, content: shell.place)
+                ContentScreen(shell: shell, content: table.place)
             }
             Tab(tabs?.sheet ?? "Лист", systemImage: "person.text.rectangle", value: Screen.sheet) {
-                ContentScreen(shell: shell, content: shell.sheet)
+                ContentScreen(shell: shell, content: table.sheet)
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
@@ -59,6 +71,15 @@ struct ContentScreen: View {
             // The story's lines do not show through the title.
             .scrollEdgeEffectStyle(.hard, for: .top)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Встать из-за стола", role: .destructive) {
+                            shell.leave()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
                         Text(title).font(.headline).lineLimit(1)

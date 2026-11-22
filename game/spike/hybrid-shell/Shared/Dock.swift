@@ -9,7 +9,15 @@ struct DockBar: View {
     @FocusState private var typing: Bool
 
     var body: some View {
-        if let chrome = shell.chrome {
+        if !shell.online {
+            // The socket to the table is down: the shell keeps asking for it.
+            HStack(spacing: 10) {
+                Text("Нет связи со столом").foregroundStyle(.secondary).lineLimit(1)
+                Spacer(minLength: 0)
+                ProgressView()
+            }
+            .padding(.horizontal, 14)
+        } else if let chrome = shell.chrome {
             let dock = chrome.dock
             HStack(spacing: 10) {
                 if let me = chrome.me {
@@ -221,6 +229,7 @@ struct MovesSheet: View {
                                 }
                             }
                         }
+                    }
                     // The sheet covers the dock, so the human's own words are typed here.
                     if dock.open {
                         Section {

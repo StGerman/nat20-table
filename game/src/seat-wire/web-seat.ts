@@ -7,6 +7,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { appendFileSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
+import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Handle } from "@nat20-table/engine-client";
@@ -42,6 +43,12 @@ export interface WebSeatOptions {
   port?: number;
   /** Origins allowed besides none; default the shell's. */
   origins?: readonly string[];
+  /**
+   * The address to listen on; default 127.0.0.1, this machine only. `0.0.0.0` lets a phone on the
+   * same network sit at the table (hybrid shell spike): the token is then the only guard and it
+   * crosses that network unencrypted, so a caller that widens this allows no origin at all.
+   */
+  host?: string;
 }
 
 interface OpenAsk {
@@ -82,11 +89,11 @@ export class WebSeat implements Seat {
     });
   }
 
-  /** Starts listening on 127.0.0.1 and gives the port and the token the shell opens the page with. */
+  /** Starts listening (on 127.0.0.1 unless `host` says otherwise) and gives the port and the token the shell opens the page with. */
   listen(): Promise<{ port: number; token: string }> {
     const origins = this.options.origins ?? SHELL_ORIGINS;
     const server = new WebSocketServer({
-      host: "127.0.0.1",
+      host: this.options.host ?? "127.0.0.1",
       port: this.options.port ?? 0,
       maxPayload: 64 * 1024,
       verifyClient: ({ req, origin }: { req: IncomingMessage; origin: string }) => {
@@ -263,6 +270,14 @@ export class WebSeat implements Seat {
     HostMessageSchema.parse(message);
     client.send(JSON.stringify(message));
   }
+}
+
+/** This machine's IPv4 addresses on the networks it is on, for the link a phone connects with. */
+export function lanAddresses(): string[] {
+  return Object.values(networkInterfaces())
+    .flatMap((rows) => rows ?? [])
+    .filter((row) => row.family === "IPv4" && !row.internal)
+    .map((row) => row.address);
 }
 
 function sameToken(given: string, token: string): boolean {

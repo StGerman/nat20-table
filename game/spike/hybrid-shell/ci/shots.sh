@@ -62,6 +62,28 @@ shot 09-yard-turn-dark -replay yard.seat-wire.jsonl -to 74
 shot 10-yard-sheet-dark -replay yard.seat-wire.jsonl -to 74 -open moves
 shot 11-road-card-dark -replay the-way-back-ru.seat-wire.jsonl -to 17
 
+# A live table: the real seat wire with a recorded run behind it. The app connects by the link, and
+# a press crosses the socket: the host's log says what it got, and the story goes on to the next turn.
+xcrun simctl ui "$DEVICE" appearance light
+HERE="$(cd "$(dirname "$0")" && pwd)"
+LINKFILE="$(mktemp)"
+rm -f "$LINKFILE"
+node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$HERE/../../../test/fixtures/yard.seat-wire.jsonl" "$LINKFILE" ru > "$OUT/replay-host.log" 2>&1 &
+HOST=$!
+for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
+if [ -s "$LINKFILE" ]; then
+  LINK="$(cat "$LINKFILE")"
+  shot 14-live-turn-light -table "$LINK"
+  WAIT=20 shot 15-live-press-light -table "$LINK" -press 1
+else
+  echo "the replay host did not start" >&2
+fi
+kill "$HOST" 2>/dev/null || true
+rm -f "$LINKFILE"
+# With no table and no recording asked for: the connect screen.
+shot 16-connect-light
+
 # What the app said about itself, from the system log as well; cut off if the log is slow to answer.
 perl -e 'alarm 90; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 10m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/app.log" 2>&1 || true
 grep -h "nat20-" "$OUT"/*.err 2>/dev/null | tail -60 || true
+cat "$OUT/replay-host.log" 2>/dev/null || true

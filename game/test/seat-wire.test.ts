@@ -211,6 +211,22 @@ test("the seat refuses a wrong token and a foreign origin, a new window replaces
   }
 });
 
+test("a seat open to the home network (the phone app, hybrid shell spike) lets in a client with the token and no origin, and no page from any origin", async () => {
+  const seat = new WebSeat("bren", { runDir: (await import("node:os")).tmpdir(), run: "t", host: "0.0.0.0", origins: [] });
+  const { port, token } = await seat.listen();
+  try {
+    await assert.rejects(new Window().connect(port, "nope"));
+    await assert.rejects(new Window().connect(port, token, 0, "tauri://localhost"));
+    await assert.rejects(new Window().connect(port, token, 0, "http://127.0.0.1"));
+    const phone = new Window();
+    await phone.connect(port, token);
+    await waitFor(() => phone.messages[0]?.type === "hello");
+    await phone.close();
+  } finally {
+    await seat.close();
+  }
+});
+
 test("a frame over the limit drops the window, not the table; a resume gets back what the table was doing; a quit with no ask open answers the next ask", async () => {
   const seat = new WebSeat("bren", { runDir: (await import("node:os")).tmpdir(), run: "t" });
   const { port, token } = await seat.listen();

@@ -38,9 +38,11 @@ final class Shell {
     /// What the page handed over for the host, newest last.
     var sent: [String] = []
 
-    @ObservationIgnored private(set) var story: Content!
-    @ObservationIgnored private(set) var place: Content!
-    @ObservationIgnored private(set) var sheet: Content!
+    /// The table the shell sits at: none is the connect screen.
+    var table: Table?
+    /// A live table's socket is up; a recorded run is always "up".
+    var online = true
+    @ObservationIgnored private var wire: Wire?
     @ObservationIgnored private var forcedFor: String?
     /// The ask a command's answer (/options, /sheet) was shown under: the sheet goes when the table moves on.
     @ObservationIgnored private var answered: String?
@@ -51,11 +53,12 @@ final class Shell {
 
     private init() {
         let defaults = UserDefaults.standard
-        let replay = defaults.string(forKey: "replay") ?? "yard.seat-wire.jsonl"
-        let to = defaults.string(forKey: "to")
-        story = Content(show: "story", replay: replay, to: to, shell: self)
-        place = Content(show: "where", replay: replay, to: to, shell: nil)
-        sheet = Content(show: "sheet", replay: replay, to: to, shell: nil)
+        // `-replay <file>` shows a recorded run; `-table <link>` (or the link kept from last time) is a live table.
+        if let replay = defaults.string(forKey: "replay") {
+            sit(.replay(name: replay, to: defaults.string(forKey: "to")))
+        } else if let link = defaults.string(forKey: "table"), let url = URL(string: link) {
+            connect(url, keep: false)
+        }
         // The spike's way to show a state no finger reached: `-screen where|sheet`, `-open moves`, `-press <n>`.
         switch defaults.string(forKey: "screen") {
         case "where": screen = .place
@@ -74,6 +77,56 @@ final class Shell {
                 self.press(press)
             }
         }
+    }
+
+    /// Sits at a table: three pages of the same run, one per tab.
+    func sit(_ source: Source) {
+        chrome = nil
+        opened = nil
+        screen = .story
+        table = Table(
+            story: Content(show: "story", source: source, main: true, shell: self),
+            place: Content(show: "where", source: source, main: false, shell: self),
+            sheet: Content(show: "sheet", source: source, main: false, shell: self)
+        )
+    }
+
+    /// A live table by its link (`ws://<host>:<port>/?token=…`, printed by the run on the Mac).
+    func connect(_ url: URL, keep: Bool) {
+        // The link holds the run's token: only where it points is logged.
+        say("nat20-wire connect \(url.host ?? "?"):\(url.port ?? 0)")
+        if keep { UserDefaults.standard.set(url.absoluteString, forKey: "table") }
+        self.wire?.close()
+        sit(.live)
+        online = false
+        let next = Wire(
+            url: url,
+            line: { [weak self] text in self?.host(text) },
+            state: { [weak self] on in
+                self?.online = on
+                say("nat20-wire \(on ? "up" : "down")")
+            }
+        )
+        wire = next
+        next.open()
+    }
+
+    /// Back to the connect screen.
+    func leave() {
+        wire?.close()
+        wire = nil
+        table = nil
+        chrome = nil
+        opened = nil
+        online = true
+        UserDefaults.standard.removeObject(forKey: "table")
+    }
+
+    private func host(_ text: String) {
+        guard let table else { return }
+        table.story.host(text)
+        table.place.host(text)
+        table.sheet.host(text)
     }
 
     /// The page says what the controls show now.
@@ -102,6 +155,7 @@ final class Shell {
     func send(_ line: String) {
         say("nat20-send \(line)")
         sent.append(line)
+        wire?.send(line)
     }
 
     func open(_ body: [String: Any]) {
@@ -135,6 +189,7 @@ final class Shell {
 
     private func act(_ what: [String: Any], done: ((Bool) -> Void)? = nil) {
         Task {
+            guard let story = table?.story else { return }
             let result = await story.act(what)
             if result.ok {
                 if opened == .moves { opened = nil }
@@ -147,13 +202,31 @@ final class Shell {
     }
 }
 
-/// The page's messages to the shell (`window.webkit.messageHandlers.shell`).
+/// The three pages of one table.
+@MainActor
+final class Table {
+    let story: Content
+    let place: Content
+    let sheet: Content
+
+    init(story: Content, place: Content, sheet: Content) {
+        self.story = story
+        self.place = place
+        self.sheet = sheet
+    }
+}
+
+/// A page's messages to the shell (`window.webkit.messageHandlers.shell`).
 @MainActor
 final class Bridge: NSObject, WKScriptMessageHandler {
     weak var shell: Shell?
+    weak var content: Content?
+    /// The story's page: only its word on the controls and on what was touched is taken.
+    private let main: Bool
 
-    init(shell: Shell) {
+    init(shell: Shell, main: Bool) {
         self.shell = shell
+        self.main = main
         super.init()
     }
 
@@ -161,7 +234,7 @@ final class Bridge: NSObject, WKScriptMessageHandler {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
         case "chrome":
-            guard let json = body["json"] as? String, let data = json.data(using: .utf8) else { return }
+            guard main, let json = body["json"] as? String, let data = json.data(using: .utf8) else { return }
             do {
                 let chrome = try JSONDecoder().decode(Chrome.self, from: data)
                 shell?.apply(chrome)
@@ -173,9 +246,10 @@ final class Bridge: NSObject, WKScriptMessageHandler {
                 shell?.send(line)
             }
         case "open":
-            shell?.open(body)
+            if main { shell?.open(body) }
         case "ready":
-            say("nat20-diag the page is ready")
+            content?.isReady()
+            if main { say("nat20-diag the page is ready") }
         default:
             break
         }
