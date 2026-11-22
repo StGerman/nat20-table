@@ -22,6 +22,10 @@ Follows Bren's call in a fight without arguing. Protective of Ilsa, whom she tea
 
 Plain words, few of them. Laughs loudly when something goes well.
 
+## Voice in Russian
+
+Отряд по-русски называется «Нижеподписавшиеся».
+
 ## Talk and silence
 
 - Speaks when someone stalls, lies or shows fear, or when Bren calls the charge.
