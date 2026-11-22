@@ -85,6 +85,12 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
     if (view.overlay) shell.open({ what: "lines", title: view.overlay.title, rows: view.overlay.text.split("\n").filter((row) => row.trim() !== "") });
     else shell.open({ what: "none" });
   }, [overlayN]);
+  // On a phone the yard is drawn wider than the screen and panned with a finger: it opens on the
+  // human's own character, and follows them when they walk.
+  const at = view.situation?.positions?.me;
+  useEffect(() => {
+    if (shell?.show === "where") document.querySelector(".lens.yard .who.me")?.scrollIntoView({ block: "center", inline: "center" });
+  }, [at?.x_ft, at?.y_ft, view.hello !== undefined]);
   const choose = (next: Finish) => {
     setFinish(next);
     try {
