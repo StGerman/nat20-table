@@ -48,6 +48,39 @@ The map of these places, with roads and miles, is `worlds/wend/map.json`.
 - The **Nettle Tooth** band stains its teeth green with nettle juice. Down the valley it is known for stealing sheep, not for raiding farms.
 - This autumn the bands have been moving south out of the hills. Hill folk say something new rules the barrows, something the goblins call **the Hollow King**, and that it takes tribute from every band. Nobody in Wendford knows more than the rumour.
 
-## The Grey Lantern company
+## The Undersigned
 
-The four pregenerated characters served together in the Grey Lantern company, hired soldiers paid off last winter when the lord's border war ended. They fought at the breaches along the Snake, far from the salt flats: they heard the border moved to the Dyke past the flats, but they have never been there and could not say where the line runs across the flats. They have travelled together since, taking guard work where they find it, and they reach Wendford on the morning the adventure begins.
+The four pregenerated characters are a company of Hired Blades called **the Undersigned** (Нижеподписавшиеся; кого и о ком: Нижеподписавшихся, кому: Нижеподписавшимся, кем: Нижеподписавшимися).
+
+- **The war.** They served together in a company of forty hired soldiers in the lord's border war. That company's name and banner were the lord's, and both went back to him; nobody uses the name now. They fought at the breaches along the Snake, far from the salt flats: they heard the border moved to the Dyke past the flats, but they have never been there and could not say where the line runs across the flats.
+- **The sheet.** When the war ended last winter, the steward's clerk paid the company off with one sheet of forty lines, the names written in the autumn, at the hiring. Seven came to the barrel to sign. A mark against your name, and you took your purse. Old Holt (Холт), who cannot read, signed first, and three more after him. Ulf (Ульф), the youngest, was the first to read before he signed, and he read aloud what the four already stood under: "We, the undersigned, have been paid in full and make no claim, for ourselves or for those who have not signed below" («Мы, нижеподписавшиеся, получили сполна и претензий не имеем, ни за себя, ни за тех, кто ниже не подписался»). Thirty-three lines below were empty. Ulf put the pen down. The clerk said that unsigned, his share would stay where theirs did. Ulf was seventeen and expected at home, and he signed. Most of the thirty-three lie along the Snake: the dead do not come to a barrel. Their shares stayed in the lord's treasury.
+- **The name.** Outside the gate a merchant looking for hands for his wagon asked whose men they were. Ulf said: the undersigned. He was not joking; the laughing came later.
+- **The sign.** Seven small crosses stitched in a row on the sleeve, one for each mark on the sheet. Ulf stitched them for all seven that evening. A stranger takes them for a count of the living.
+- **The custom.** The Undersigned sign nothing until it has been read aloud to them, all of it, to the last line. Merchants grumble that it takes long. The company waits.
+- **The seven.** The four characters are four of the seven. Which of them signed before Ulf read is not fixed: a personality card may say. Holt, Ulf and one more took their own roads after that winter, and where they are now is not written yet. The four have travelled together since, taking guard work where they find it, and they reach Wendford on the morning the adventure begins.
+
+### Reading and papers
+
+- Every one of the four reads; nobody rolls to read a paper. Ilsa reads and writes for the company: when a paper is read aloud, she holds the sheet and follows the lines. Maren reads slowly and surely, and watches the reader, not the page. Torva can read, a finger under the line, and leaves it to Ilsa; she listens with her arms folded and remembers every word about money. Never say how the human's character reads: that is the player's.
+- At a contract, whoever wrote the paper reads it aloud, all of it, and a Blade who reads follows the lines. *Fair in Wend* and *The Way Back* open after that: the paper has been read and marked. Say so once in the opening, in a clause.
+- When a player asks what the paper says, say all of it, in the merchant's voice: who pays, the wage, what was paid ahead and where the rest is paid, as get_state's escort contract shows them; that a Blade who falls is paid for the days served; what becomes of the pay if the merchant dies, as the pack says. The paper holds nothing else.
+- Never invent a clause, a penalty, a seal or a line in small letters; never hide a line because a roll failed; never tell the table the company missed something.
+- Any other paper (a board, a tally, a letter): say what it says. Ask for a check (Investigation, the Blade who studies it as actor) only when the pack's text says what there is to find beyond the words. A failure never takes the words away: the other side sees the Blade looking for more.
+
+The company tells the story as Holt told it, in his words. Tell it only when someone at the table asks how the company got its name or what the crosses are. A companion may begin it ("Holt told it like this"); never put it in the mouth of the human's character, and never add a moral:
+
+> Я подписал первым. Читать я не умею, а считать умею.
+>
+> Война кончилась зимой. Писарь лорда положил на бочку лист в сорок строк. Имена он вписал ещё осенью, когда нас нанимали, все сорок. Нас к бочке подошло семеро.
+>
+> Порядок был простой: ставишь знак против своего имени, получаешь кошель. Я поставил. За мной ещё трое. Пятым стоял Ульф, самый младший. Он взялся читать и прочёл вслух то, под чем уже стояли наши четыре знака: «Мы, нижеподписавшиеся, получили сполна и претензий не имеем, ни за себя, ни за тех, кто ниже не подписался».
+>
+> Тридцать три строки ниже были пустые.
+>
+> Ульф положил перо. Писарь сказал: не подпишешь, твоя доля останется там же, где их. Ульф помолчал и подписал. Ему было семнадцать, и дома ждали.
+>
+> Знамя и имя были лордовы, мы сдали и то и другое. За воротами нас окликнул торговец, искал людей к фургону: чьи будете? Ульф ответил: нижеподписавшиеся. Он не шутил. Смеяться мы начали потом, не сразу.
+>
+> Вечером Ульф вышил каждому на рукав семь крестиков в ряд. Мой первый.
+>
+> С тех пор мы ничего не подписываем, пока нам не прочтут вслух. Всё, до последней строки. Торговцы злятся, что долго. Мы ждём.

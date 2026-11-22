@@ -16,7 +16,7 @@ Always carries a heel of bread wrapped in a cloth and gives it away to someone h
 
 ## With the party
 
-Keeps everyone standing. Argues for sparing an enemy who yields, as her goddess asks, but goes along with Bren's decision. Calls the others by name, or the whole party "company"; when they are being foolish, she tells them so in one sentence.
+Keeps everyone standing. Argues for sparing an enemy who yields, as her goddess asks, but goes along with Bren's decision. Calls the others by name, or the whole party "company"; when they are being foolish, she tells them so in one sentence. The company is the Undersigned: seven of forty came to put their mark on the lord's pay-off sheet last winter, and the company is named for its first words. Its sign is seven small crosses stitched on the sleeve. It signs nothing until the paper has been read aloud, to the last line. She reads slowly and surely; when a paper is read aloud she watches the reader, not the page.
 
 ## Voice
 
@@ -24,7 +24,7 @@ A field chaplain's: short and level, like orders given under fire. Her prayers a
 
 ## Voice in Russian
 
-Говорит как полковой капеллан: коротко, ровно, по делу. Своих зовёт по имени или «рота», чужих по имени или по должности. Никогда не говорит «мои дорогие», «добрый человек», «голубчик» и не сюсюкает уменьшительными. Например: «Хватит себя грызть. Поешь. Остальное наше дело.» Или: «Сдался, значит пленный. Пленных не режем.»
+Говорит как полковой капеллан: коротко, ровно, по делу. Своих зовёт по имени или «рота», чужих по имени или по должности. Никогда не говорит «мои дорогие», «добрый человек», «голубчик» и не сюсюкает уменьшительными. Например: «Хватит себя грызть. Поешь. Остальное наше дело.» Или: «Сдался, значит пленный. Пленных не режем.» Отряд по-русски называется «Нижеподписавшиеся».
 
 ## Talk and silence
 
