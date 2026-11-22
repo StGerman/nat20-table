@@ -1,0 +1,46 @@
+# The hybrid shell spike: a SwiftUI shell around the page (game/src/page) in a web view.
+# No Xcode project is committed: `xcodegen generate` writes it from this file.
+name: GlassTable
+options:
+  bundleIdPrefix: dev.nat20
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  GlassTable:
+    type: application
+    platform: iOS
+    sources:
+      - path: Shared
+      - path: iOS
+        excludes:
+          - Info.plist
+      # The built page (`npm run page:build`), copied whole as `page/`.
+      - path: ../../dist/page
+        type: folder
+        buildPhase: resources
+      # Recorded runs, for a table with no host.
+      - path: ../../test/fixtures/yard.seat-wire.jsonl
+        buildPhase: resources
+      - path: ../../test/fixtures/the-way-back-ru.seat-wire.jsonl
+        buildPhase: resources
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleDisplayName: Glass Table
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Glass Table connects to the table running on your Mac.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.nat20.glasstable
+        TARGETED_DEVICE_FAMILY: "1"
+    scheme: {}

@@ -1,0 +1,58 @@
+# The hybrid shell spike: builds the SwiftUI shell around the page for the iPhone simulator on a
+# hosted Apple Silicon machine and saves pictures of it, so a thread with no Mac can see what it
+# built. Replays recorded runs: no host, no model, no signing. Not part of ci-ok.
+name: spike-hybrid-shell
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/spike-hybrid-shell.yml
+      - game/spike/hybrid-shell/**
+      - game/src/page/**
+      - game/src/seat-wire/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    name: ios (simulator, recorded runs)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: The page the shell shows
+        run: npm run page:build
+      - name: The Xcode project, from project.yml
+        working-directory: game/spike/hybrid-shell
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+      - name: Build for the simulator
+        working-directory: game/spike/hybrid-shell
+        run: |
+          set -o pipefail
+          xcodebuild -project GlassTable.xcodeproj -scheme GlassTable -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build 2>&1 \
+            | tee build.log | xcbeautify --quiet
+      - name: Pictures from the simulator
+        working-directory: game/spike/hybrid-shell
+        run: ci/shots.sh build/Build/Products/Debug-iphonesimulator/GlassTable.app shots
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: hybrid-shell
+          path: |
+            game/spike/hybrid-shell/shots
+            game/spike/hybrid-shell/build.log
+          retention-days: 7

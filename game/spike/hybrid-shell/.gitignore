@@ -1,0 +1,4 @@
+*.xcodeproj
+iOS/Info.plist
+build/
+shots/
