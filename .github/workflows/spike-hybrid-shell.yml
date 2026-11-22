@@ -21,9 +21,15 @@ concurrency:
 
 jobs:
   ios:
-    name: ios (simulator, recorded runs)
-    runs-on: macos-26
-    timeout-minutes: 40
+    # Twice: the Xcode the spike was written against, and the Xcode 27 image (a preview label), which
+    # is what Stas's Mac and iPhone run. One failing does not stop the other.
+    name: ios (simulator, ${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, xcode-27]
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,6 +47,8 @@ jobs:
           brew install xcodegen
           xcodegen generate
           xcodebuild -version
+          xcodebuild -showsdks | grep -i ios || true
+          xcrun simctl list runtimes
       - name: Build for the simulator
         working-directory: game/spike/hybrid-shell
         run: |
@@ -48,7 +56,7 @@ jobs:
           xcodebuild -project GlassTable.xcodeproj -scheme GlassTable -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build 2>&1 \
-            | tee build.log | xcbeautify --quiet
+            | tee build.log | ci/pretty.sh
       - name: Pictures from the simulator
         working-directory: game/spike/hybrid-shell
         run: ci/shots.sh build/Build/Products/Debug-iphonesimulator/GlassTable.app shots
@@ -61,14 +69,14 @@ jobs:
           xcodebuild -project GlassTable.xcodeproj -scheme GlassTable -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-tour ARCHS=arm64 ONLY_ACTIVE_ARCH=NO build-for-testing 2>&1 \
-            | tee build-tour.log | xcbeautify --quiet
+            | tee build-tour.log | ci/pretty.sh
       - name: A finger's tour of a live table, recorded
         working-directory: game/spike/hybrid-shell
         run: ci/tour.sh shots
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: hybrid-shell
+          name: hybrid-shell-${{ matrix.runner }}
           path: |
             game/spike/hybrid-shell/shots
             game/spike/hybrid-shell/build.log
