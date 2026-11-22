@@ -15,12 +15,12 @@ import { answered, EMPTY, reduce, settle, type Built, type PageView } from "./re
 declare const __WIRE__: Built;
 
 /** What a native shell does at the page (hybrid shell spike): a pressed move, a typed line, a command. */
-type ShellAct = { kind: "option"; n: number } | { kind: "typed"; text: string } | { kind: "reaction"; take: boolean } | { kind: "command"; name: "pause" | "quit" };
+type ShellAct = { kind: "option"; n: number } | { kind: "typed"; text: string } | { kind: "reaction"; take: boolean } | { kind: "command"; name: "pause" | "quit" | "sheet" };
 
 declare global {
   interface Window {
     /** The native shell's way in: a host message as it came off the socket, and what the human did on a control. */
-    __nat20Shell?: { host(line: string): void; act(a: ShellAct): { ok: boolean; notice?: string } };
+    __nat20Shell?: { host(line: string): void; act(a: ShellAct): { ok: boolean; notice?: string }; under(on: boolean): void };
     /** What the page told the shell, kept where there is no shell to tell (the page's tests). */
     __nat20Posted?: unknown[];
     webkit?: { messageHandlers?: { shell?: { postMessage(message: unknown): void } } };
@@ -183,6 +183,11 @@ function Page(): ReturnType<typeof h> {
         if (typed.kind === "error") return { ok: false, notice: typed.text };
         if (typed.kind !== "intent") return { ok: true };
         return send(typed.intent) ? { ok: true } : { ok: false, notice: words.busy };
+      },
+      // The shell's sheet stands over the lower half of the story: the story's end stays above it.
+      under(on) {
+        document.documentElement.classList.toggle("under-sheet", on);
+        if (on) scrollTo({ top: document.documentElement.scrollHeight });
       },
     };
     post({ type: "ready" });

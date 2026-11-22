@@ -60,6 +60,13 @@ final class Content {
         pump()
     }
 
+    /// The shell's sheet stands over the lower half of the page, or no longer does.
+    func under(_ on: Bool) {
+        Task {
+            _ = try? await page.callJavaScript("if (window.__nat20Shell) window.__nat20Shell.under(on)", arguments: ["on": on])
+        }
+    }
+
     /// The page can take the host's lines now.
     func isReady() {
         ready = true

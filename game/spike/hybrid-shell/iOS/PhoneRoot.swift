@@ -42,6 +42,12 @@ struct Tabs: View {
         }
         .toolbar(stage ? .hidden : .automatic, for: .tabBar)
         .animation(.default, value: stage)
+        .onChange(of: shell.opened) { _, now in
+            table.story.under(now == .moves)
+        }
+        .onChange(of: shell.screen) { _, now in
+            if now == .sheet { shell.freshSheet() }
+        }
         .sheet(item: $shell.opened) { opened in
             switch opened {
             case .moves:

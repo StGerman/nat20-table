@@ -307,6 +307,8 @@ html.native body { overflow-x: hidden; }
 .win.native { height: auto; min-height: 100vh; overflow: visible; }
 /* A short story is only as tall as its words: a taller page would scroll them under the shell's title. */
 .win.native.show-story { min-height: 0; }
+/* The shell's sheet stands over the lower half: the story ends above it. */
+html.native.under-sheet .win.native .story { padding-bottom: 46vh; }
 .win.native .ambient { position: fixed; }
 .win.native .story { position: relative; inset: auto; overflow: visible; padding: 12px 20px 24px; }
 .win.native .inspector { position: relative; inset: auto; width: auto; max-height: none; margin: 12px 16px 24px; }

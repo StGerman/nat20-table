@@ -44,8 +44,8 @@ final class Shell {
     var online = true
     @ObservationIgnored private var wire: Wire?
     @ObservationIgnored private var forcedFor: String?
-    /// The ask a command's answer (/options, /sheet) was shown under: the sheet goes when the table moves on.
-    @ObservationIgnored private var answered: String?
+    /// The sheet that is open shows what a command answered with (/options, /where).
+    @ObservationIgnored private var answered = false
 
     static let shared = Shell()
     /// The app's name as the project file gives it (`APP_NAME` in project.yml), the one place it is written.
@@ -135,10 +135,6 @@ final class Shell {
             let sheet = next.dock.sheet.map { $0.forced ? "forced" : "yes" } ?? "no"
             say("nat20-chrome seq=\(next.seq) form=\(next.dock.form) ask=\(next.dock.ask ?? "-") chips=\(next.dock.chips.count) sheet=\(sheet) card=\(next.dock.card == nil ? "no" : "yes")")
         }
-        if let under = answered, under != (next.dock.ask ?? "-") {
-            answered = nil
-            if case .some(.lines) = opened { opened = nil }
-        }
         chrome = next
         notice = nil
         // An ask that is its own list (a pick, a road choice, a reaction, a question) opens its sheet once.
@@ -164,15 +160,27 @@ final class Shell {
             let rows = rolls.compactMap { $0["text"] as? String }
             let title = (rolls.first?["roller"] as? String) ?? ""
             opened = .lines(title: title, rows: rows)
+            answered = false
         } else if what == "person", let name = body["name"] as? String {
             opened = .lines(title: name, rows: (body["rows"] as? [String]) ?? [])
+            answered = false
         } else if what == "lines", let title = body["title"] as? String {
             // A forced sheet is the ask itself: what a command answered with does not cover it.
             if opened == .moves, chrome?.dock.sheet?.forced == true || chrome?.dock.card?.asked == true { return }
             opened = .lines(title: title, rows: (body["rows"] as? [String]) ?? [])
-            answered = chrome?.dock.ask ?? "-"
+            answered = true
+        } else if what == "none" {
+            // The table moved on: what a command answered with goes, as the page's own overlay does.
+            if answered, case .some(.lines) = opened { opened = nil }
+            answered = false
+            return
         }
         say("nat20-open \(what)")
+    }
+
+    /// «Лист» asks the seat for a fresh sheet when the table waits on the human, as /sheet does.
+    func freshSheet() {
+        if chrome?.dock.open == true { act(["kind": "command", "name": "sheet"]) }
     }
 
     func press(_ n: Int) {

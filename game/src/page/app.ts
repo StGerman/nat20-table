@@ -29,7 +29,7 @@ export interface AppProps {
 export interface Shell {
   /** Which content this web view draws. */
   show: "story" | "where" | "sheet" | "people";
-  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[] } | { what: "lines"; title: string; rows: string[] }): void;
+  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[] } | { what: "lines"; title: string; rows: string[] } | { what: "none" }): void;
 }
 
 type Options = Extract<TableEvent, { kind: "options" }>;
@@ -77,10 +77,13 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
       setPanel("sheet");
     }
   }, [sheetN]);
-  // Inside a native shell what the seat answered a command with (/options, /sheet) is the shell's sheet.
-  const overlayN = view.overlay?.n ?? 0;
+  // Inside a native shell what the seat answered a command with (/options, /where) is the shell's
+  // sheet, and it goes when the page's own overlay would: the table moved on.
+  const overlayN = view.overlay ? view.overlay.n : 0;
   useEffect(() => {
-    if (shell?.show === "story" && view.overlay) shell.open({ what: "lines", title: view.overlay.title, rows: view.overlay.text.split("\n").filter((row) => row.trim() !== "") });
+    if (shell?.show !== "story") return;
+    if (view.overlay) shell.open({ what: "lines", title: view.overlay.title, rows: view.overlay.text.split("\n").filter((row) => row.trim() !== "") });
+    else shell.open({ what: "none" });
   }, [overlayN]);
   const choose = (next: Finish) => {
     setFinish(next);
