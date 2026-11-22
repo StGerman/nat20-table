@@ -63,6 +63,8 @@ kill "$HOST" 2>/dev/null || true
 rm -f "$LINKFILE"
 # With no table and no recording asked for: the connect screen.
 shot 16-connect-light
+# The same on a phone set to Russian: the app's own name.
+shot 17-connect-ru-light -AppleLanguages "(ru)"
 
 # What the app said about itself, from the system log as well; cut off if the log is slow to answer.
 perl -e 'alarm 90; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 10m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/app.log" 2>&1 || true

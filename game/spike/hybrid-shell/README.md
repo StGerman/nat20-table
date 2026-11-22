@@ -40,6 +40,8 @@ cat Local.xcconfig
 
 It should print one line, `DEVELOPMENT_TEAM = ` and ten characters. If Xcode says the bundle identifier is taken, change `APP_BUNDLE_ID` in `project.yml`.
 
+The app is named Fine Print, «Мелкий шрифт» on a phone set to Russian (`APP_NAME` in `project.yml`, `Shared/Names`). The project, target and scheme keep the working name `GlassTable`.
+
 ## Pictures and the tour on CI
 
 `.github/workflows/spike-hybrid-shell.yml` builds for the simulator on two Xcode images, takes the pictures (`ci/shots.sh`) and runs a finger's tour of a live table with a video (`ci/tour.sh`). It is not part of `ci-ok`.

@@ -12,10 +12,11 @@ configFiles:
   Release: Signing.xcconfig
 settings:
   base:
-    # The name is a placeholder until one is picked: these two lines are the only place it is written.
-    # The target, the scheme and the project keep the working name `GlassTable`, which nobody sees.
-    APP_NAME: Glass Table
-    APP_BUNDLE_ID: dev.nat20.glasstable
+    # The app's name (Stas, 2026-11-22): Fine Print, «Мелкий шрифт» in Russian (Shared/Names). These two
+    # lines and Shared/Names are the only places it is written. The target, the scheme and the project
+    # keep the working name `GlassTable`, which nobody sees.
+    APP_NAME: Fine Print
+    APP_BUNDLE_ID: dev.nat20.fineprint
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.0.1"
     CURRENT_PROJECT_VERSION: "1"
