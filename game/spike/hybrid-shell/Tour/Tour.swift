@@ -44,27 +44,38 @@ final class Tour: XCTestCase {
         }
         picture(app, "05-after-a-row")
 
-        // The human's own words, typed in the dock.
+        // The human's own words, typed in the dock. A sheet may stand over it (the recording answers
+        // a /where here): it is drawn down first, as a thumb would.
         let line = app.textFields["dock-line"]
         if line.waitForExistence(timeout: 20) {
-            line.tap()
-            pause(1)
-            picture(app, "06-the-keyboard")
-            line.typeText("I look around\n")
-            pause(4)
-            picture(app, "07-after-typing")
+            for _ in 0..<3 where !line.isHittable {
+                picture(app, "06-a-sheet-over-the-dock")
+                let grabber = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.49))
+                grabber.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.99)))
+                pause(2)
+            }
+            if line.isHittable {
+                line.tap()
+                pause(2)
+                picture(app, "07-the-keyboard")
+                if app.keyboards.firstMatch.exists || line.value(forKey: "hasKeyboardFocus") as? Bool == true {
+                    line.typeText("I look around\n")
+                    pause(4)
+                }
+                picture(app, "08-after-typing")
+            }
         }
 
         // The story under the bars: scrolled back, the tab bar steps aside; scrolled on, it returns.
         app.swipeDown()
         pause(1)
-        picture(app, "08-scrolled-back")
+        picture(app, "09-scrolled-back")
         app.swipeUp()
         pause(1)
-        picture(app, "09-scrolled-on")
+        picture(app, "10-scrolled-on")
 
         // The other tabs.
-        for (index, name) in ["10-where", "11-sheet", "12-story-again"].enumerated() {
+        for (index, name) in ["11-where", "12-sheet", "13-story-again"].enumerated() {
             let tab = app.tabBars.buttons.element(boundBy: (index + 1) % 3)
             if tab.waitForExistence(timeout: 10) {
                 tab.tap()

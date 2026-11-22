@@ -33,6 +33,22 @@ kill "$HOST" 2>/dev/null || true
 tail -40 "$OUT/tour-test.log"
 cat "$OUT/tour-host.log"
 xcrun xcresulttool export attachments --path "$OUT/tour.xcresult" --output-path "$OUT/tour" || true
+# The test's pictures under their own names; Xcode's own recording and snapshots repeat tour.mp4.
+python3 - "$OUT/tour" <<'PY' || true
+import json, os, sys
+root = sys.argv[1]
+keep = set()
+for test in json.load(open(os.path.join(root, "manifest.json"))):
+    for a in test.get("attachments", []):
+        name, file = a.get("suggestedHumanReadableName", ""), a.get("exportedFileName", "")
+        if file.endswith(".png") and name[:2].isdigit():
+            target = name.split("_0_")[0] + ".png"
+            os.replace(os.path.join(root, file), os.path.join(root, target))
+            keep.add(target)
+for file in os.listdir(root):
+    if file not in keep and not file.endswith(".txt"):
+        os.remove(os.path.join(root, file))
+PY
 # The result bundle is large and its pictures are out: only they are kept.
 rm -rf "$OUT/tour.xcresult"
 exit "$STATUS"
