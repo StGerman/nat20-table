@@ -3,3 +3,4 @@ iOS/Info.plist
 build/
 shots/
 build-tour/
+Local.xcconfig

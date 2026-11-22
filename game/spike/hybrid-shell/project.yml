@@ -6,6 +6,10 @@ options:
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
+# Signing for a real phone: Signing.xcconfig, and your own team in Local.xcconfig (not committed).
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
 settings:
   base:
     # The name is a placeholder until one is picked: these two lines are the only place it is written.
