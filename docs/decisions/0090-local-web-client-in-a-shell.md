@@ -1,6 +1,6 @@
 # 0090. The first client is a local web page in a shell, on our own seat wire
 
-- **Status:** Proposed
+- **Status:** Accepted on merge (table #459, 2026-11-21); its choice of shell is superseded by [0092](0092-swiftui-shell-over-the-page.md), the wire and the page stand
 - **Date:** 2026-11-21
 - **Decided by:** Claude proposed in `docs/design/glass-table-system-design.md`; Stas took the one-package direction in the prototype thread, 2026-11-21 01:11Z («Звучит отлично запланируй с Яном пожалуйста»); accepted on merge
 
