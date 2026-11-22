@@ -29,7 +29,7 @@ export interface AppProps {
 export interface Shell {
   /** Which content this web view draws. */
   show: "story" | "where" | "sheet" | "people";
-  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[] }): void;
+  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[] } | { what: "lines"; title: string; rows: string[] }): void;
 }
 
 type Options = Extract<TableEvent, { kind: "options" }>;
@@ -77,6 +77,11 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
       setPanel("sheet");
     }
   }, [sheetN]);
+  // Inside a native shell what the seat answered a command with (/options, /sheet) is the shell's sheet.
+  const overlayN = view.overlay?.n ?? 0;
+  useEffect(() => {
+    if (shell?.show === "story" && view.overlay) shell.open({ what: "lines", title: view.overlay.title, rows: view.overlay.text.split("\n").filter((row) => row.trim() !== "") });
+  }, [overlayN]);
   const choose = (next: Finish) => {
     setFinish(next);
     try {
@@ -119,7 +124,6 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
       { className: `win native show-${shell.show} ${s?.mode === "combat" ? "scene-fight" : "scene-road"}`, lang: view.hello.language },
       h("div", { className: "ambient", "aria-hidden": true }),
       content,
-      view.overlay && shell.show === "story" ? h(Overlay, { key: view.overlay.n, overlay: view.overlay, words: ui(view) }) : null,
       view.stage && shell.show === "story" ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish, settled }) : null,
     );
   }

@@ -42,15 +42,26 @@ final class Shell {
     @ObservationIgnored private(set) var place: Content!
     @ObservationIgnored private(set) var sheet: Content!
     @ObservationIgnored private var forcedFor: String?
+    /// The ask a command's answer (/options, /sheet) was shown under: the sheet goes when the table moves on.
+    @ObservationIgnored private var answered: String?
 
-    init() {
+    static let shared = Shell()
+    /// The app's name as the project file gives it (`APP_NAME` in project.yml), the one place it is written.
+    static let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? ""
+
+    private init() {
         let defaults = UserDefaults.standard
         let replay = defaults.string(forKey: "replay") ?? "yard.seat-wire.jsonl"
         let to = defaults.string(forKey: "to")
         story = Content(show: "story", replay: replay, to: to, shell: self)
         place = Content(show: "where", replay: replay, to: to, shell: nil)
         sheet = Content(show: "sheet", replay: replay, to: to, shell: nil)
-        // The spike's way to show a state no finger reached: `-open moves`, `-press <n>`.
+        // The spike's way to show a state no finger reached: `-screen where|sheet`, `-open moves`, `-press <n>`.
+        switch defaults.string(forKey: "screen") {
+        case "where": screen = .place
+        case "sheet": screen = .sheet
+        default: break
+        }
         if defaults.string(forKey: "open") == "moves" {
             Task {
                 try? await Task.sleep(for: .seconds(8))
@@ -70,6 +81,10 @@ final class Shell {
         if next.dock.form != chrome?.dock.form || next.dock.ask != chrome?.dock.ask {
             let sheet = next.dock.sheet.map { $0.forced ? "forced" : "yes" } ?? "no"
             say("nat20-chrome seq=\(next.seq) form=\(next.dock.form) ask=\(next.dock.ask ?? "-") chips=\(next.dock.chips.count) sheet=\(sheet) card=\(next.dock.card == nil ? "no" : "yes")")
+        }
+        if let under = answered, under != (next.dock.ask ?? "-") {
+            answered = nil
+            if case .some(.lines) = opened { opened = nil }
         }
         chrome = next
         notice = nil
@@ -97,7 +112,13 @@ final class Shell {
             opened = .lines(title: title, rows: rows)
         } else if what == "person", let name = body["name"] as? String {
             opened = .lines(title: name, rows: (body["rows"] as? [String]) ?? [])
+        } else if what == "lines", let title = body["title"] as? String {
+            // A forced sheet is the ask itself: what a command answered with does not cover it.
+            if opened == .moves, chrome?.dock.sheet?.forced == true || chrome?.dock.card?.asked == true { return }
+            opened = .lines(title: title, rows: (body["rows"] as? [String]) ?? [])
+            answered = chrome?.dock.ask ?? "-"
         }
+        say("nat20-open \(what)")
     }
 
     func press(_ n: Int) {

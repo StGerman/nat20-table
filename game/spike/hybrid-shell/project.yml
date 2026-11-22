@@ -8,6 +8,10 @@ options:
   createIntermediateGroups: true
 settings:
   base:
+    # The name is a placeholder until one is picked: these two lines are the only place it is written.
+    # The target, the scheme and the project keep the working name `GlassTable`, which nobody sees.
+    APP_NAME: Glass Table
+    APP_BUNDLE_ID: dev.nat20.glasstable
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.0.1"
     CURRENT_PROJECT_VERSION: "1"
@@ -32,15 +36,15 @@ targets:
     info:
       path: iOS/Info.plist
       properties:
-        CFBundleDisplayName: Glass Table
+        CFBundleDisplayName: $(APP_NAME)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: Glass Table connects to the table running on your Mac.
+        NSLocalNetworkUsageDescription: $(APP_NAME) connects to the table running on your Mac.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.nat20.glasstable
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1"
     scheme: {}

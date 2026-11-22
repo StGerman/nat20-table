@@ -4,7 +4,8 @@
 set -euo pipefail
 APP="$1"
 OUT="$2"
-BUNDLE=dev.nat20.glasstable
+# The bundle id is the built app's own: project.yml is the one place it is written.
+BUNDLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
 mkdir -p "$OUT"
 
 # The newest iOS runtime's iPhone 17.
@@ -53,6 +54,9 @@ shot 05-yard-press-light -replay yard.seat-wire.jsonl -to 74 -press 9
 shot 06-road-input-light -replay the-way-back-ru.seat-wire.jsonl -to 12
 shot 07-road-card-light -replay the-way-back-ru.seat-wire.jsonl -to 17
 shot 08-road-end-light -replay the-way-back-ru.seat-wire.jsonl
+# The other two tabs.
+shot 12-yard-where-light -replay yard.seat-wire.jsonl -to 74 -screen where
+shot 13-yard-sheet-tab-light -replay yard.seat-wire.jsonl -to 74 -screen sheet
 xcrun simctl ui "$DEVICE" appearance dark
 shot 09-yard-turn-dark -replay yard.seat-wire.jsonl -to 74
 shot 10-yard-sheet-dark -replay yard.seat-wire.jsonl -to 74 -open moves

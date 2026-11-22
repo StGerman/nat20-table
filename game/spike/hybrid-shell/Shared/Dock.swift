@@ -144,6 +144,7 @@ struct Chips: View {
 /// The sheet of the open ask.
 struct MovesSheet: View {
     let shell: Shell
+    @State private var draft = ""
 
     var body: some View {
         NavigationStack {
@@ -158,7 +159,7 @@ struct MovesSheet: View {
                                     HStack(alignment: .top) {
                                         Text(choice.text)
                                             .fontWeight(card.decided == choice.id ? .bold : .regular)
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Color.primary)
                                         Spacer(minLength: 8)
                                         ForEach(choice.votes, id: \.who) { vote in
                                             Text(vote.initial)
@@ -183,8 +184,8 @@ struct MovesSheet: View {
                         }
                         if let reaction = sheet.reaction {
                             Section {
-                                Button(reaction.yes) { shell.react(true) }
-                                Button(reaction.no) { shell.react(false) }
+                                Button(reaction.yes) { shell.react(true) }.foregroundStyle(Color.primary)
+                                Button(reaction.no) { shell.react(false) }.foregroundStyle(Color.primary)
                             }
                         }
                         ForEach(Array(sheet.groups.enumerated()), id: \.offset) { _, group in
@@ -195,14 +196,14 @@ struct MovesSheet: View {
                                     } label: {
                                         HStack(alignment: .top) {
                                             VStack(alignment: .leading, spacing: 2) {
-                                                Text(move.label).foregroundStyle(.primary)
+                                                Text(move.label).foregroundStyle(Color.primary)
                                                 if let summary = move.summary {
-                                                    Text(summary).font(.footnote).foregroundStyle(.secondary)
+                                                    Text(summary).font(.footnote).foregroundStyle(Color.secondary)
                                                 }
                                             }
                                             Spacer(minLength: 8)
                                             if let side = move.side {
-                                                Text(side).font(.footnote).foregroundStyle(.secondary)
+                                                Text(side).font(.footnote).foregroundStyle(Color.secondary)
                                             }
                                         }
                                     }
@@ -220,15 +221,34 @@ struct MovesSheet: View {
                                 }
                             }
                         }
+                    // The sheet covers the dock, so the human's own words are typed here.
+                    if dock.open {
+                        Section {
+                            TextField(dock.placeholder, text: $draft)
+                                .submitLabel(.send)
+                                .onSubmit {
+                                    let text = draft
+                                    shell.typed(text) { ok in
+                                        if ok { draft = "" }
+                                    }
+                                }
+                        }
                     }
                 }
             }
-            .navigationTitle(shell.chrome?.dock.more ?? shell.chrome?.dock.placeholder ?? "")
+            // «Что ещё можно» names the list a turn opens; an ask that is its own list has no name.
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(title.isEmpty ? .hidden : .visible, for: .navigationBar)
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+    }
+
+    private var title: String {
+        guard let dock = shell.chrome?.dock, dock.card == nil, dock.sheet?.forced != true else { return "" }
+        return dock.more ?? ""
     }
 }
 

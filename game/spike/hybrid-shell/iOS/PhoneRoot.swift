@@ -3,7 +3,8 @@ import SwiftUI
 import WebKit
 
 struct PhoneRoot: View {
-    @State private var shell = Shell()
+    // One shell for the app: a second one would load every page twice.
+    private let shell = Shell.shared
 
     var body: some View {
         @Bindable var shell = shell
@@ -55,6 +56,8 @@ struct ContentScreen: View {
                     WebView(content.page)
                 }
             }
+            // The story's lines do not show through the title.
+            .scrollEdgeEffectStyle(.hard, for: .top)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
@@ -75,6 +78,6 @@ struct ContentScreen: View {
 
     private var title: String {
         let title = shell.chrome?.title ?? ""
-        return title.isEmpty ? "Glass Table" : title
+        return title.isEmpty ? Shell.appName : title
     }
 }
