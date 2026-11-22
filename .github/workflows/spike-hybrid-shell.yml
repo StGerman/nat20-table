@@ -52,6 +52,19 @@ jobs:
       - name: Pictures from the simulator
         working-directory: game/spike/hybrid-shell
         run: ci/shots.sh build/Build/Products/Debug-iphonesimulator/GlassTable.app shots
+      # The tour is built on its own: a UI test's runner is signed to run locally, which the app's
+      # build above leaves out.
+      - name: Build the tour
+        working-directory: game/spike/hybrid-shell
+        run: |
+          set -o pipefail
+          xcodebuild -project GlassTable.xcodeproj -scheme GlassTable -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-tour ARCHS=arm64 ONLY_ACTIVE_ARCH=NO build-for-testing 2>&1 \
+            | tee build-tour.log | xcbeautify --quiet
+      - name: A finger's tour of a live table, recorded
+        working-directory: game/spike/hybrid-shell
+        run: ci/tour.sh shots
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -59,4 +72,5 @@ jobs:
           path: |
             game/spike/hybrid-shell/shots
             game/spike/hybrid-shell/build.log
+            game/spike/hybrid-shell/build-tour.log
           retention-days: 7

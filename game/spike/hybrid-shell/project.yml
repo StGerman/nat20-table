@@ -47,4 +47,19 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1"
-    scheme: {}
+    scheme:
+      testTargets:
+        - GlassTableTour
+  # A finger's tour of a live table (Tour/Tour.swift), run by ci/tour.sh.
+  GlassTableTour:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tour
+    dependencies:
+      - target: GlassTable
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tour
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: GlassTable

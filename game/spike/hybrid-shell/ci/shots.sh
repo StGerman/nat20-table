@@ -8,26 +8,8 @@ OUT="$2"
 BUNDLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
 mkdir -p "$OUT"
 
-# The newest iOS runtime's iPhone 17.
-DEVICE="$(xcrun simctl list devices available -j | python3 -c '
-import json, sys, re
-devices = json.load(sys.stdin)["devices"]
-found = []
-for runtime, rows in devices.items():
-    m = re.search(r"iOS-(\d+)-(\d+)", runtime)
-    if not m:
-        continue
-    for row in rows:
-        if row["name"] == "iPhone 17":
-            found.append(((int(m.group(1)), int(m.group(2))), row["udid"], runtime))
-found.sort()
-print(found[-1][1] if found else "")
-')"
-if [ -z "$DEVICE" ]; then
-  xcrun simctl list devices available
-  echo "no iPhone 17 simulator" >&2
-  exit 1
-fi
+HERE="$(cd "$(dirname "$0")" && pwd)"
+DEVICE="$("$HERE/device.sh")"
 echo "simulator $DEVICE"
 xcrun simctl boot "$DEVICE" || true
 xcrun simctl bootstatus "$DEVICE" -b
@@ -65,7 +47,6 @@ shot 11-road-card-dark -replay the-way-back-ru.seat-wire.jsonl -to 17
 # A live table: the real seat wire with a recorded run behind it. The app connects by the link, and
 # a press crosses the socket: the host's log says what it got, and the story goes on to the next turn.
 xcrun simctl ui "$DEVICE" appearance light
-HERE="$(cd "$(dirname "$0")" && pwd)"
 LINKFILE="$(mktemp)"
 rm -f "$LINKFILE"
 node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$HERE/../../../test/fixtures/yard.seat-wire.jsonl" "$LINKFILE" ru > "$OUT/replay-host.log" 2>&1 &

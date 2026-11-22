@@ -33,6 +33,7 @@ struct DockBar: View {
                     }
                 } else {
                     TextField(dock.placeholder, text: $draft)
+                        .accessibilityIdentifier("dock-line")
                         .focused($typing)
                         .submitLabel(.send)
                         .onSubmit(submit)
@@ -47,6 +48,7 @@ struct DockBar: View {
                             Image(systemName: "list.bullet").font(.title3)
                         }
                         .accessibilityLabel(dock.more ?? dock.placeholder)
+                        .accessibilityIdentifier("dock-list")
                     }
                 }
             }
@@ -146,6 +148,7 @@ struct Chips: View {
             .glassEffect(.regular.interactive(), in: Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("chip-\(move.n)")
     }
 }
 
@@ -215,6 +218,7 @@ struct MovesSheet: View {
                                             }
                                         }
                                     }
+                                    .accessibilityIdentifier("row-\(move.n)")
                                 }
                             }
                         }
