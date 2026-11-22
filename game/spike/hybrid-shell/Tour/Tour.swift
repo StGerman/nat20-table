@@ -85,6 +85,59 @@ final class Tour: XCTestCase {
         }
     }
 
+    /// The asks the recorded runs never reach (ci/asks-wire.mjs): a reaction, the Narrator's question,
+    /// the pause and its way out, a turn again, the end.
+    @MainActor
+    func testEveryOtherKindOfAsk() throws {
+        let link = ProcessInfo.processInfo.environment["ASKS_LINK"] ?? ""
+        try XCTSkipIf(link.isEmpty, "no table to sit at: TEST_RUNNER_ASKS_LINK is not set")
+        let app = XCUIApplication()
+        app.launchArguments = ["-table", link]
+        app.launch()
+
+        // A reaction is its own sheet: yes or no.
+        let yes = app.buttons["react-yes"]
+        XCTAssertTrue(yes.waitForExistence(timeout: 90), "the reaction's sheet opened by itself")
+        pause(1)
+        picture(app, "21-a-reaction")
+        yes.tap()
+
+        // The Narrator's question, answered in words in the sheet's own line.
+        XCTAssertTrue(yes.waitForNonExistence(timeout: 30), "the reaction went to the host")
+        let answer = app.textFields["sheet-line"]
+        if answer.waitForExistence(timeout: 20) {
+            pause(2)
+            picture(app, "22-a-question")
+            answer.tap()
+            pause(2)
+            picture(app, "23-the-keyboard-under-a-question")
+            if app.keyboards.firstMatch.exists {
+                answer.typeText("Tie its hands and ask who sent it\n")
+            }
+        }
+        pause(4)
+        picture(app, "24-paused")
+
+        // The pause is lifted from the menu, as a typed /pause would.
+        let menu = app.buttons["menu"].firstMatch
+        if menu.waitForExistence(timeout: 10) {
+            menu.tap()
+            let item = app.buttons["menu-pause"]
+            if item.waitForExistence(timeout: 10) {
+                picture(app, "25-the-menu")
+                item.tap()
+            }
+        }
+
+        // A turn again, and after it the end.
+        let chip = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'chip-'")).firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 30), "the turn came back after the pause")
+        picture(app, "26-a-turn-again")
+        chip.tap()
+        pause(5)
+        picture(app, "27-the-end")
+    }
+
     private func pause(_ seconds: TimeInterval) {
         Thread.sleep(forTimeInterval: seconds)
     }

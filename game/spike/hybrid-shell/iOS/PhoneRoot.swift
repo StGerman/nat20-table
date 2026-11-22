@@ -79,12 +79,18 @@ struct ContentScreen: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        // The table's own pause: the other players wait until it is lifted.
+                        Button(shell.chrome?.dock.form == "paused" ? "Продолжить игру" : "Пауза") {
+                            shell.pause()
+                        }
+                        .accessibilityIdentifier("menu-pause")
                         Button("Встать из-за стола", role: .destructive) {
                             shell.leave()
                         }
                     } label: {
                         Image(systemName: "ellipsis")
                     }
+                    .accessibilityIdentifier("menu")
                 }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {

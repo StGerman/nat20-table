@@ -18,20 +18,28 @@ HOST=$!
 for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
 LINK="$(cat "$LINKFILE")"
 rm -f "$LINKFILE"
+# A second table for the asks the recordings never reach (asks-wire.mjs).
+ASKS="$(mktemp)"
+node "$HERE/asks-wire.mjs" "$HERE/../../../test/fixtures/yard.seat-wire.jsonl" "$ASKS"
+node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$ASKS" "$LINKFILE" ru > "$OUT/tour-asks-host.log" 2>&1 &
+HOST2=$!
+for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
+ASKS_LINK="$(cat "$LINKFILE")"
+rm -f "$LINKFILE"
 
 xcrun simctl io "$DEVICE" recordVideo --codec h264 --force "$OUT/tour.mp4" > "$OUT/tour-video.log" 2>&1 &
 VIDEO=$!
 sleep 2
 STATUS=0
-TEST_RUNNER_TABLE_LINK="$LINK" xcodebuild test-without-building -project GlassTable.xcodeproj -scheme GlassTable \
+TEST_RUNNER_TABLE_LINK="$LINK" TEST_RUNNER_ASKS_LINK="$ASKS_LINK" xcodebuild test-without-building -project GlassTable.xcodeproj -scheme GlassTable \
   -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build-tour \
   -resultBundlePath "$OUT/tour.xcresult" > "$OUT/tour-test.log" 2>&1 || STATUS=$?
 # The recorder writes the file when it is interrupted, not killed.
 kill -INT "$VIDEO" 2>/dev/null || true
 wait "$VIDEO" 2>/dev/null || true
-kill "$HOST" 2>/dev/null || true
+kill "$HOST" "$HOST2" 2>/dev/null || true
 tail -40 "$OUT/tour-test.log"
-cat "$OUT/tour-host.log"
+cat "$OUT/tour-host.log" "$OUT/tour-asks-host.log"
 xcrun xcresulttool export attachments --path "$OUT/tour.xcresult" --output-path "$OUT/tour" || true
 # The test's pictures under their own names; Xcode's own recording and snapshots repeat tour.mp4.
 python3 - "$OUT/tour" <<'PY' || true

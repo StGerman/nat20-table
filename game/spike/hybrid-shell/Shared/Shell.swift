@@ -191,6 +191,11 @@ final class Shell {
         act(["kind": "reaction", "take": take])
     }
 
+    /// The table's pause, on and off: what a typed /pause does.
+    func pause() {
+        act(["kind": "command", "name": "pause"])
+    }
+
     func typed(_ text: String, done: @escaping (Bool) -> Void) {
         act(["kind": "typed", "text": text], done: done)
     }

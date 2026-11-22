@@ -195,8 +195,8 @@ struct MovesSheet: View {
                         }
                         if let reaction = sheet.reaction {
                             Section {
-                                Button(reaction.yes) { shell.react(true) }.foregroundStyle(Color.primary)
-                                Button(reaction.no) { shell.react(false) }.foregroundStyle(Color.primary)
+                                Button(reaction.yes) { shell.react(true) }.foregroundStyle(Color.primary).accessibilityIdentifier("react-yes")
+                                Button(reaction.no) { shell.react(false) }.foregroundStyle(Color.primary).accessibilityIdentifier("react-no")
                             }
                         }
                         ForEach(Array(sheet.groups.enumerated()), id: \.offset) { _, group in
@@ -238,6 +238,7 @@ struct MovesSheet: View {
                     if dock.open {
                         Section {
                             TextField(dock.placeholder, text: $draft)
+                                .accessibilityIdentifier("sheet-line")
                                 .submitLabel(.send)
                                 .onSubmit {
                                     let text = draft
