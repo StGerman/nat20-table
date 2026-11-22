@@ -12,6 +12,7 @@ import type { Choice } from "../table/choices.ts";
 import { nameSpans, PEOPLE_WORDS, personCard, type Person, type PersonState } from "../ui/people.ts";
 import { FINISHES, mount, type Die, type Finish } from "./d20.ts";
 import { faceOf } from "./portraits.ts";
+import { chipsOf, costOf, named, placeholder, shownName, ui } from "./chrome.ts";
 import { meOf, placed, type CardView, type Dock, type PageView, type RollToken, type StoryLine } from "./reduce.ts";
 
 export interface AppProps {
@@ -20,25 +21,21 @@ export interface AppProps {
   send(intent: PlayerIntent): boolean;
   /** The roll stage has shown the human's roll. */
   settled(): void;
+  /** Inside a native shell (hybrid shell spike): the page draws content only, and the shell draws every control. */
+  shell?: Shell;
+}
+
+/** What a native shell asks of the page, and what the page tells it was touched. */
+export interface Shell {
+  /** Which content this web view draws. */
+  show: "story" | "where" | "sheet" | "people";
+  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[] }): void;
 }
 
 type Options = Extract<TableEvent, { kind: "options" }>;
 type Situation = NonNullable<Extract<TableEvent, { kind: "situation" }>["situation"]>;
 /** The roll tokens a popover shows, and where it opens. */
 type Pop = { ids: string[]; x: number; y: number };
-
-function ui(view: PageView): UiWords {
-  return UI_WORDS[view.hello?.language ?? "en"];
-}
-
-function named(view: PageView, handle: string): string {
-  return view.hello?.names?.[handle] ?? handle.charAt(0).toUpperCase() + handle.slice(1);
-}
-
-/** A creature's name as the panel shows it: the seat's name for a foe («волк 1»), else the party's. */
-function shownName(view: PageView, s: Situation | undefined, handle: string): string {
-  return s?.shown?.[handle] ?? s?.creatures.find((c) => c.handle === handle)?.name ?? named(view, handle);
-}
 
 const FINISH_KEY = "nat20.die-finish";
 
@@ -52,7 +49,7 @@ function savedFinish(): Finish {
   }
 }
 
-export function App({ view, send, settled }: AppProps): ReactNode {
+export function App({ view, send, settled, shell }: AppProps): ReactNode {
   const [finish, setFinish] = useState<Finish>(savedFinish);
   /** The person card open, by id; the inspector open («Люди» or «Лист»); the lens over the story. */
   const [person, setPerson] = useState<string>();
@@ -103,6 +100,29 @@ export function App({ view, send, settled }: AppProps): ReactNode {
     if (view.ask) ask({ kind: "command", name: "sheet" });
   };
   const looks = lensOf(view);
+  if (shell) {
+    // The shell opens what the content was touched on: a roll's lines, a person's card.
+    const rolls = (p: Pop) => shell.open({ what: "rolls", rolls: p.ids.map((id) => view.rolls[id]).filter((r) => r !== undefined) });
+    const who = (id: string) => {
+      const p = view.people.find((q) => q.id === id);
+      if (!p) return;
+      const [name, ...rows] = personCard(p, peopleWords(view)).slice(0, -1);
+      shell.open({ what: "person", name, rows });
+    };
+    const content =
+      shell.show === "where" ? (looks ? h(Lens, { view, looks }) : null)
+      : shell.show === "sheet" ? h(CharSheet, { view, finish, choose, close: () => undefined })
+      : shell.show === "people" ? h(PeopleList, { view, open: who, close: () => undefined })
+      : h(Story, { view, open: who, pop: rolls });
+    return h(
+      "main",
+      { className: `win native show-${shell.show} ${s?.mode === "combat" ? "scene-fight" : "scene-road"}`, lang: view.hello.language },
+      h("div", { className: "ambient", "aria-hidden": true }),
+      content,
+      view.overlay && shell.show === "story" ? h(Overlay, { key: view.overlay.n, overlay: view.overlay, words: ui(view) }) : null,
+      view.stage && shell.show === "story" ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish, settled }) : null,
+    );
+  }
   return h(
     "main",
     { className: `win ${s?.mode === "combat" ? "scene-fight" : "scene-road"}`, lang: view.hello.language },
@@ -350,7 +370,8 @@ function Story({ view, open, pop }: { view: PageView; open(id: string): void; po
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const down = () => el.scrollTo?.({ top: el.scrollHeight });
+    // Inside a native shell the document scrolls, so the shell's bars can follow it.
+    const down = () => (document.documentElement.classList.contains("native") ? scrollTo({ top: document.documentElement.scrollHeight }) : el.scrollTo?.({ top: el.scrollHeight }));
     down();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(down);
@@ -461,37 +482,6 @@ function Overlay({ overlay, words, onClose }: { overlay: NonNullable<PageView["o
     h("header", null, h("h2", null, overlay.title), h("button", { className: "close", onClick: close, "aria-label": words.page.close }, "×")),
     h("pre", null, overlay.text),
   );
-}
-
-/** What a move costs, in the panel's words: the sheet's group and the chip's second line. */
-function costOf(choice: Choice, words: UiWords): { group: "action" | "bonus" | "path" | "free"; label?: string } {
-  const c = choice.about?.cost;
-  const id = choice.about?.id;
-  if (c?.spell_slot) return { group: c.bonus_action > 0 ? "bonus" : "action", label: words.panel.slot(c.spell_slot) };
-  if (c && c.action > 0) return { group: "action", label: words.panel.action };
-  if (c && c.bonus_action > 0) return { group: "bonus", label: words.panel.bonusAction };
-  if (id === "move" || choice.act?.kind === "move" || choice.act?.kind === "dash_move") return { group: "path", label: words.page.path };
-  return { group: "free" };
-}
-
-/** The few moves the chips offer on a fight turn: a strike at a foe in reach first, then a bonus action, then the rest in the engine's order. */
-function chipsOf(choices: Choice[], fight: boolean): Choice[] {
-  const rest = choices.filter((c) => c.about?.id !== "end_turn");
-  if (!fight) return rest.length <= 4 ? rest : rest.slice(0, 3);
-  const rank = (c: Choice) => {
-    const id = c.about?.id ?? "";
-    const direct = c.act !== undefined;
-    if (/^(melee_attack|ranged_attack)(\/|$)/.test(id) && direct && c.target?.side === "hostile") return 0;
-    if (c.about?.cost?.spell_slot !== undefined && direct) return 1;
-    if ((c.about?.cost?.bonus_action ?? 0) > 0) return 2;
-    if (id === "move") return 4;
-    return 3;
-  };
-  return rest
-    .map((c, i) => ({ c, i }))
-    .sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i)
-    .slice(0, 3)
-    .map(({ c }) => c);
 }
 
 function DockView({ view, send }: { view: PageView; send(intent: PlayerIntent): boolean }): ReactNode {
@@ -654,28 +644,6 @@ function Health({ me, words }: { me: Situation["me"]; words: UiWords }): ReactNo
     h("b", null, words.page.hp(me.hp, me.hp_max)),
     h("span", { className: "lvl" }, h("i", { style: { width: `${Math.max(0, Math.min(100, (100 * me.hp) / Math.max(1, me.hp_max)))}%` } })),
   );
-}
-
-/** What the capsule asks: the question of the open ask, or who the table waits on. */
-function placeholder(view: PageView, words: UiWords): string {
-  const name = named(view, view.hello?.handle ?? "");
-  const dock = view.dock;
-  switch (dock.form) {
-    case "waiting":
-      return words.page.waiting(dock.on);
-    case "paused":
-      return words.panel.paused;
-    case "answer":
-      return words.page.answer;
-    case "input":
-      return words.page.ask(name);
-    case "reaction":
-      return words.page.orOwn;
-    case "moves":
-      return dock.prompt.kind === "combat_turn" || dock.prompt.kind === "surrender" ? words.page.ask(name) : words.page.orOwn;
-    case "ended":
-      return "";
-  }
 }
 
 /** The input capsule: what the human types, read as the terminal reads it. */

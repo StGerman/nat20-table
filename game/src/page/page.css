@@ -299,3 +299,13 @@ span.face-btn { cursor: default; }
   .budget { width: 100%; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { *, .ambient { animation: none !important; scroll-behavior: auto !important; } }
+
+/* ---------- inside a native shell (hybrid shell spike): content only, and the document scrolls,
+   so the shell's own bars can follow it and float over the text ---------- */
+html.native, html.native body { height: auto; min-height: 100%; overflow: visible; }
+html.native body { overflow-x: hidden; }
+.win.native { height: auto; min-height: 100vh; overflow: visible; }
+.win.native .ambient { position: fixed; }
+.win.native .story { position: relative; inset: auto; overflow: visible; padding: 12px 20px 24px; }
+.win.native .inspector { position: relative; inset: auto; width: auto; max-height: none; margin: 12px 16px 24px; }
+.win.native .inspector .close { display: none; }

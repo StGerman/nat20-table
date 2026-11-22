@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: spike-hybrid-shell-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ios:
     name: ios (simulator, recorded runs)

@@ -36,19 +36,28 @@ shot() {
   local name="$1"
   shift
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl launch "$DEVICE" "$BUNDLE" "$@"
+  # The app's own log lines (NSLog) land in the .err file.
+  xcrun simctl launch --stdout="$PWD/$OUT/$name.out" --stderr="$PWD/$OUT/$name.err" "$DEVICE" "$BUNDLE" "$@"
   sleep "${WAIT:-14}"
   xcrun simctl io "$DEVICE" screenshot "$OUT/$name.png"
 }
 
 xcrun simctl ui "$DEVICE" appearance light
-shot 01-yard-light -replay yard.seat-wire.jsonl
-shot 02-yard-light-edge -replay yard.seat-wire.jsonl -edge 1
-shot 03-road-light -replay the-way-back-ru.seat-wire.jsonl
+# The yard: a fight turn with chips, then its whole sheet, then a pick that is its own sheet.
+shot 01-yard-turn-light -replay yard.seat-wire.jsonl -to 74
+shot 02-yard-turn-edge-light -replay yard.seat-wire.jsonl -to 74 -edge 1
+shot 03-yard-sheet-light -replay yard.seat-wire.jsonl -to 74 -open moves
+shot 04-yard-pick-light -replay yard.seat-wire.jsonl -to 80
+shot 05-yard-press-light -replay yard.seat-wire.jsonl -to 74 -press 9
+# The road: words out of a fight, then a road card with the table's votes.
+shot 06-road-input-light -replay the-way-back-ru.seat-wire.jsonl -to 12
+shot 07-road-card-light -replay the-way-back-ru.seat-wire.jsonl -to 17
+shot 08-road-end-light -replay the-way-back-ru.seat-wire.jsonl
 xcrun simctl ui "$DEVICE" appearance dark
-shot 04-yard-dark -replay yard.seat-wire.jsonl
-shot 05-yard-dark-edge -replay yard.seat-wire.jsonl -edge 1
+shot 09-yard-turn-dark -replay yard.seat-wire.jsonl -to 74
+shot 10-yard-sheet-dark -replay yard.seat-wire.jsonl -to 74 -open moves
+shot 11-road-card-dark -replay the-way-back-ru.seat-wire.jsonl -to 17
 
-# What the app said about itself.
-xcrun simctl spawn "$DEVICE" log show --last 5m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/app.log" 2>&1 || true
-tail -40 "$OUT/app.log" || true
+# What the app said about itself, from the system log as well; cut off if the log is slow to answer.
+perl -e 'alarm 90; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 10m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/app.log" 2>&1 || true
+grep -h "nat20-" "$OUT"/*.err 2>/dev/null | tail -60 || true
