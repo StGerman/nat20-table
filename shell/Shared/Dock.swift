@@ -25,7 +25,8 @@ struct DockBar: View {
             // Another window took the seat: this one asks for it only when the human says so.
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(words.elsewhere).font(.footnote.weight(.semibold)).lineLimit(1)
+                    // The line is longer than the room beside the button: it is set smaller, not cut.
+                    Text(words.elsewhere).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
                     Text(words.elsewhereMore).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                 }
                 .accessibilityElement(children: .combine)
