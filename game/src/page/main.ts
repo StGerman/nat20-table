@@ -1,6 +1,10 @@
 // The page's entry (AGT-142): it reads its host from the address and keeps one view through the
-// reducer. `?port=…&token=…` is a live table over the seat wire on 127.0.0.1 (the shell opens the
+// reducer. `?port=…&token=…` is a live table over the seat wire on 127.0.0.1 (a browser opens the
 // page so); `?replay=<url of a seat-wire.jsonl>` plays a recorded run, which is how it is tested.
+// `?shell=native` is the page inside the SwiftUI shell (AGT-153, decision 0093): it opens no socket
+// and draws no control. The shell hands it each host line (`__nat20Shell.host`) and each press
+// (`__nat20Shell.act`); the page tells the shell what its controls show after every line
+// (`chromeOf`), and builds the message for the shell's socket itself. No intent is built in Swift.
 // The wire's version and hash are written in at build time (build.ts), so a page refuses a host
 // built from another wire.
 import { createElement as h, useEffect, useReducer, useRef } from "react";
@@ -8,10 +12,32 @@ import { createRoot } from "react-dom/client";
 import { CLOSE_REPLACED, HostMessageSchema, type HostMessage, type PageMessage } from "../seat-wire/messages.ts";
 import { UI_WORDS } from "../table/words.ts";
 import type { PlayerIntent } from "../table/types.ts";
-import { App } from "./app.ts";
+import { readLine } from "../ui/input.ts";
+import { App, type Shell } from "./app.ts";
+import { chromeOf, ui } from "./chrome.ts";
 import { answered, EMPTY, reduce, replaced, settle, type Built, type PageView } from "./reduce.ts";
 
 declare const __WIRE__: Built;
+
+/** What a native shell does at the page (AGT-153, decision 0093): a pressed move, a typed line, a command. */
+type ShellAct = { kind: "option"; n: number } | { kind: "typed"; text: string } | { kind: "reaction"; take: boolean } | { kind: "command"; name: "pause" | "quit" | "sheet" };
+
+declare global {
+  interface Window {
+    /** The native shell's way in: a host message as it came off the socket, and what the human did on a control. */
+    __nat20Shell?: { host(line: string): void; act(a: ShellAct): { ok: boolean; notice?: string }; under(on: boolean): void };
+    /** What the page told the shell, kept where there is no shell to tell (the page's tests). */
+    __nat20Posted?: unknown[];
+    webkit?: { messageHandlers?: { shell?: { postMessage(message: unknown): void } } };
+  }
+}
+
+/** Tells the native shell; with none (a browser, a test) the message is kept on the window. */
+function post(message: unknown): void {
+  const shell = window.webkit?.messageHandlers?.shell;
+  if (shell) shell.postMessage(message);
+  else (window.__nat20Posted ??= []).push(message);
+}
 
 type Action = { type: "host"; message: HostMessage } | { type: "settled" } | { type: "answered" } | { type: "replaced" };
 
@@ -51,6 +77,20 @@ function Page(): ReturnType<typeof h> {
   const stage = useRef<string | undefined>(undefined);
   seq.current = view.seq;
   stage.current = view.stage;
+  // Inside a native shell (`shell=native`) the page opens no socket and draws no control: the shell
+  // feeds it the host's lines and is told what its controls show after each.
+  const native = params.get("shell") === "native";
+  const show = (["where", "sheet", "people"].find((x) => x === params.get("show")) ?? "story") as Shell["show"];
+  const now = useRef(view);
+  now.current = view;
+  const told = useRef("");
+  useEffect(() => {
+    if (!native || !view.hello) return;
+    const chrome = JSON.stringify(chromeOf(view));
+    if (chrome === told.current) return;
+    told.current = chrome;
+    post({ type: "chrome", json: chrome });
+  }, [view]);
 
   useEffect(() => {
     const replay = params.get("replay");
@@ -82,7 +122,8 @@ function Page(): ReturnType<typeof h> {
       };
     }
     const port = params.get("port");
-    if (!port) return;
+    // Inside a native shell the socket is the shell's: the page never opens one, whatever its address says.
+    if (!port || native) return;
     let closed = false;
     const open = () => {
       const ws = new WebSocket(`ws://127.0.0.1:${port}/?token=${encodeURIComponent(params.get("token") ?? "")}`);
@@ -108,7 +149,20 @@ function Page(): ReturnType<typeof h> {
   }, []);
 
   const send = (intent: PlayerIntent): boolean => {
-    const ask = view.ask;
+    const ask = now.current.ask;
+    if (native) {
+      // The shell holds the socket: it is handed the message as the page would have sent it.
+      if (ask) {
+        post({ type: "send", message: { type: "intent", id: ask.id, intent } satisfies PageMessage });
+        dispatch({ type: "answered" });
+        return true;
+      }
+      if (intent.kind === "command" && (intent.name === "pause" || intent.name === "quit")) {
+        post({ type: "send", message: { type: "command", name: intent.name } satisfies PageMessage });
+        return true;
+      }
+      return false;
+    }
     const ws = socket.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
     if (ask) {
@@ -122,7 +176,37 @@ function Page(): ReturnType<typeof h> {
     }
     return false;
   };
-  return h(App, { view, send, settled: () => dispatch({ type: "settled" }) });
+  useEffect(() => {
+    if (!native) return;
+    document.documentElement.classList.add("native");
+    window.__nat20Shell = {
+      host(line) {
+        const parsed = HostMessageSchema.safeParse(JSON.parse(line));
+        if (parsed.success) dispatch({ type: "host", message: parsed.data });
+      },
+      act(a) {
+        const v = now.current;
+        const words = ui(v);
+        if (a.kind === "option") return { ok: send({ kind: "option", number: a.n }) };
+        if (a.kind === "reaction") return { ok: send({ kind: "reaction", take: a.take }) };
+        if (a.kind === "command") return { ok: send({ kind: "command", name: a.name }) };
+        // A typed line is read as the terminal reads it, as the page's own capsule does.
+        const typed = readLine(a.text, v.ask?.prompt, words);
+        if (typed.kind === "empty") return { ok: false };
+        if (typed.kind === "error") return { ok: false, notice: typed.text };
+        if (typed.kind !== "intent") return { ok: true };
+        return send(typed.intent) ? { ok: true } : { ok: false, notice: words.busy };
+      },
+      // The shell's sheet stands over the lower half of the story: the story's end stays above it.
+      under(on) {
+        document.documentElement.classList.toggle("under-sheet", on);
+        if (on) scrollTo({ top: document.documentElement.scrollHeight });
+      },
+    };
+    post({ type: "ready" });
+  }, []);
+  const shell: Shell | undefined = native ? { show, open: (what) => post({ type: "open", ...what }) } : undefined;
+  return h(App, { view, send, settled: () => dispatch({ type: "settled" }), ...(shell ? { shell } : {}) });
 }
 
 createRoot(document.getElementById("page")!).render(h(Page));

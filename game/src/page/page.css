@@ -299,3 +299,22 @@ span.face-btn { cursor: default; }
   .budget { width: 100%; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { *, .ambient { animation: none !important; scroll-behavior: auto !important; } }
+
+/* ---------- inside a native shell (decision 0093): content only, and the document scrolls,
+   so the shell's own bars can follow it and float over the text ---------- */
+html.native, html.native body { height: auto; min-height: 0; overflow: visible; }
+html.native body { overflow-x: hidden; }
+.win.native { height: auto; min-height: 100vh; overflow: visible; }
+/* A short story is only as tall as its words: a taller page would scroll them under the shell's title. */
+.win.native.show-story { min-height: 0; }
+/* The shell's sheet stands over the lower half: the story ends above it. */
+html.native.under-sheet .win.native .story { padding-bottom: 46vh; }
+/* «Где все» on a phone: the yard near twice the screen's width, so a face and its name can be read;
+   the page scrolls both ways under a finger. */
+html.native:has(.win.show-where .lens.yard) body { overflow-x: auto; }
+.win.native .lens.yard { position: relative; inset: auto; display: block; width: max-content; padding: 12px; }
+.win.native .lens.yard svg { display: block; width: 185vw; max-width: none; height: auto; }
+.win.native .ambient { position: fixed; }
+.win.native .story { position: relative; inset: auto; overflow: visible; padding: 12px 20px 24px; }
+.win.native .inspector { position: relative; inset: auto; width: auto; max-height: none; margin: 12px 16px 24px; }
+.win.native .inspector .close { display: none; }
