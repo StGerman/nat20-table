@@ -46,7 +46,7 @@ final class Tour: XCTestCase {
 
         // The human's own words, typed in the dock. A sheet may stand over it (the recording answers
         // a /where here): it is drawn down first, as a thumb would.
-        let line = app.textFields["dock-line"]
+        let line = app.buttons["dock-line"]
         if line.waitForExistence(timeout: 20) {
             for _ in 0..<3 where !line.isHittable {
                 picture(app, "06-a-sheet-over-the-dock")
@@ -55,12 +55,20 @@ final class Tour: XCTestCase {
                 pause(2)
             }
             if line.isHittable {
+                // The dock's line opens a line over the keyboard, where what is typed can be read.
                 line.tap()
-                pause(2)
-                picture(app, "07-the-keyboard")
-                if app.keyboards.firstMatch.exists || line.value(forKey: "hasKeyboardFocus") as? Bool == true {
-                    line.typeText("I look around\n")
-                    pause(4)
+                let field = app.textFields["type-line"]
+                if field.waitForExistence(timeout: 10) {
+                    pause(2)
+                    if !app.keyboards.firstMatch.exists { field.tap() }
+                    pause(1)
+                    if app.keyboards.firstMatch.exists {
+                        field.typeText("I look around")
+                        pause(1)
+                        picture(app, "07-the-keyboard")
+                        field.typeText("\n")
+                        pause(4)
+                    }
                 }
                 picture(app, "08-after-typing")
             }

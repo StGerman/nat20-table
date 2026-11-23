@@ -26,7 +26,10 @@ struct Tabs: View {
             Tab(tabs?.story ?? "Рассказ", systemImage: "book", value: Screen.story) {
                 ContentScreen(shell: shell, content: table.story)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        Chips(shell: shell)
+                        VStack(spacing: 0) {
+                            Chips(shell: shell)
+                            TypeLine(shell: shell)
+                        }
                     }
             }
             Tab(tabs?.`where` ?? "Где все", systemImage: "map", value: Screen.place) {

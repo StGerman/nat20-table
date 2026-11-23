@@ -33,6 +33,9 @@ final class Shell {
     var chrome: Chrome?
     var screen: Screen = .story
     var opened: Opened?
+    /// The line typed in the dock, and whether it is open over the keyboard.
+    var draft = ""
+    var typing = false
     /// Why the page would not take what was typed.
     var notice: String?
     /// What the page handed over for the host, newest last.

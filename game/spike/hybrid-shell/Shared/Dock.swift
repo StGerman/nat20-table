@@ -5,8 +5,6 @@ import SwiftUI
 /// The capsule: health, the line the human types, and the way to the whole list.
 struct DockBar: View {
     let shell: Shell
-    @State private var draft = ""
-    @FocusState private var typing: Bool
 
     var body: some View {
         if !shell.online {
@@ -32,16 +30,21 @@ struct DockBar: View {
                         ProgressView()
                     }
                 } else {
-                    TextField(dock.placeholder, text: $draft)
-                        .accessibilityIdentifier("dock-line")
-                        .focused($typing)
-                        .submitLabel(.send)
-                        .onSubmit(submit)
-                    if !draft.isEmpty {
-                        Button(action: submit) {
-                            Image(systemName: "arrow.up.circle.fill").font(.title2)
-                        }
-                    } else if dock.sheet != nil || dock.card != nil {
+                    // The keyboard would cover a line typed here, so a touch opens the line over the
+                    // keyboard (TypeLine) and this one only shows what it holds.
+                    Button {
+                        shell.screen = .story
+                        shell.typing = true
+                    } label: {
+                        Text(shell.draft.isEmpty ? dock.placeholder : shell.draft)
+                            .foregroundStyle(shell.draft.isEmpty ? Color.secondary : Color.primary)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("dock-line")
+                    if dock.sheet != nil || dock.card != nil {
                         Button {
                             shell.opened = .moves
                         } label: {
@@ -57,12 +60,46 @@ struct DockBar: View {
             ProgressView()
         }
     }
+}
+
+/// The line the human types in, over the keyboard: the dock sits under the keyboard, so its own
+/// line could not be read while typing.
+struct TypeLine: View {
+    @Bindable var shell: Shell
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        if shell.typing, let dock = shell.chrome?.dock, dock.open {
+            HStack(spacing: 8) {
+                TextField(dock.placeholder, text: $shell.draft)
+                    .accessibilityIdentifier("type-line")
+                    .focused($focused)
+                    .submitLabel(.send)
+                    .onSubmit(submit)
+                Button(action: submit) {
+                    Image(systemName: "arrow.up.circle.fill").font(.title2)
+                }
+                .disabled(shell.draft.isEmpty)
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .glassEffect(.regular, in: Capsule())
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+            .task { focused = true }
+            .onChange(of: focused) { _, now in
+                // The keyboard went: the line goes with it, and the dock shows what is left unsent.
+                if !now { shell.typing = false }
+            }
+        }
+    }
 
     private func submit() {
-        let text = draft
+        let text = shell.draft
         shell.typed(text) { ok in
-            if ok { draft = "" }
+            if ok { shell.draft = "" }
         }
+        focused = false
     }
 }
 
