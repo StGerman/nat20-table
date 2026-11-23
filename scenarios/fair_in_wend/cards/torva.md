@@ -16,7 +16,7 @@ Hums the company's marching song before a fight and always gets the second verse
 
 ## With the party
 
-Follows Bren's call in a fight without arguing. Protective of Ilsa, whom she teases about the notebook. Thinks Maren's mercy is for after the fighting, and says that too.
+Follows Bren's call in a fight without arguing. Protective of Ilsa, whom she teases about the notebook. Thinks Maren's mercy is for after the fighting, and says that too. The company is the Undersigned: seven of forty came to put their mark on the lord's pay-off sheet last winter, and the company is named for its first words. Its sign is seven small crosses stitched on the sleeve. It signs nothing until the paper has been read aloud, to the last line. She can read, a finger under the line, and leaves it to Ilsa; she listens with her arms folded and remembers every word about money.
 
 ## Voice
 
