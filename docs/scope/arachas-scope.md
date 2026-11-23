@@ -1,6 +1,6 @@
 # Arachas (the lair under the Barrow Oak): scope
 
-Status: Proposed; accepted when this PR merges, except the source and the name Arachas (§2 item 1), which stay conditional on §9 question 5. Drafted 2026-11-23 on main f5a036a at Stas's ask («Давай скоуп сейчас»). No number (decision 0085: a milestone gets one in its `milestone.md`).
+Status: Proposed; accepted when this PR merges, except the source, the name Arachas and the pack id `lair_of_arachas` (§2 item 1), which stay conditional on §9 question 5. Drafted 2026-11-23 on main f5a036a at Stas's ask («Давай скоуп сейчас»). No number (decision 0085: a milestone gets one in its `milestone.md`).
 Inputs: the concept, version 2 (<https://claude.ai/artifact/GDdBxPPt4tWC8tL55vcm5y>, copy `/mnt/project-files/demo/arachas-in-wend-concept.md`); Lev's review and Zoya's read of 2026-11-16, 33 items, approved by Stas 2026-11-23 20:15Z (<https://claude.ai/artifact/EFK8DGAun4PCiggVLyUtuF>); `docs/roadmap.md` row "Arachas plus glue"; `docs/scope/dramaturg-mechanism-scope.md` §3 (the shelved inputs); `docs/design/m13-system-design.md` §12 (the debts left to this pack).
 Order (Stas 2026-11-23 20:12Z): Glass Table, Sign in with ChatGPT, People and places registries, «Камень A», then this. `docs/roadmap.md` still says "no spec yet" and has no registries step; Yan keeps that page (decision 0065) and updates it at his next pass; until then this line is the order.
 
@@ -15,17 +15,17 @@ A third quest on the Wend map, at the Barrow Oak, in which what the party did on
 3. **Four monsters into core** (`demo`), from SRD 5.2.1: Cultist, Cultist Fanatic, Giant Spider (Web), Giant Wolf Spider. Checked on `demo` at ea7eaef: none of the four is there; the Restrained condition and Hold Person are; Command and a Web action were not found. The Fanatic's spell list (Command, Hold Person, and a Spiritual Weapon bonus action as far as recalled) is taken from the SRD 5.2.1 block in the design, not from this line; each spell core lacks is core work. Then the pin.
 4. **Sleepers the engine can count.** A sleeper still in a cocoon when fight 2 ends does not wake; the count writes `all_sleepers_woke` or `a_sleeper_did_not_wake` at the fight's end (decision 0070). Scene 6 reads it.
 5. **Two fights at level 3**, seven creatures each, one Cultist Fanatic in the pack: fight 1 on Bald Hill, 575 XP (Hesta or a neighbour as a Cultist, 2 Cultists, 2 Giant Spiders, 2 Giant Wolf Spiders); fight 2 under the oak, 850 XP (Arachas as a Giant Spider, Nell as the Cultist Fanatic, 2 Cultists, 3 Giant Wolf Spiders). If the signal fire was lit, two more Giant Wolf Spiders arrive in round 3 (100 XP, nine creatures); that is the price of a failed scene 4, outside the seven. Surrender through the conditions the contract has (`standing_at_most`, `hp_fraction_at_most`). Hesta and Nell carry `npc`.
-6. **Six records, each with a reader in the same pack:** `hesta_known`, `party_ambushes`, `back_way`, `nell_doubts`, the promise to the captive, the fight outcomes (cultists, Nell, and the sleeper deed of item 4).
+6. **Every deed the pack writes has a reader in the same pack or in item 7's card.** By concept: `hesta_known`, `party_ambushes`, `back_way`, `nell_doubts`, the promise to the captive, the cultists spared or killed, `killed_hesta`, Nell yielded or `killed_nell`, and the two sleeper deeds of item 4. The design fixes the ids; the rule is the list, not a count.
 7. **The decision about Nell is a deck card**, with its reader in the same change: a Wendford arrival card on the next contract.
 8. **Level 3 pregens** (`pregens/*_l3.json`) for a party that starts here; a roster below level 3 is offered them.
 9. **People and places as registry records:** Nell, Hesta, the Bald Hill brothers, the three sleepers, Gwyn's scene; the Highsteads fold gate, the Bald Hill farm, the chamber under the oak. Bald Hill stays a scene on the 2-mile path, not a map place.
-10. **Nell's age in older content:** main calls her a child in four places, and all four change to "a young woman": the note on card `the_fair_price` (*The Way Back*), and `look`, `look_ru` and `notes` of `nell_hale` in `worlds/wend/npcs.json`.
+10. **Nell's age in older content:** main calls her a child in four places, and all four change to "a young woman": the note on card `the_fair_price` (*The Way Back*), and `look`, `look_ru` and `notes` of `nell_hale` in `worlds/wend/npcs.json`. Zoya reads that PR, and Vera reads the two `look` lines.
 
 ## 3. Out
 
 - XP, level-up and the roster between runs: built in Milestone 9 (API-44, API-45, ENG-31, CHR-12).
 - The other seven inputs the M13 scope §3 shelved to "Arachas plus glue". They stay on the shelf for the Mill plus glue or a later scope: errand quests; fronts and clocks (the deadline here is "tonight", in prose); witnesses and the attitude step; more of `saw` than main has; carrier C; arrival without a draw; Snitt's fate after Scene 4 and the promise to him (this pack reads `snitt_yielded` and decides nothing more about him).
-- MAP-13 (the Mill's goblins yield): its own backlog row, not part of this pack.
+- MAP-13 (the Mill's goblins yield): its own backlog row, not part of this pack, and still due before it (`tasks/backlog/MAP-13.md`); §7 keeps it in the order.
 - What Gritch said about the Hollow King, and the lit barrows: the pack explains neither. Zoya's board row is answered by keeping both as rumour.
 - A hazard that applies a condition outside a fight, a new surrender kind, an attackable web outside the Giant Spider's stat block.
 - Travel draws inside the pack. The road deck leads in.
@@ -39,15 +39,16 @@ A third quest on the Wend map, at the Barrow Oak, in which what the party did on
 Each row names its lowest layer (decision 0080).
 
 1. `pack:check` is green for `lair_of_arachas`, slot and adventure id equal: test, no model.
-2. Each fight over a fixed seed set: both surrender conditions fire; fight 2 has at least one seed where every sleeper wakes and one where one does not, and the deed written matches the count: seeded fixtures, no model.
+2. Scripted fixtures, no model: each fight's surrender condition fires; fight 2 once with every sleeper cut loose and once with one left, each writing its deed; fight 2 with the signal fire lit and not lit, the two extra spiders arriving in round 3 only when lit.
 3. One scripted case per deed in §2 item 2: the scene variant shown is the one the deed selects, and with no deed the scene still plays: test, no model.
 4. The decision card writes its deed and the Wendford reader offers the changed line: the card bench.
 5. Vera reads scene 6's prose where a child does not wake, and the first line that tells a player they are Restrained, before either merges.
-6. One pair on one build (decision 0043), all AI first, then Stas: each plays scenes 1 to 6 in 120 minutes or less; audit, leak scan and narration judge pass.
+6. One pair on one build (decision 0043), all AI first, then Stas: each plays scenes 1 to 6 in 120 minutes or less; audit, leak scan and narration judge pass: full run. Both halves start from a roster and a world memory that hold at least one Mill deed and one road deed, and each transcript shows a scene reading one of them.
 7. A level 2 roster is offered the level 3 pregens, and a level 3 roster is not: test, no model.
-8. `pack:check` shows a reader for each of the six records of §2 item 6, and a registry record for each person and place of item 9: test, no model.
+8. `pack:check` shows a reader for every deed the pack writes (§2 item 6), and a registry record for each person and place of item 9: test, no model.
 9. Each of the four monsters has a core test in `core/tests/` against its SRD block, Web applying Restrained among them, and each Fanatic spell core lacks: core test.
-10. In Stas's half, the human's character writes one deed in scenes 1 to 4 and hears it read back in scene 5 or 6 (the M13 design's §12 item 6). Lev's `trace` of that run shows where.
+10. In Stas's half, the human's character writes one deed in scenes 1 to 4 and hears it read back in scene 5 or 6 (the M13 design's §12 item 6). Lev's `trace` of that run shows where: full run, read by a person.
+11. No line on main calls Nell Hale a child (§2 item 10): a `pack:check` or grep test, no model.
 
 ## 5. Reads already made
 
@@ -73,10 +74,10 @@ Not priced: Yan prices it at the next roadmap pass, after the registries and «�
 | Field | Estimate |
 | --- | --- |
 | Rows, by kind | core: 4 stat blocks, Web, Command and any other Fanatic spell core lacks; contract and server: scene `if`, sleepers; content: the pack, the decision card and its reader, pregens, registry records; one run-record row |
-| PRs for Stas | about 12 to 15 (this scope, the design, 2 to 3 core PRs and a pin, the contract PR, 4 to 6 content and server PRs, the run record) |
+| PRs for Stas | about 11 to 14 (this scope, the design, 2 to 3 core PRs and a pin, the contract PR, 4 to 6 content and server PRs, the run record) |
 | Exit runs | one pair; the last pairs cost 18 to 22 USD |
 | Stas at the table | one half, up to 120 minutes: the longest human half so far |
-| Order inside | design, core monsters, pin, contract, pack, cards, exit |
+| Order inside | MAP-13 before the pack; then design, core monsters, pin, contract, pack, cards, exit |
 
 Work that can start before «Камень A» and the registries are done, with no code: the system design, and Zoya's quest brief and problem blocks. Work that waits: registry records (after the registries), the farm's fourth state (after «Камень A»).
 
@@ -90,4 +91,4 @@ None until this scope and the system design are both accepted.
 2. **XP.** After your approval of seven creatures and one Fanatic the pack gives 1425 XP, about 356 a character; fight 1 is just under the Low budget. Options: (a) keep; (b) a second Giant Spider in fight 2 (the pack's fourth), 1050 XP there, 1625 XP in all, eight creatures. Recommended: (a) until a run shows fight 2 is short.
 3. **The design may start now**, ahead of «Камень A», because it needs no code and no merged quest. Recommended: yes, as soon as you say so; it is one review of yours.
 4. **The exit is a pair**, with your half up to two hours. Recommended: yes; this is the pack that owes you a deed you made and met.
-5. **Rule 7 and a third-party CC-BY source.** Rule 7 lists SRD, Foundry fields, 5e-bits and our own text. This pack takes a plot skeleton and one name from a CC-BY 4.0 adventure, with attribution. Options: (a) a short decision record and one line in Rule 7 that allows a CC-BY 4.0 work's ideas and names with attribution, never its text or art; (b) rename the spider and take nothing, so no rule changes. Recommended: (a); the licence page was checked on 2026-11-14 and the name is the quest's hook.
+5. **Rule 7 and a third-party CC-BY source.** Rule 7 lists SRD, Foundry fields, 5e-bits and our own text. This pack takes a plot skeleton and one name from a CC-BY 4.0 adventure, with attribution. Options: (a) a short decision record and one line in Rule 7 that allows a CC-BY 4.0 work's ideas and names with attribution, never its text or art; (b) rename the spider and take nothing, so no rule changes; that also renames the pack id, the `pack_slot` and comment of `barrow_oak` in `worlds/wend/map.json`, this file and the roadmap row. Recommended: (a); the licence page was checked on 2026-11-14 and the name is the quest's hook.
