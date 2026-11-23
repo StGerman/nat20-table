@@ -1,6 +1,6 @@
 # Glass Table (the Mac app): scope
 
-Status: Proposed; accepted on merge. Drafted 2026-11-21, main c1746be, from the system design `docs/design/glass-table-system-design.md` and Yan's plan of the same day (plan page in project files, `demo/glass-table-plan-yan-2026-11-21.md`; quoted in §7). No number until Stas gives one.
+Status: Proposed; accepted on merge. Drafted 2026-11-21, main c1746be, from the system design `docs/design/glass-table-system-design.md` and Yan's plan of the same day (plan page in project files, `demo/glass-table-plan-yan-2026-11-21.md`; quoted in §7). No number until Stas gives one. Amended 2026-11-23 after decision 0093 (§10): the shell is SwiftUI, and the iPhone window comes in.
 Ask: Stas, 2026-11-21 01:11Z, after the one-package answer: «Звучит отлично запланируй с Яном пожалуйста». Order: Stas, 2026-11-21 07:29Z, on the plan's card: Glass Table goes first, before «Камень A» (the plan recommended the other order; §7 gives what that costs).
 
 ## 1. Goal
@@ -13,14 +13,16 @@ Stas opens an app from the Dock, sees the Glass Table he picked, and plays a con
 2. **The seat wire and `WebSeat`.** Schemas with a hash, a WebSocket on 127.0.0.1, `seat-wire.jsonl` in the run folder, resume by `seq`, a leak scan over `seat-wire.jsonl`.
 3. **The page.** The prototype's structure: story, dock in its forms, roll tokens and roll stage, «Где все», «Дорога», «Лист», «Люди», cards with votes, and the moments the prototype draws (reaction, the Narrator's question, surrender, night, level-up, falling to 0, a fallen companion).
 4. **The lobby.** Adventure and character, the saved party (go on, new, or the last journey again), Claude's sign-in state, start. The app always plays with a saved party, kept in the app's own data folder.
-5. **The shell and the package.** One signed and notarised DMG with the shell, the compiled loop, the engine binaries and the content.
-6. **A spike before any of it**, on Stas's Mac (§6).
+5. **The shell and the package.** One signed and notarised DMG with the shell, the compiled loop, the engine binaries and the content. The shell is SwiftUI (§10).
+6. **A spike before any of it**, on Stas's Mac (§6). Its question is now asked of the Swift Mac app (§10).
 7. **Lines for level-up.** A player-facing Russian line for each level-up choice, read by Vera (Lev's finding 14; Stas's answer to question 7). Without them the screen is the one where Vera «нажала бы не думая».
+8. **The iPhone window** (§10). The same shell on Stas's iPhone, as a second window on a table his Mac hosts on the home network.
 
 ## 3. Out
 
 - A second model provider. "Sign in with ChatGPT" has its own Proposed design; a backlog row waits behind it.
-- A native SwiftUI client (decision 0090, Revisit when).
+- A fully native client that writes the page again in Swift (decision 0093, option C).
+- A phone with no Mac; finding the table without a pasted link, pairing and TLS; calling the human back to a locked phone; TestFlight and the App Store; an iPad layout, Android, Windows (`docs/design/swiftui-shell-design.md` §6).
 - Continuing inside a day or a fight. A host crash costs at most the day since the last night's save (design §7).
 - Installing Claude Code for the player. Would Vera get through install alone? No, and this milestone does not change that; it waits on Anthropic's answer (Friends and Family D1).
 - Lev's list beyond what the prototype draws: «Журнал», fight start and end, picking a target by touching it on the yard lens (the dock's follow-up pick is in), time limits, roads off the route. They become rows only when Stas picks them.
@@ -36,8 +38,9 @@ Each row with its lowest layer (decision 0080):
 4. Replay of the scripted fixture and of one bench fight fixture on Playwright's WebKit project; every roll face equals the engine log (Rule 4): test, no model.
 5. A scripted living-world stretch on a recorded saved party shows a card with its votes, a name token and a person's «Помнит» on the page; every `HumanPrompt` kind puts up its dock form; the page's drawn text at each `seq` contains each `seat.jsonl` line and passes the language scan: test, no model.
 6. The DMG builds, is signed and notarised, and starts the bundled loop and server with no checkout, Rust or Node: CI on a hosted macOS arm64 runner (test, no model), then Stas installs it (a person).
-7. Vera (fallback) reads the app's new lines (lobby, sign-in states, stop cards, card votes, the death save, level-up): a person.
+7. Vera (fallback) reads the app's new lines (lobby, sign-in states, stop cards, card votes, the death save, level-up, the shell's own lines): a person.
 8. One pair on one DMG (0043): the all-AI half from its bundled binaries, then Stas in the app, only after the AI half has passed (0065). Audit, leak scan, judge: a full run.
+9. Stas plays *The Silent Mill*, Scene 1 to 6, on his iPhone over Wi-Fi at a table his Mac hosts: a person.
 
 ## 5. Reads already made
 
@@ -47,6 +50,8 @@ Each row with its lowest layer (decision 0080):
 - **Zoya** wrote three candidate lines about the Corrins on 2026-11-21 and **Vera** read them (both in project files, `demo/gui-glass-table-corrins-line-2026-11-21.md`). Zoya's pick, A: «Коррины — невысокий кочевой народ: семьями живут в расписных повозках и латают котлы по всей долине.» Vera on it, verbatim: "Вариант 1: коррины — маленькие кочевники, лудильщики. Картинка у меня сложилась сразу." and "«невысокий». Невысокий для людей или это другой народ? Я бы переспросила, люди ли они вообще." On the line under it in every variant: "«знаете из них» звучит как подстрочник, по-русски так не говорят." Zoya's board found that the packs' `glossary_ru` has no entry for the roadfolk, so the DM may translate the word another way and lose the underline. The line needs a place in the world's data and a field in the player's view of it: an engine contract change under Rule 1, in its own row, and the one exception to "the contract does not change".
 
 ## 6. The spike
+
+Amended 2026-11-23 (§10): the paragraph below is the spike as first written, for a Tauri window. It is not run; the same question is asked of the Swift Mac app (CON-20).
 
 Before any app code: a Tauri window starts the Bun-compiled loop and `nat20-api-server` as bundled binaries, makes one live model call under the hardened runtime (with the JIT entitlement if it needs one), is signed and notarised, and is launched from Finder on Stas's Mac, where the app gets no shell `PATH` and still has to find Claude Code. The report says works or not, item by item. It merges no game code. If Tauri fails with the compiled loop, decision 0090 falls back to Electron before anything was built on it.
 
@@ -92,3 +97,17 @@ Answered by Stas in the prototype thread, 2026-11-21: at 07:46Z, 2 («Где п�
 6. "The same build" for this milestone means the same signed DMG, and the AI half runs from its binaries (exit row 8). Recommended: yes. **Answered: yes.**
 7. Level-up: one small row that writes a player-facing Russian line for each choice, read by Vera (Lev's finding 14)? Recommended: yes; the frame alone ships a screen where the player presses without knowing what. **Answered: yes.**
 8. The Corrins' line: Zoya's A as written (§5)? Vera's one doubt is whether «невысокий» says they are not human; B says «полурослики», a word no player-facing deck text uses today. **Answered: A as written.**
+
+## 10. Amendment, 2026-11-23: a SwiftUI shell, and the iPhone
+
+Decision 0093 and `docs/design/swiftui-shell-design.md` (table #482, merged by Stas on 2026-11-23) replace the Tauri shell with one SwiftUI shell over the same page, on the iPhone and the Mac. Stas's words: 2026-11-22 21:16Z («let's use SwiftUI for iOS. The goal is to run "Silentl Mill" on an emulator or my iPhone next weekend»), 23:12Z («spike прошел успешно и мы готовы к билду на SwiftUI»), and his card of 23:35Z for the Mac. That design's §8 asked where the work sits and recommended this milestone; his merge is the yes.
+
+What this changes here, and nothing else:
+
+- **In 5 and 6.** The shell is SwiftUI, not Tauri. §6's spike as written (a Tauri window) is not run; its question, the compiled loop and the engine started from a signed app launched from Finder with one live model call, is asked of the Swift Mac app and stays open until that app's report. The Apple Developer account and the evening at the Mac it needed are still needed, for that app.
+- **In 8, new.** The iPhone window. It is a window on a table the Mac hosts: the loop, the engine and the models stay on the Mac.
+- **Out.** "A native SwiftUI client (decision 0090, Revisit when)" is replaced by the two lines there now. A fully native client is still out; a shell around the page is in.
+- **Exit row 9, new.** A person, on a real phone. Exit rows 1 to 8 stand; row 6's DMG now holds the Swift Mac app, and row 7's read takes in the lines the shell words itself (the connect screen, no connection, leaving the table).
+- **Would Vera get through this alone?** No, and the amendment does not claim it: the phone needs a table running on a Mac, a link pasted from it, and a build installed from Xcode. It serves Stas.
+
+§7's numbers were priced for the Tauri shell and are not repriced here; the plan for the new rows is in the PR that writes them.
