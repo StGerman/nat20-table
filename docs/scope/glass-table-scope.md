@@ -38,7 +38,7 @@ Each row with its lowest layer (decision 0080):
 4. Replay of the scripted fixture and of one bench fight fixture on Playwright's WebKit project; every roll face equals the engine log (Rule 4): test, no model.
 5. A scripted living-world stretch on a recorded saved party shows a card with its votes, a name token and a person's «Помнит» on the page; every `HumanPrompt` kind puts up its dock form; the page's drawn text at each `seq` contains each `seat.jsonl` line and passes the language scan: test, no model.
 6. The DMG builds, is signed and notarised, and starts the bundled loop and server with no checkout, Rust or Node: CI on a hosted macOS arm64 runner (test, no model), then Stas installs it (a person).
-7. Vera (fallback) reads the app's new lines (lobby, sign-in states, stop cards, card votes, the death save, level-up): a person.
+7. Vera (fallback) reads the app's new lines (lobby, sign-in states, stop cards, card votes, the death save, level-up, the shell's own lines): a person.
 8. One pair on one DMG (0043): the all-AI half from its bundled binaries, then Stas in the app, only after the AI half has passed (0065). Audit, leak scan, judge: a full run.
 9. Stas plays *The Silent Mill*, Scene 1 to 6, on his iPhone over Wi-Fi at a table his Mac hosts: a person.
 
@@ -105,7 +105,7 @@ What this changes here, and nothing else:
 - **In 5 and 6.** The shell is SwiftUI, not Tauri. §6's spike as written (a Tauri window) is not run; its question, the compiled loop and the engine started from a signed app launched from Finder with one live model call, is asked of the Swift Mac app and stays open until that app's report. The Apple Developer account and the evening at the Mac it needed are still needed, for that app.
 - **In 8, new.** The iPhone window. It is a window on a table the Mac hosts: the loop, the engine and the models stay on the Mac.
 - **Out.** "A native SwiftUI client (decision 0090, Revisit when)" is replaced by the two lines there now. A fully native client is still out; a shell around the page is in.
-- **Exit row 9, new.** A person, on a real phone. Exit rows 1 to 8 stand; row 6's DMG now holds the Swift Mac app.
+- **Exit row 9, new.** A person, on a real phone. Exit rows 1 to 8 stand; row 6's DMG now holds the Swift Mac app, and row 7's read takes in the lines the shell words itself (the connect screen, no connection, leaving the table).
 - **Would Vera get through this alone?** No, and the amendment does not claim it: the phone needs a table running on a Mac, a link pasted from it, and a build installed from Xcode. It serves Stas.
 
 §7's numbers were priced for the Tauri shell and are not repriced here; the plan for the new rows is in the PR that writes them.

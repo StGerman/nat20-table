@@ -18,4 +18,4 @@ Check (exit row 6): the DMG builds signed and notarised and starts the bundled l
 
 ## Status
 
-todo. Nothing on main. Stas said go for the milestone 2026-11-21 09:26Z; the Tauri shell this row named is dropped (decision 0093, table #482). Waits on Stas: the paid Apple Developer account (99 USD a year; design §8 question 3 keeps it for the signed Mac app) and the signing secrets in the repository.
+todo. Nothing on main. Stas said go for the milestone 2026-11-21 09:26Z; the Tauri shell this row named is dropped (decision 0093, table #482). Waits on Stas: the paid Apple Developer account (99 USD a year; the SwiftUI shell design §8 question 3 keeps it for the signed Mac app) and the signing secrets in the repository.
