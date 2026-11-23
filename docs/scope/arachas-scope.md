@@ -1,8 +1,8 @@
 # Arachas (the lair under the Barrow Oak): scope
 
-Status: Proposed; accepted when this PR merges. Drafted 2026-11-23 on main f5a036a at Stas's ask («Давай скоуп сейчас»). No number (decision 0085: a milestone gets one in its `milestone.md`).
+Status: Proposed; accepted when this PR merges, except the source and the name Arachas (§2 item 1), which stay conditional on §9 question 5. Drafted 2026-11-23 on main f5a036a at Stas's ask («Давай скоуп сейчас»). No number (decision 0085: a milestone gets one in its `milestone.md`).
 Inputs: the concept, version 2 (<https://claude.ai/artifact/GDdBxPPt4tWC8tL55vcm5y>, copy `/mnt/project-files/demo/arachas-in-wend-concept.md`); Lev's review and Zoya's read of 2026-11-16, 33 items, approved by Stas 2026-11-23 20:15Z (<https://claude.ai/artifact/EFK8DGAun4PCiggVLyUtuF>); `docs/roadmap.md` row "Arachas plus glue"; `docs/scope/dramaturg-mechanism-scope.md` §3 (the shelved inputs); `docs/design/m13-system-design.md` §12 (the debts left to this pack).
-Order (Stas 2026-11-23 20:12Z): Glass Table, Sign in with ChatGPT, People and places registries, «Камень A», then this. `docs/roadmap.md` still says "no spec yet" and has no registries step; Yan updates it at his next pass.
+Order (Stas 2026-11-23 20:12Z): Glass Table, Sign in with ChatGPT, People and places registries, «Камень A», then this. `docs/roadmap.md` still says "no spec yet" and has no registries step; Yan keeps that page (decision 0065) and updates it at his next pass; until then this line is the order.
 
 ## 1. Goal
 
@@ -10,12 +10,12 @@ A third quest on the Wend map, at the Barrow Oak, in which what the party did on
 
 ## 2. In
 
-1. **The pack `lair_of_arachas`** at the map's slot `barrow_oak`: six scenes, two fights, one day and one night on site, about 95 minutes; prose and DM notes in the pack's own text (CC-BY-4.0). The skeleton and the name Arachas come from *The Lair of Arachas* (Hugh Lashbrooke / Ten Acre Games, CC-BY 4.0); no text, map, item card or art of theirs. Rule 7's list of allowed sources does not name a third-party CC-BY adventure, so this needs question 5 answered before any content PR. Attribution in `NOTICE.md` and the pack's `credit`.
+1. **The pack `lair_of_arachas`** at the map's place `barrow_oak`, whose `pack_slot` is `lair_of_arachas`: six scenes, two fights, one day and one night on site, about 95 minutes; prose and DM notes in the pack's own text (CC-BY-4.0). The skeleton and the name Arachas come from *The Lair of Arachas* (Hugh Lashbrooke / Ten Acre Games, CC-BY 4.0); no text, map, item card or art of theirs. Rule 7's list of allowed sources does not name a third-party CC-BY adventure, so this needs §9 question 5 answered before any content PR. Attribution in `NOTICE.md` and the pack's `credit`.
 2. **A scene reads a deed** (the one new system; carrier B of the M13 scope §3): a scene variant chosen by `if`, the way a card is chosen today. The deeds read are those main already writes: `wenna_saved`, `snitt_yielded` or `yard_to_the_end`, the three Wendford answer deeds the M13 design left to this pack (`named_self_for_the_goblin`, `said_the_goblin_should_have_died`, `gave_osric_no_name`), `killed_col`, `killed_dunn`, `col_owes_blades`, `heard_of_the_low_fires`, `robbed_cairn` or `left_the_cairn_stones`, and the three `salt_on_credit` deeds. «Камень A»'s farm deed is read once that quest is on main.
 3. **Four monsters into core** (`demo`), from SRD 5.2.1: Cultist, Cultist Fanatic, Giant Spider (Web), Giant Wolf Spider. Checked on `demo` at ea7eaef: none of the four is there; the Restrained condition and Hold Person are; Command and a Web action were not found. The Fanatic's spell list (Command, Hold Person, and a Spiritual Weapon bonus action as far as recalled) is taken from the SRD 5.2.1 block in the design, not from this line; each spell core lacks is core work. Then the pin.
-4. **Sleepers the engine can count.** A sleeper still in a cocoon when fight 2 ends does not wake; the count writes `all_sleepers_woke` or `a_sleeper_did_not_wake` at the fight's end (decision 0070).
-5. **Two fights at level 3**, seven creatures each, one Cultist Fanatic in the pack: fight 1 on Bald Hill, 575 XP (Hesta or a neighbour as a Cultist, 2 Cultists, 2 Giant Spiders, 2 Giant Wolf Spiders); fight 2 under the oak, 850 XP (Arachas as a Giant Spider, Nell as the Cultist Fanatic, 2 Cultists, 3 Giant Wolf Spiders). Surrender through the conditions the contract has (`standing_at_most`, `hp_fraction_at_most`). Hesta and Nell carry `npc`.
-6. **Six records, each with a reader in the same pack:** `hesta_known`, `party_ambushes`, `back_way`, `nell_doubts`, the promise to the captive, the fight outcomes.
+4. **Sleepers the engine can count.** A sleeper still in a cocoon when fight 2 ends does not wake; the count writes `all_sleepers_woke` or `a_sleeper_did_not_wake` at the fight's end (decision 0070). Scene 6 reads it.
+5. **Two fights at level 3**, seven creatures each, one Cultist Fanatic in the pack: fight 1 on Bald Hill, 575 XP (Hesta or a neighbour as a Cultist, 2 Cultists, 2 Giant Spiders, 2 Giant Wolf Spiders); fight 2 under the oak, 850 XP (Arachas as a Giant Spider, Nell as the Cultist Fanatic, 2 Cultists, 3 Giant Wolf Spiders). If the signal fire was lit, two more Giant Wolf Spiders arrive in round 3 (100 XP, nine creatures); that is the price of a failed scene 4, outside the seven. Surrender through the conditions the contract has (`standing_at_most`, `hp_fraction_at_most`). Hesta and Nell carry `npc`.
+6. **Six records, each with a reader in the same pack:** `hesta_known`, `party_ambushes`, `back_way`, `nell_doubts`, the promise to the captive, the fight outcomes (cultists, Nell, and the sleeper deed of item 4).
 7. **The decision about Nell is a deck card**, with its reader in the same change: a Wendford arrival card on the next contract.
 8. **Level 3 pregens** (`pregens/*_l3.json`) for a party that starts here; a roster below level 3 is offered them.
 9. **People and places as registry records:** Nell, Hesta, the Bald Hill brothers, the three sleepers, Gwyn's scene; the Highsteads fold gate, the Bald Hill farm, the chamber under the oak. Bald Hill stays a scene on the 2-mile path, not a map place.
@@ -46,7 +46,7 @@ Each row names its lowest layer (decision 0080).
 6. One pair on one build (decision 0043), all AI first, then Stas: each plays scenes 1 to 6 in 120 minutes or less; audit, leak scan and narration judge pass.
 7. A level 2 roster is offered the level 3 pregens, and a level 3 roster is not: test, no model.
 8. `pack:check` shows a reader for each of the six records of §2 item 6, and a registry record for each person and place of item 9: test, no model.
-9. Each of the four monsters has a core test in `core/tests/` against its SRD block, Web applying Restrained among them: core test.
+9. Each of the four monsters has a core test in `core/tests/` against its SRD block, Web applying Restrained among them, and each Fanatic spell core lacks: core test.
 10. In Stas's half, the human's character writes one deed in scenes 1 to 4 and hears it read back in scene 5 or 6 (the M13 design's §12 item 6). Lev's `trace` of that run shows where.
 
 ## 5. Reads already made
@@ -87,7 +87,7 @@ None until this scope and the system design are both accepted.
 ## 9. Questions for Stas
 
 1. **What "plus glue" means here.** This scope takes one shelved input, "a scene reads a deed", and leaves the other seven on the shelf (§3 lists them). Recommended: yes; each one the player would not feel delays the pair.
-2. **XP.** After your approval of seven creatures and one Fanatic the pack gives 1425 XP, about 356 a character; fight 1 is just under the Low budget. Options: (a) keep; (b) a second Giant Spider in fight 2 (the pack's third), 1050 XP there, 1625 XP in all, eight creatures. Recommended: (a) until a run shows fight 2 is short.
+2. **XP.** After your approval of seven creatures and one Fanatic the pack gives 1425 XP, about 356 a character; fight 1 is just under the Low budget. Options: (a) keep; (b) a second Giant Spider in fight 2 (the pack's fourth), 1050 XP there, 1625 XP in all, eight creatures. Recommended: (a) until a run shows fight 2 is short.
 3. **The design may start now**, ahead of «Камень A», because it needs no code and no merged quest. Recommended: yes, as soon as you say so; it is one review of yours.
 4. **The exit is a pair**, with your half up to two hours. Recommended: yes; this is the pack that owes you a deed you made and met.
 5. **Rule 7 and a third-party CC-BY source.** Rule 7 lists SRD, Foundry fields, 5e-bits and our own text. This pack takes a plot skeleton and one name from a CC-BY 4.0 adventure, with attribution. Options: (a) a short decision record and one line in Rule 7 that allows a CC-BY 4.0 work's ideas and names with attribution, never its text or art; (b) rename the spider and take nothing, so no rule changes. Recommended: (a); the licence page was checked on 2026-11-14 and the name is the quest's hook.
