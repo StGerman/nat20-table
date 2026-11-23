@@ -7,6 +7,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { appendFileSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
+import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Handle } from "@nat20-table/engine-client";
@@ -15,7 +16,7 @@ import type { SeatNames } from "../table/seat-lines.ts";
 import type { HumanPrompt, PlayerIntent, Seat, SuggestUpdate, TableEvent } from "../table/types.ts";
 import { UI_WORDS } from "../table/words.ts";
 import { InkSeat } from "../ui/ink-seat.ts";
-import { HostMessageSchema, PageMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "./schema.ts";
+import { CLOSE_REPLACED, HostMessageSchema, PageMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "./schema.ts";
 
 /** The file of everything the window was sent: one `{seq, seat, event}` per event, one `{seat, message}` per other message (an ask, a preview, suggestions), in order. A resend on resume is not written again. */
 export const SEAT_WIRE_JSONL = "seat-wire.jsonl";
@@ -42,6 +43,12 @@ export interface WebSeatOptions {
   port?: number;
   /** Origins allowed besides none; default the shell's. */
   origins?: readonly string[];
+  /**
+   * The address to listen on; default 127.0.0.1, this machine only. `0.0.0.0` lets a phone on the
+   * same network sit at the table (decision 0093). The token is then the only guard and it crosses
+   * that network unencrypted, so a caller that widens this allows no origin at all (`origins: []`).
+   */
+  host?: string;
 }
 
 interface OpenAsk {
@@ -82,11 +89,11 @@ export class WebSeat implements Seat {
     });
   }
 
-  /** Starts listening on 127.0.0.1 and gives the port and the token the shell opens the page with. */
+  /** Starts listening (on 127.0.0.1 unless `host` says otherwise) and gives the port and the token a window connects with. */
   listen(): Promise<{ port: number; token: string }> {
     const origins = this.options.origins ?? SHELL_ORIGINS;
     const server = new WebSocketServer({
-      host: "127.0.0.1",
+      host: this.options.host ?? "127.0.0.1",
       port: this.options.port ?? 0,
       maxPayload: 64 * 1024,
       verifyClient: ({ req, origin }: { req: IncomingMessage; origin: string }) => {
@@ -189,8 +196,15 @@ export class WebSeat implements Seat {
   // --- The socket -------------------------------------------------------------------------------
 
   private connected(ws: WebSocket): void {
-    // A window with the token replaces the one before it: a socket left half open by a sleeping laptop never closes on its own.
-    if (this.client && this.client !== ws) this.client.terminate();
+    // A window with the token replaces the one before it. The old one is told so by its close code,
+    // so it stops asking for the seat: two live windows would otherwise take it from each other
+    // every second. A socket left half open by a sleeping laptop never answers a close, so it is
+    // cut after a moment.
+    const before = this.client;
+    if (before && before !== ws) {
+      before.close(CLOSE_REPLACED, "replaced");
+      setTimeout(() => before.terminate(), 1000).unref();
+    }
     this.client = ws;
     this.send({ type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: this.options.run, language: this.options.language ?? "en", handle: this.handle, title: this.options.title ?? "", ...(this.options.party ? { names: Object.fromEntries(this.options.party.map((h) => [h, this.ink.named(h)])) } : {}) });
     // A window that was replaced may still deliver a frame before it closes: only the current one is heard.
@@ -263,6 +277,14 @@ export class WebSeat implements Seat {
     HostMessageSchema.parse(message);
     client.send(JSON.stringify(message));
   }
+}
+
+/** This machine's IPv4 addresses on the networks it is on, for the link a phone connects with. */
+export function lanAddresses(): string[] {
+  return Object.values(networkInterfaces())
+    .flatMap((rows) => rows ?? [])
+    .filter((row) => row.family === "IPv4" && !row.internal)
+    .map((row) => row.address);
 }
 
 function sameToken(given: string, token: string): boolean {

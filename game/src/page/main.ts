@@ -5,14 +5,15 @@
 // built from another wire.
 import { createElement as h, useEffect, useReducer, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { HostMessageSchema, type HostMessage, type PageMessage } from "../seat-wire/messages.ts";
+import { CLOSE_REPLACED, HostMessageSchema, type HostMessage, type PageMessage } from "../seat-wire/messages.ts";
+import { UI_WORDS } from "../table/words.ts";
 import type { PlayerIntent } from "../table/types.ts";
 import { App } from "./app.ts";
-import { answered, EMPTY, reduce, settle, type Built, type PageView } from "./reduce.ts";
+import { answered, EMPTY, reduce, replaced, settle, type Built, type PageView } from "./reduce.ts";
 
 declare const __WIRE__: Built;
 
-type Action = { type: "host"; message: HostMessage } | { type: "settled" } | { type: "answered" };
+type Action = { type: "host"; message: HostMessage } | { type: "settled" } | { type: "answered" } | { type: "replaced" };
 
 function step(view: PageView, action: Action): PageView {
   switch (action.type) {
@@ -22,6 +23,8 @@ function step(view: PageView, action: Action): PageView {
       return settle(view);
     case "answered":
       return answered(view);
+    case "replaced":
+      return replaced(view, UI_WORDS[view.hello?.language ?? "en"].elsewhere);
   }
 }
 
@@ -89,8 +92,13 @@ function Page(): ReturnType<typeof h> {
         const parsed = HostMessageSchema.safeParse(JSON.parse(String(e.data)));
         if (parsed.success) dispatch({ type: "host", message: parsed.data });
       };
-      // A dropped socket comes back and asks for what it missed.
-      ws.onclose = () => !closed && setTimeout(open, 1000);
+      // A dropped socket comes back and asks for what it missed. A window whose seat another window
+      // took does not: the two would take the seat from each other every second.
+      ws.onclose = (e) => {
+        if (closed) return;
+        if (e.code === CLOSE_REPLACED) dispatch({ type: "replaced" });
+        else setTimeout(open, 1000);
+      };
     };
     open();
     return () => {

@@ -51,6 +51,8 @@ export const SETTINGS = {
   dm: { kind: "string", default: "model", allowed: ["model", "scripted"] },
   players: { kind: "string", default: "model", allowed: ["model", "scripted"] },
   seat: { kind: "string", default: "scripted", allowed: ["scripted", "ink", "web", "ai"] },
+  /** With `--seat web`: no browser window. The seat wire listens on the home network and the run prints the link the app on a phone connects with (decision 0093). The link's token is the only guard there and is not encrypted: for a network you trust. */
+  "seat-lan": { kind: "bool", default: false },
   /** The character the human plays (AGT-35), by handle: skips the pick list. The pack's seat when unset. */
   play: { kind: "string" },
   out: { kind: "string", default: path.join(REPO, "runs") },

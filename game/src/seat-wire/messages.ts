@@ -10,6 +10,13 @@ import { z } from "zod";
 /** The wire's version: bumped on any change to a message, with the hash. */
 export const WIRE_VERSION = 1;
 
+/**
+ * The WebSocket close code a window gets when another window with the token took its seat (decision
+ * 0093: one seat, one window). It is the socket's own frame, not a wire message: a window closed
+ * with it stops asking for the seat, where any other close makes it come back and resume.
+ */
+export const CLOSE_REPLACED = 4001;
+
 const COMMANDS = ["sheet", "where", "map", "options", "log", "usage", "pause", "suggest", "quit"] as const;
 
 /** What the human sends at an open ask: `PlayerIntent` (game/src/table/types.ts). */
