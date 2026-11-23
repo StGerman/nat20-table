@@ -23,12 +23,14 @@ The inventory is `/mnt/project-files/assets/npc-registry.md` (2026-11-21): 22 fa
 
 Not written yet. It comes with the scope and the system design, each row naming its lowest layer (decision 0080).
 
-# Open before the design
+# Answered before the design (Stas, 2026-11-23)
 
-1. Houses on the map, or only ground and places.
-2. The woodpile and the trough in the mill yard: drawn flat, or given geometry (MON-10).
-3. N, the number of prepared places.
-4. A player fact for "what we learned in this place".
+1. Houses: wanted, but only with pathfinding and a way in, so they come with geometry (milestone «Walls and cover») and doors (milestone «Rooms you can enter»).
+2. Mill-yard cover: real geometry, so a character can hide behind the woodpile or the fence, in «Walls and cover».
+3. N = 8 prepared places, as proposed.
+4. The player fact for "what we learned in this place" waits for this milestone's design.
+
+**Layout format, so the next two milestones add no rework.** Every prop in a place's layout carries `solid`, `cover` (`half`, `three_quarters`, `total` or none) and `height_ft` from the first commit, and a door anchor carries `leads_to` (a place id). This milestone fills them in and uses none of them. The page draws a solid prop only when the place has a mesh, so houses and fences appear by themselves once «Walls and cover» builds the mesh from the same file.
 
 # Tasks
 
