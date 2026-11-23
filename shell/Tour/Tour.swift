@@ -54,7 +54,7 @@ final class Tour: XCTestCase {
 
         // The human's own words, typed in the dock. A sheet may stand over it (the recording answers
         // a /where here): it is drawn down first, as a thumb would.
-        let line = app.buttons["dock-line"]
+        let line = app.buttons["dock-line"].firstMatch
         if line.waitForExistence(timeout: 20) {
             for _ in 0..<3 where !line.isHittable {
                 picture(app, "06-a-sheet-over-the-dock")
@@ -105,17 +105,17 @@ final class Tour: XCTestCase {
         let menu = app.buttons["menu"].firstMatch
         if menu.waitForExistence(timeout: 10) {
             menu.tap()
-            let leave = app.buttons["menu-leave"]
+            let leave = app.buttons["menu-leave"].firstMatch
             if leave.waitForExistence(timeout: 10) {
                 leave.tap()
                 pause(2)
                 picture(app, "14-leaving")
-                let named = app.buttons["leave-yes"]
+                let named = app.buttons["leave-yes"].firstMatch
                 let yes = named.exists ? named : app.buttons["Встать из-за стола"].firstMatch
                 if yes.waitForExistence(timeout: 10) { yes.tap() }
             }
         }
-        XCTAssertTrue(app.buttons["sit"].waitForExistence(timeout: 20), "leaving the table shows the link screen")
+        XCTAssertTrue(app.buttons["sit"].firstMatch.waitForExistence(timeout: 20), "leaving the table shows the link screen")
         let kept = app.descendants(matching: .any).matching(identifier: "link").firstMatch
         XCTAssertEqual(kept.value as? String, link, "the link of the table that was left stays in the field")
         picture(app, "15-the-link-is-kept")
@@ -167,7 +167,7 @@ final class Tour: XCTestCase {
 
         // The host's own second window takes the seat (ci/replay-host.ts `take-seat`): the shell
         // says so and does not take it back until asked.
-        let here = app.buttons["play-here"]
+        let here = app.buttons["play-here"].firstMatch
         XCTAssertTrue(here.waitForExistence(timeout: 60), "the shell said the game is open elsewhere")
         pause(4)
         XCTAssertEqual(mark(app)?.link, "replaced", "a replaced shell does not ask for the seat again by itself")
@@ -215,14 +215,14 @@ final class Tour: XCTestCase {
         switch now.control {
         case "answers":
             // The second answer on offer: it has a control of its own.
-            return tap(app, app.buttons["react-answer-2"])
+            return tap(app, app.buttons["react-answer-2"].firstMatch)
         case "reaction":
-            return tap(app, app.buttons["react-yes"])
+            return tap(app, app.buttons["react-yes"].firstMatch)
         case "question":
             return write(app, app.textFields["sheet-line"], "Tie its hands and ask who sent it")
         case "paused":
             // The pause is lifted from the menu, as a typed /pause would.
-            return tap(app, app.buttons["menu"].firstMatch) && tap(app, app.buttons["menu-pause"])
+            return tap(app, app.buttons["menu"].firstMatch) && tap(app, app.buttons["menu-pause"].firstMatch)
         case "card":
             return tap(app, first("choice-"))
         case "rows":
@@ -231,7 +231,7 @@ final class Tour: XCTestCase {
             return tap(app, first("chip-"))
         default:
             // The human's own words: the dock's line opens a line over the keyboard.
-            return tap(app, app.buttons["dock-line"]) && write(app, app.textFields["type-line"], "I look around")
+            return tap(app, app.buttons["dock-line"].firstMatch) && write(app, app.textFields["type-line"], "I look around")
         }
     }
 

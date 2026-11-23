@@ -68,7 +68,10 @@ struct DockBar: View {
                         Button {
                             shell.opened = .moves
                         } label: {
+                            // A finger's width, whatever the picture's size.
                             Image(systemName: "list.bullet").font(.title3)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                         .accessibilityLabel(dock.more ?? dock.placeholder)
                         .accessibilityIdentifier("dock-list")
@@ -198,7 +201,8 @@ struct Chips: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(move.label).font(.subheadline.weight(.semibold)).lineLimit(1)
                 if let cost = move.cost {
-                    Text(cost).font(.caption2).foregroundStyle(.secondary)
+                    // In the label's own colour: the grey of a second line is too faint on glass.
+                    Text(cost).font(.caption2)
                 }
             }
             .padding(.horizontal, 14)
