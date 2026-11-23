@@ -9,7 +9,7 @@ state: open
 
 A house is worth drawing when you can go in. A door anchor carries `leads_to`, another place in the registry, with its own layout and mesh. Going through it loads that place, the way a scene exit loads the next scene. An interior is a place of its own, never a second storey inside one mesh, so this milestone adds places and links and changes neither the registry format nor the geometry.
 
-First interior: the Wendford alehouse. `worlds/wend/map.json` already prices a room there (`inn_cp`, room and board per person per night). Taking a room spends that money through the ledger and passes one night of the living world. What a night gives under the rules (a rest or not) is decided in the design; long rests are outside the Demo Run scope.
+First interior: the Wendford alehouse. Going in changes the scene, never the caravan's place on the world map: the interior's registry entry has `in: wendford`, and the world position stays `wendford`. So the room for the night is the `rest_night{where: inn}` that already exists (protocol §4.12): it charges the `inn_cp` of `wendford` in `worlds/wend/map.json` through the ledger and ends the day. This milestone gives that rest a room to happen in; it adds no new price, command or rest rule.
 
 # Exit criterion
 
