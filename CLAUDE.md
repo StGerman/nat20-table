@@ -135,7 +135,7 @@ text UI ⇄ game loop ⇄ AI DM agent, AI player agents
 
 - Dependencies point down only. `nat20-api-contract` depends on serde, serde_json and schemars and nothing else. `nat20_core` depends on nothing of ours. Nothing depends on `game/`.
 - One engine process per game session. The core registry is a process-wide global.
-- The text UI reaches the game loop only through one boundary: player-facing events out, player intents in. A future web or mobile client replaces the UI behind that boundary over its own network contract (protobuf + Connect or AG-UI, chosen when a real client is planned; `docs/decisions/0016-client-contract-deferred.md`). No client ever talks to the engine.
+- The text UI reaches the game loop only through one boundary: player-facing events out, player intents in. The Glass Table page sits behind that boundary on the seat wire (decision 0090), inside a SwiftUI shell on the iPhone and the Mac that holds no game logic (decision 0093). A remote seat, a second human or a client in another language reopens the wire (protobuf + Connect or AG-UI; `docs/decisions/0016-client-contract-deferred.md`). No client ever talks to the engine.
 
 ## Rule 1: contract first
 
