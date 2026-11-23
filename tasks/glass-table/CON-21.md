@@ -17,3 +17,5 @@ Check (exit row 6): the DMG builds signed and notarised and starts the bundled l
 ## Status
 
 todo. No code until Stas says go (the talk moved to December with no date, Stas 2026-11-21 08:36Z). Waits on Stas for the signing secrets in the repository.
+
+2026-11-23: on hold. Decision 0093 (Proposed, table #482) replaces the Tauri shell with a SwiftUI one; if it is accepted, this row is rewritten for a Swift Mac app (`docs/design/swiftui-shell-design.md` §4, PRs 6 and 7). Nobody starts the Tauri shell meanwhile.
