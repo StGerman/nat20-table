@@ -1,6 +1,6 @@
 # The contract line that bites: system design
 
-Status: Proposed. Lev Neiman, 2026-11-23, branch `table/contract-line-that-bites`, main 958f389. No scope: the goals are Stas's decisions of 2026-11-23 (no literacy field, no reading roll; every contract is read aloud to the last line before anyone signs). For the next contract written; the two ready packs keep their terms. Author's read, no verdict on itself. Revised once on Zoya's and Vera's reads (§9); neither has read this revision.
+Status: Accepted by Stas on 2026-11-23 («Ок по всем»: Lev's recommendation on all three questions in §10). Lev Neiman, 2026-11-23, branch `table/contract-line-that-bites`, main 958f389. No scope: the goals are Stas's decisions of 2026-11-23 (no literacy field, no reading roll; every contract is read aloud to the last line before anyone signs). For the next contract written; the two ready packs keep their terms. Author's read, no verdict on itself. Revised once on Zoya's and Vera's reads (§9); neither has read this revision.
 
 ## 1. Summary
 
@@ -103,6 +103,8 @@ Not taken:
 - Pity at the gate, and the ledger tone (Vera): the seat's line is the ledger; the Narrator and the companions answer it.
 
 ## 10. Decisions for Stas
+
+Stas, 2026-11-23: «Ок по всем». 1: after `settle`. 2: party order (Ilsa), with amendment B. 3: yes, amendment A.
 
 1. **A signing card with a way to refuse: now, or after `settle`?** Now costs a contract change of its own on top of `settle`. I recommend after: no card is better than a corridor.
 2. **Who goes short?** The last name in party order: Ilsa. I first put the human last; party order also sets rations, anchors and odd coppers, so I now recommend today's order, with Zoya's amendment B: a shared cost falls on a name the table heard before the first choice that can bring it on. Cost to the player: the day comes off a companion's pay. The other way: "the human's seat last".
