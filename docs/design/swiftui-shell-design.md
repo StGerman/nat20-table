@@ -2,7 +2,7 @@
 
 - **Status:** Proposed; accepted on merge
 - **Date:** 2026-11-22, main 958f389
-- **Decision:** `docs/decisions/0092-swiftui-shell-over-the-page.md` (Proposed)
+- **Decision:** `docs/decisions/0093-swiftui-shell-over-the-page.md` (Proposed)
 - **Amends:** `docs/design/glass-table-system-design.md` §3 (the shell), §8 (the package), §11 (PRs 3 and 9). Everything else there stands: the seat wire, `WebSeat`, the page, the lobby, the tests.
 - **Asked by:** Stas, 2026-11-22 21:16Z («let's use SwiftUI for iOS. The goal is to run "Silentl Mill" on an emulator or my iPhone next weekend») and 23:12Z («spike прошел успешно и мы готовы к билду на SwiftUI»)
 - **Evidence:** the spike on draft PR table #480, which is not merged. This design says what of it moves to main, in which PRs, and what checks each.
@@ -58,7 +58,7 @@ Order by dependency. Rows and sizes are Yan's, written only after this is accept
 
 | # | PR | Gate |
 |---|---|---|
-| 1 | This design and decision 0092 | Stas accepts |
+| 1 | This design and decision 0093 | Stas accepts |
 | 2 | Rows: CON-20 re-pointed from Tauri to the Swift Mac app (its question stays open until PR 7's report), CON-21 rewritten, the rows below; the Glass Table scope amended (Decisions for Stas, 1) | 1 is on main |
 | 3 | The page's native mode and the chrome state; a wire that holds every kind of ask; a reaction that offers more than one answer shows each | every kind of ask is answered through the shell's entry points on WebKit, and the posted intent passes the wire schema; the page in a browser is unchanged |
 | 4 | The seat's listen address and `--seat-lan`; a replaced window is closed with its own code; the host keeps the Mac awake | the seat-wire tests pass |
@@ -117,5 +117,5 @@ Decided: the Mac takes the same SwiftUI shell and Tauri is dropped (Stas, card i
 
 ## 9. Sources
 
-- Decision 0092; decision 0090; `docs/design/glass-table-system-design.md`; `docs/scope/glass-table-scope.md`.
+- Decision 0093; decision 0090; `docs/design/glass-table-system-design.md`; `docs/scope/glass-table-scope.md`.
 - Draft PR table #480 and its `spike-hybrid-shell` runs of 2026-11-22.

@@ -1,4 +1,4 @@
-# 0092. The client's shell is SwiftUI over the same page, on the iPhone and the Mac
+# 0093. The client's shell is SwiftUI over the same page, on the iPhone and the Mac
 
 - **Status:** Proposed
 - **Date:** 2026-11-22
