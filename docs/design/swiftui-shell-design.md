@@ -10,7 +10,7 @@
 
 ## 1. Summary
 
-The window around the page becomes a small SwiftUI program, the same one on the iPhone and the Mac. The page stays the content and the only game logic. The seat wire does not change. Nothing here touches the engine, the contract crate, the loop or the Rule 3 projection.
+The window around the page becomes a small SwiftUI program, the same one on the iPhone and the Mac. The page stays the content and the only game logic. The seat wire's messages do not change: the ping and the notice to a replaced window are the WebSocket's own frames. Nothing here touches the engine, the contract crate, the loop or the Rule 3 projection.
 
 Would Vera get through this alone? Not yet, and this design does not claim it: the phone needs a table running on a Mac and a link pasted from it, and the phone build is installed from Xcode. It serves Stas until the Mac app starts the table itself and the phone finds it without a link (§6).
 
@@ -41,7 +41,7 @@ Would Vera get through this alone? Not yet, and this design does not claim it: t
 | Swift holds no game logic | the shell sends only what the page posted, its own `resume` and a ping; it words nothing the seat already words; its own lines follow the table's language | test, no model: a check over what the shell sent in the simulator test |
 | A press is not lost | the shell pings; a socket found dead comes back and the open ask is offered again; a press that never reached the host is not shown as answered | test, no model: the simulator test drops the socket between a press and its send |
 | The story survives a drop | resume asks from the page's own `seq`; a page that was reloaded is fed the run from 0 | test, no model: the simulator test drops the socket and reloads a page |
-| One seat, one window | a window that takes the seat tells the one before it, which stops asking for it | test, no model (`game/test/seat-wire.test.ts`) |
+| One seat, one window | the seat closes the window it replaces with a WebSocket close code that says so, and that window stops asking for the seat; no wire message is added | test, no model (`game/test/seat-wire.test.ts`) |
 | A seat on the home network takes no browser | no origin is let in off the loopback address | test, no model (`game/test/seat-wire.test.ts`) |
 | Rule 3 | the shell receives only what the page received | nothing new to test: the leak scan over `seat-wire.jsonl` covers every line sent |
 | Rule 4 | the die shows only the engine's number: the roll stage stays in the page | existing replay tests |
@@ -61,10 +61,10 @@ Order by dependency. Rows and sizes are Yan's, written only after this is accept
 | 1 | This design and decision 0092 | Stas accepts |
 | 2 | Rows: CON-20 re-pointed from Tauri to the Swift Mac app (its question stays open until PR 7's report), CON-21 rewritten, the rows below; the Glass Table scope amended (Decisions for Stas, 1) | 1 is on main |
 | 3 | The page's native mode and the chrome state; a wire that holds every kind of ask; a reaction that offers more than one answer shows each | every kind of ask is answered through the shell's entry points on WebKit, and the posted intent passes the wire schema; the page in a browser is unchanged |
-| 4 | The seat's listen address and `--seat-lan`; a replaced window is told; the host keeps the Mac awake | the seat-wire tests pass |
+| 4 | The seat's listen address and `--seat-lan`; a replaced window is closed with its own code; the host keeps the Mac awake | the seat-wire tests pass |
 | 5 | The shell for the iPhone, its CI job on a hosted macOS runner, and the UI test: every kind of ask, a dropped socket, a reloaded page, only the page's lines sent | the job is green on the simulator; Vera on the shell's own lines |
 | 6 | The same shell for the Mac: a window, a menu bar command and key for every dock action | a UI test on the runner answers an ask by each menu command and its key |
-| 7 | The Mac app starts the table: the compiled loop and the engine as bundled binaries, signed (what CON-20 asked of Tauri, and CON-21's package) | a report from Stas's Mac, then the DMG of exit row 6 |
+| 7 | The Mac app starts the table: the compiled loop and the engine as bundled binaries, signed (what CON-20 asked of Tauri, and CON-21's package) | a report from Stas's Mac, then the DMG of the Glass Table exit row 6 |
 | 8 | Stas's iPhone: first ten minutes at a recorded table over Wi-Fi with a lock and unlock, then *The Silent Mill* | a person; recorded in the task |
 
 PRs 3 to 5 are the spike's code, reviewed and with what the spike skipped (§5). The ten-minute half of PR 8 can happen on the spike branch before 3 to 5 land: it needs nothing from main, it fails sooner than a two-hour session would, and its result decides whether they land at all.
