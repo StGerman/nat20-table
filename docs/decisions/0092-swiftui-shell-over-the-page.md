@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-22
-- **Decided by:** Stas, project chat: 2026-11-22 21:16Z («let's use SwiftUI for iOS»), and 23:12Z («spike прошел успешно и мы готовы к билду на SwiftUI») after running the spike on his Mac. The hybrid shape and the Mac half are Claude's proposal in `docs/design/swiftui-shell-design.md`; accepted on merge
+- **Decided by:** Stas, project chat: 2026-11-22 21:16Z («let's use SwiftUI for iOS»), and 23:12Z («spike прошел успешно и мы готовы к билду на SwiftUI») after running the spike on his Mac; the Mac on the same shell, his card in the thread, 23:35Z. The hybrid shape (a shell over the page, not a native rewrite) is Claude's proposal in `docs/design/swiftui-shell-design.md`; accepted on merge
 
 ## Context
 
@@ -11,11 +11,13 @@ Decision 0090 put the first client in a Tauri shell on the Mac and rejected a na
 Facts checked by the spike on draft PR table #480 (never merged; its branch is the evidence):
 
 - A hosted macOS runner builds a Swift app for the simulator, and a cloud thread reads what it drew: screenshots, and a video of a UI test pressing through a live table. The first of 0090's three facts no longer holds. A round takes about 20 minutes, most of it the simulator's first boot.
-- A SwiftUI shell can draw every control (tab bar, dock, move chips, sheets) in the system's own material while the page stays the only game logic: the page's reducer says what the controls show, the shell draws that and reports a press, and the page builds the intent. Swift holds no game rule and builds no message.
-- The shell's own WebSocket plays a table over the seat wire of 0090 unchanged, with resume by `seq` after a drop. A seat opened to the home network takes a phone by a pasted link.
+- A SwiftUI shell can draw every control (tab bar, dock, move chips, sheets) in the system's own material while the page stays the only game logic: the page's reducer says what the controls show, the shell draws that and reports a press, and the page builds the intent. Swift holds no game rule and builds no intent; the one message it writes itself is `resume`.
+- The shell's own WebSocket plays a table over the seat wire of 0090 unchanged: every kind of ask the test wires hold was answered across it on a simulator. A seat opened to the home network takes a client by a pasted link.
 - It builds on Xcode 26.6 and on Xcode 27.1 in CI, and Stas ran it in the simulator on Xcode 27.2.
 
-Not checked: a build on a real phone, the socket over Wi-Fi, the same shell built for macOS, and a Mac app that starts the game loop and the engine (the question CON-20 asked of Tauri).
+Not checked: a build on a real phone, the socket over Wi-Fi, resume after a dropped socket (the shell was seen to ask for the table again, not to lose nothing), the same shell built for macOS, and a Mac app that starts the game loop and the engine (the question CON-20 asked of Tauri).
+
+0090 said to revisit the wire, not the shell, when a mobile client was planned (its option E, as 0016 foresaw), and CLAUDE.md's Architecture gave such a client its own network contract. That trigger has fired. This record answers it: the wire stays as it is, because this phone is a second window on the same home network, in the same language as the page, for the one human already at the table. Nothing E offers is used by that.
 
 ## Options
 
@@ -44,14 +46,15 @@ Not checked: a build on a real phone, the socket over Wi-Fi, the same shell buil
 
 ## Decision
 
-B. The spike removed the reason 0090 gave against Swift, and a shell over the page costs one small Swift program where C costs the client twice. One shell for both devices beats D on upkeep. 0090's wire, `WebSeat`, the page and its tests all stand; this record replaces only its choice of shell. The Mac half of B is Claude's recommendation and is the one open choice (design, Decisions for Stas, 1): if the shell does not hold on macOS, the Mac falls back to D.
+B. The spike removed the reason 0090 gave against Swift, and a shell over the page costs one small Swift program where C costs the client twice. One shell for both devices beats D on upkeep, and Stas chose it for the Mac. 0090's wire, `WebSeat`, the page and its tests all stand; this record replaces only its choice of shell. If the shell does not hold on macOS, the Mac falls back to D.
 
 ## Consequences
 
-- The Tauri shell is not built. CON-20 closes as `wont-do` and CON-21 is rewritten for a Swift Mac app; what CON-20 was to check (the compiled loop and the engine started from a signed app launched from Finder) is checked on that app instead. The rows change only after this record is accepted.
+- The Tauri shell is not built. CON-20's question (the compiled loop and the engine started from a signed app launched from Finder) is asked of the Swift Mac app instead and stays open until that app answers it; CON-21 is rewritten for it. The rows change only after this record is accepted.
 - The page gains a native mode: it draws content only and tells the shell what its controls show. That state is plain data, tested with no browser and no Mac.
 - The shell is a new top-level part of this repo with its own CI job on a hosted macOS runner, off the `ci-ok` gate until it has been stable for a milestone. No Xcode project is committed; it is generated.
-- The shell must stay free of game logic: no rule, no intent built in Swift, no text of its own that the seat already words. A line the shell does word itself (no connection, the connect screen) is player-facing and goes to Vera.
+- The shell must stay free of game logic: no rule, no intent built in Swift, no text of its own that the seat already words. A test reads what the shell sent and fails on any line the page did not post, `resume` and a ping apart. A line the shell does word itself (no connection, the connect screen) is player-facing and goes to Vera.
+- CLAUDE.md's Architecture said a mobile client would get its own network contract. It now says what this record decides.
 - A seat can listen beyond the loopback address. There the link's token is the only guard and crosses the network unencrypted, so that mode lets in no browser origin. It is fit for Stas's home network. A pairing step and TLS come before anyone outside the project plays on a phone.
 - The phone is a window, not the game: the loop, the engine and the models still run on a Mac. A phone with no Mac is a different product and is not planned here.
 - The floor is iOS 26 and macOS 26, where SwiftUI's own web view and the glass material exist.
