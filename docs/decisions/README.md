@@ -98,6 +98,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0089](0089-card-pick-fight-first.md) | The DM picks a card that can come to a fight first, then continuity, then the clearest problem; prompt only | Accepted | 2026-11-18 | Stas |
 | [0090](0090-local-web-client-in-a-shell.md) | The first client is a local web page in a Tauri shell, on our own JSON seat wire over a local WebSocket; settles the deferred part of 0016 for a local client | Accepted, shell superseded by 0093 | 2026-11-21 | Claude proposed; Stas on merge |
 | [0091](0091-table-moves-to-chatgpt.md) | The table moves to ChatGPT through Sign in with ChatGPT, the Narrator on gpt-6.1-terra; Claude stays only in the judge and analysis | Proposed | 2026-11-21 | Stas (thread); on merge |
+| [0092](0092-fine-print-and-the-undersigned.md) | The game is Fine Print / «Мелкий шрифт», the party's company is the Undersigned / «Нижеподписавшиеся»; no literacy field and no roll to read a contract | Proposed | 2026-11-23 | Stas (thread, card); on merge |
 | [0093](0093-swiftui-shell-over-the-page.md) | The client's shell is SwiftUI over the same page, on the iPhone and the Mac; the page stays the only game logic; replaces 0090's Tauri shell | Proposed | 2026-11-22 | Stas (project chat, card); the hybrid shape on merge |
 
 ## Open questions to watch

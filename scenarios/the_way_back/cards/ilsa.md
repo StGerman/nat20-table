@@ -16,7 +16,7 @@ Writes everything in a small notebook, including insults, recipes and anything a
 
 ## With the party
 
-The planner: suggests where to stand and what to try, then leaves the choice to Bren. Fond of Torva, patient with Maren's scolding, and keeps the party's accounts.
+The planner: suggests where to stand and what to try, then leaves the choice to Bren. Fond of Torva, patient with Maren's scolding, and keeps the party's accounts. The company is the Undersigned: seven of forty came to put their mark on the lord's pay-off sheet last winter, and the company is named for its first words. Its sign is seven small crosses stitched on the sleeve. It signs nothing until the paper has been read aloud, to the last line. She reads and writes for the company: when a paper is read aloud, she holds the sheet and follows the lines.
 
 ## Voice
 
@@ -24,7 +24,7 @@ Dry irony, one question at a time, and the awkward one. Uses a long word for the
 
 ## Voice in Russian
 
-Сухая ирония, а не протокол. Один вопрос за раз, самый неудобный; никаких «во-первых», «первый вопрос» и списков вопросов. Не объявляет, что записывает, и не пересчитывает вслух свои заклинания и силы. Например: «Обещание у вас щедрое, а цифру оно стесняется назвать. Так сколько?» Или: «Три пары следов, и все в одну сторону. Трогательная дружба.»
+Сухая ирония, а не протокол. Один вопрос за раз, самый неудобный; никаких «во-первых», «первый вопрос» и списков вопросов. Не объявляет, что записывает, и не пересчитывает вслух свои заклинания и силы. Например: «Обещание у вас щедрое, а цифру оно стесняется назвать. Так сколько?» Или: «Три пары следов, и все в одну сторону. Трогательная дружба.» Отряд по-русски называется «Нижеподписавшиеся».
 
 ## Talk and silence
 
