@@ -3,13 +3,14 @@
 // socket loses no event and gets its open ask again, and `seat-wire.jsonl` carries nothing a player
 // view never does. The client here is a scripted seat at the far end of a real WebSocket.
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import WebSocket from "ws";
 import { REPO } from "../src/engine.ts";
 import { audit } from "../src/play/run.ts";
-import { HostMessageSchema, WIRE_HASH, type HostMessage } from "../src/seat-wire/schema.ts";
+import { CLOSE_REPLACED, HostMessageSchema, WIRE_HASH, type HostMessage } from "../src/seat-wire/schema.ts";
 import { SEAT_WIRE_JSONL, WebSeat } from "../src/seat-wire/web-seat.ts";
 import { readCampaign } from "../src/pack/campaign.ts";
 import { TableLoop } from "../src/table/loop.ts";
@@ -196,9 +197,13 @@ test("the seat refuses a wrong token and a foreign origin, a new window replaces
     await first.connect(port, token, 0, "tauri://localhost");
     const firstWs = (first as unknown as { ws: WebSocket }).ws;
     // A laptop that slept leaves its socket half open: the reloaded page must still get in.
+    const firstClosed = once(firstWs, "close");
     const window = new Window();
     await window.connect(port, token);
-    await waitFor(() => firstWs.readyState === firstWs.CLOSED);
+    // The window that lost the seat is told so by its close code, so it does not come back for it.
+    const [code] = (await firstClosed) as [number];
+    assert.equal(code, CLOSE_REPLACED);
+    await waitFor(() => window.messages[0]?.type === "hello");
     const ws = (window as unknown as { ws: WebSocket }).ws;
     ws.send("not json");
     ws.send(JSON.stringify({ type: "intent", id: "a9", intent: { kind: "text", text: "hi", extra: 1 } }));
@@ -206,6 +211,22 @@ test("the seat refuses a wrong token and a foreign origin, a new window replaces
     await waitFor(() => window.messages.filter((m) => m.type === "refused").length === 2);
     await waitFor(() => seat.takeCommands().length === 1 || false, 2000).catch(() => assert.fail("the pause reaches the loop's next look"));
     await window.close();
+  } finally {
+    await seat.close();
+  }
+});
+
+test("a seat open to the home network lets in a client with the token and no origin, and no page from any origin", async () => {
+  const seat = new WebSeat("bren", { runDir: (await import("node:os")).tmpdir(), run: "t", host: "0.0.0.0", origins: [] });
+  const { port, token } = await seat.listen();
+  try {
+    await assert.rejects(new Window().connect(port, "nope"));
+    await assert.rejects(new Window().connect(port, token, 0, "tauri://localhost"));
+    await assert.rejects(new Window().connect(port, token, 0, "http://127.0.0.1"));
+    const phone = new Window();
+    await phone.connect(port, token);
+    await waitFor(() => phone.messages[0]?.type === "hello");
+    await phone.close();
   } finally {
     await seat.close();
   }

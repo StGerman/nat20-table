@@ -453,6 +453,8 @@ export interface UiWords {
   mouseOn: string;
   noCommand(name: string, commands: string): string;
   busy: string;
+  /** In a window whose seat another window took: where the game is now, that nothing is lost, and how to play here again. */
+  elsewhere: string;
   pausedTyped: string;
   answerYesNo: string;
   /** The echo of y or n on a reaction. */
@@ -608,6 +610,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     },
     noCommand: (name, commands) => `There is no /${name}. Commands: ${commands}`,
     busy: "The table is busy: wait for your prompt. A command typed now is answered when it comes.",
+    elsewhere: "The game is open on another device or in another tab. Nothing is lost: reload this page to play here.",
     pausedTyped: "Paused: only commands until /pause again.",
     answerYesNo: "Answer y or n (да or нет), or the number of a reaction.",
     yes: "yes",
@@ -759,6 +762,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
     },
     noCommand: (name, commands) => `Команды /${name} нет. Есть такие: ${commands}`,
     busy: "Стол занят: дождитесь своей очереди. Команда, набранная сейчас, сработает, когда очередь придёт.",
+    elsewhere: "Игра открыта на другом устройстве или в другой вкладке. Ничего не потеряно: чтобы играть здесь, обновите страницу.",
     pausedTyped: "Пауза: пока только команды, до следующего /pause.",
     answerYesNo: "Ответьте «да» или «нет» или номером ответного хода.",
     yes: "да",

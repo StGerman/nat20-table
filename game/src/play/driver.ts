@@ -53,7 +53,7 @@ import { Transcript } from "../table/transcript.ts";
 import type { DmAgent, PlayerAgent, Seat, StopKind } from "../table/types.ts";
 import type { Instance } from "ink";
 import { InkSeat } from "../ui/ink-seat.ts";
-import { WebSeat } from "../seat-wire/web-seat.ts";
+import { lanAddresses, WebSeat } from "../seat-wire/web-seat.ts";
 import { openInBrowser, servePage, type PageHost } from "./page-host.ts";
 import { glyphsFor } from "../ui/panel.ts";
 import { pickOnScreen, savedCharacters } from "../ui/pick.ts";
@@ -126,6 +126,10 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   // the human on another character (AGT-35); with `--seat ink` and no `--play`, the pick list does.
   if (flags.seat === "ai" && flags.play) {
     console.error("--play names the human's character, and --seat ai has no human.");
+    process.exit(2);
+  }
+  if (flags["seat-lan"] && flags.seat !== "web") {
+    console.error("--seat-lan opens the web seat to the home network: it needs --seat web.");
     process.exit(2);
   }
   const casting: Casting = flags.seat === "ai" ? "none" : flags.play ? { play: flags.play } : "default";
@@ -270,6 +274,20 @@ export async function playRun(play: PlayCommand, args: string[]): Promise<void> 
   const web =
     flags.seat === "web" && party.human
       ? await (async () => {
+          // The app on a phone brings its own page (decision 0093): no browser and no origin, and the
+          // wire open to the home network behind the run's token. The Mac stays awake for the run's
+          // life either way (`keepAwake`), so a phone that sleeps finds the table where it left it.
+          if (flags["seat-lan"]) {
+            const seat = new WebSeat(party.human!, { runDir, run: path.basename(runDir), language, names: seatNames, title: (language === "ru" ? pack.adventure.title_ru : undefined) ?? pack.adventure.title, party: everyone, record: drawnTo, onQuit: () => quit(), origins: [], host: "0.0.0.0" });
+            const { port, token } = await seat.listen();
+            const links = lanAddresses().map((address) => `ws://${address}:${port}/?token=${token}`);
+            console.log(`The table waits for the phone. Paste this link in the app${links.length > 1 ? " (one per network this Mac is on)" : ""}:
+${(links.length > 0 ? links : [`ws://127.0.0.1:${port}/?token=${token}`]).join("\n")}
+In the simulator on this Mac: ws://127.0.0.1:${port}/?token=${token}
+Anyone on this network who has the link can sit at this table until the run ends.
+Ctrl+C here stops the run after the decision in flight.`);
+            return seat;
+          }
           pageHost = await servePage().catch((error: unknown) => {
             console.error(error instanceof Error ? error.message : String(error));
             process.exit(2);
