@@ -13,4 +13,4 @@ Card `bridge_again` in *The Way Back* leaves the paper's text to the Narrator, a
 
 ## Status
 
-todo. Zoya's text. Open for Stas: the new small print "the toll is owed by the owner of the goods" is his call (§7 PR 3). Touches `scenarios/the_way_back/`, which table #481 also edits: after #481.
+todo. Zoya's text. Open for Stas: the new small print "the toll is owed by the owner of the goods" is his call (§7 PR 3). Table #481, which also edited `scenarios/the_way_back/`, merged on 2026-11-23.

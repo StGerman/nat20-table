@@ -13,4 +13,4 @@ The setting has no line on how a company paper is read: aloud, every term, the l
 
 ## Status
 
-todo. Waits on table #481 (company rename, `table/company-the-undersigned`, open): it renames the Grey Lantern in `lore/the_wend_valley.md`, the file this row edits, and the design keeps the rename out of this PR (§9). Blocks MAP-34.
+todo. The company rename (table #481) merged on 2026-11-23, so nothing blocks it. Blocks MAP-34.

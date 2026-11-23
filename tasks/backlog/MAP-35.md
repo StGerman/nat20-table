@@ -13,4 +13,4 @@ Stas accepted both on 2026-11-23 («Ок по всем», `docs/design/contract-
 
 ## Status
 
-todo. No code dependency. table #481 edits `compass-wend.md` in the same folder: rebase after it if the amendments land there. Should merge before MAP-34.
+todo. No code dependency. Should merge before MAP-34.

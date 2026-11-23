@@ -13,4 +13,4 @@ The first pack written to `docs/design/contract-line-that-bites.md`: the opening
 
 ## Status
 
-todo. After MAP-32 and AGT-153; uses MAP-35's amendments A and B. Open in the design (§5(a)): `purse_cp` is one number, so the pack starts at one party size, or the purse is counted in days, which is a `world.escort` change under Rule 1 and its own PR. Settle that before the pack is written. Size L: a new pack, with tests.
+todo. After MAP-32 and AGT-156; uses MAP-35's amendments A and B. Open in the design (§5(a)): `purse_cp` is one number, so the pack starts at one party size, or the purse is counted in days, which is a `world.escort` change under Rule 1 and its own PR. Settle that before the pack is written. Size L: a new pack, with tests.
