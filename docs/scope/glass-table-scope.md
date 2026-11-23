@@ -51,6 +51,8 @@ Each row with its lowest layer (decision 0080):
 
 ## 6. The spike
 
+Amended 2026-11-23 (§10): the paragraph below is the spike as first written, for a Tauri window. It is not run; the same question is asked of the Swift Mac app (CON-20).
+
 Before any app code: a Tauri window starts the Bun-compiled loop and `nat20-api-server` as bundled binaries, makes one live model call under the hardened runtime (with the JIT entitlement if it needs one), is signed and notarised, and is launched from Finder on Stas's Mac, where the app gets no shell `PATH` and still has to find Claude Code. The report says works or not, item by item. It merges no game code. If Tauri fails with the compiled loop, decision 0090 falls back to Electron before anything was built on it.
 
 Needs from Stas: an Apple Developer account (99 USD a year; Apple's own review time is not ours to shorten) and one evening at the Mac, 60 to 90 minutes.
