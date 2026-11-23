@@ -1,6 +1,8 @@
 #!/bin/bash
-# The tour (Tour/Tour.swift) at a live table: the replay host behind the real seat wire, the screen
-# recorded while a UI test presses, types and scrolls. Leaves tour.mp4, the test's pictures and both logs.
+# The shell's UI test (Tour/Tour.swift) at two live tables: the replay host behind the real seat wire,
+# the screen recorded while the test presses, types and scrolls. Then what the second host heard is
+# read against what the pages handed the shell (heard.ts). Leaves tour.mp4, the test's pictures, the
+# logs and the accessibility audit's findings.
 # usage: tour.sh <out dir>   (after shots.sh: the simulator is booted and the tour is built)
 set -euo pipefail
 OUT="$1"
@@ -13,15 +15,14 @@ xcrun simctl ui "$DEVICE" appearance light
 
 LINKFILE="$(mktemp)"
 rm -f "$LINKFILE"
-node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$HERE/../../game/test/fixtures/yard.seat-wire.jsonl" "$LINKFILE" ru > "$OUT/tour-host.log" 2>&1 &
+node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$HERE/../../game/test/fixtures/yard.seat-wire.jsonl" "$LINKFILE" ru "$OUT/tour-host.jsonl" > "$OUT/tour-host.log" 2>&1 &
 HOST=$!
 for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
 LINK="$(cat "$LINKFILE")"
 rm -f "$LINKFILE"
-# A second table for the asks the recordings never reach (asks-wire.mjs).
-ASKS="$(mktemp)"
-node "$HERE/asks-wire.mjs" "$HERE/../../game/test/fixtures/yard.seat-wire.jsonl" "$ASKS"
-node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$ASKS" "$LINKFILE" ru > "$OUT/tour-asks-host.log" 2>&1 &
+# A second table on the wire that holds every kind of ask (game/test/page-wires.ts); when it is
+# played out, the host's own second window takes the seat.
+node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" every-ask "$LINKFILE" ru "$OUT/tour-asks-host.jsonl" take-seat > "$OUT/tour-asks-host.log" 2>&1 &
 HOST2=$!
 for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
 ASKS_LINK="$(cat "$LINKFILE")"
@@ -40,6 +41,19 @@ wait "$VIDEO" 2>/dev/null || true
 kill "$HOST" "$HOST2" 2>/dev/null || true
 tail -40 "$OUT/tour-test.log"
 cat "$OUT/tour-host.log" "$OUT/tour-asks-host.log"
+# What the accessibility audit found on the shell's screens: read by a person, it fails nothing.
+grep -h "nat20-audit" "$OUT/tour-test.log" > "$OUT/accessibility.txt" || true
+cat "$OUT/accessibility.txt"
+# Leaving the table tells the host nothing: the first tour ends by leaving.
+if grep -q quit "$OUT/tour-host.jsonl"; then
+  echo "the shell sent a quit when the human left the table" >&2
+  STATUS=1
+fi
+# Only the pages' lines were sent, every kind of ask was answered, the lost press was asked again.
+BUNDLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' build-tour/Build/Products/Debug-iphonesimulator/GlassTable.app/Info.plist)"
+SENT="$(xcrun simctl get_app_container "$DEVICE" "$BUNDLE" data)/Documents/sent.jsonl"
+cp "$SENT" "$OUT/tour-asks-sent.jsonl" || touch "$OUT/tour-asks-sent.jsonl"
+node --experimental-strip-types --no-warnings "$HERE/heard.ts" "$OUT/tour-asks-host.jsonl" "$OUT/tour-asks-sent.jsonl" || STATUS=1
 xcrun xcresulttool export attachments --path "$OUT/tour.xcresult" --output-path "$OUT/tour" || true
 # The test's pictures under their own names; Xcode's own recording and snapshots repeat tour.mp4.
 python3 - "$OUT/tour" <<'PY' || true

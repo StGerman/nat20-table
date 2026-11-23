@@ -1,13 +1,14 @@
 // Before a table: the link the run on the Mac prints (`--seat web --seat-lan`), pasted or typed, or
-// a recorded run from the bundle. The spike's words here are new and nobody has read them as a player.
+// a recorded run from the bundle. The link of the table the human last left stays in the field.
 import SwiftUI
 
 struct ConnectScreen: View {
     let shell: Shell
-    @State private var link = ""
+    @State private var link = UserDefaults.standard.string(forKey: "lastTable") ?? ""
     @State private var wrong = false
 
     var body: some View {
+        let words = shell.words
         NavigationStack {
             Form {
                 Section {
@@ -16,6 +17,8 @@ struct ConnectScreen: View {
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
                         .lineLimit(1...4)
+                        .accessibilityLabel(words.linkHeader)
+                        .accessibilityIdentifier("link")
                     PasteButton(payloadType: String.self) { strings in
                         if let first = strings.first {
                             link = first.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -23,23 +26,26 @@ struct ConnectScreen: View {
                         }
                     }
                 } header: {
-                    Text("Ссылка стола")
+                    Text(words.linkHeader)
                 } footer: {
-                    Text(wrong ? "Это не похоже на ссылку стола: она начинается с ws://" : "Её показывает игра на вашем Mac, когда стол готов.")
+                    Text(wrong ? words.linkWrong : words.linkFooter)
                 }
                 Section {
-                    Button("Сесть за стол", action: join)
+                    Button(words.sit, action: join)
                         .disabled(link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("sit")
                 }
                 Section {
-                    Button("Бой во дворе мельницы") {
+                    Button(words.yard) {
                         shell.sit(.replay(name: "yard.seat-wire.jsonl", to: nil))
                     }
-                    Button("Дорога с обозом") {
+                    Button(words.road) {
                         shell.sit(.replay(name: "the-way-back-ru.seat-wire.jsonl", to: nil))
                     }
                 } header: {
-                    Text("Записанная игра")
+                    Text(words.recorded)
+                } footer: {
+                    Text(words.recordedFooter)
                 }
             }
             .navigationTitle(Shell.appName)

@@ -7,12 +7,32 @@ struct DockBar: View {
     let shell: Shell
 
     var body: some View {
-        if !shell.online {
-            // The socket to the table is down: the shell keeps asking for it.
+        let words = shell.words
+        if shell.link == .down {
+            // The socket to the table is down: the shell keeps asking for it, and says nothing is lost.
             HStack(spacing: 10) {
-                Text("Нет связи со столом").foregroundStyle(.secondary).lineLimit(1)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(words.offline).font(.footnote.weight(.semibold)).lineLimit(1)
+                    Text(words.offlineMore).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("offline")
                 Spacer(minLength: 0)
                 ProgressView()
+            }
+            .padding(.horizontal, 14)
+        } else if shell.link == .replaced {
+            // Another window took the seat: this one asks for it only when the human says so.
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(words.elsewhere).font(.footnote.weight(.semibold)).lineLimit(1)
+                    Text(words.elsewhereMore).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
+                .accessibilityElement(children: .combine)
+                Spacer(minLength: 0)
+                Button(words.playHere) { shell.playHere() }
+                    .font(.footnote.weight(.semibold))
+                    .accessibilityIdentifier("play-here")
             }
             .padding(.horizontal, 14)
         } else if let chrome = shell.chrome {
@@ -27,7 +47,7 @@ struct DockBar: View {
                         .lineLimit(1)
                     Spacer(minLength: 0)
                     if dock.form == "waiting" {
-                        ProgressView()
+                        ProgressView().accessibilityHidden(true)
                     }
                 } else {
                     // The keyboard would cover a line typed here, so a touch opens the line over the
@@ -80,6 +100,7 @@ struct TypeLine: View {
                     Image(systemName: "arrow.up.circle.fill").font(.title2)
                 }
                 .disabled(shell.draft.isEmpty)
+                .accessibilityLabel(shell.words.send)
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 44)
@@ -204,6 +225,7 @@ struct MovesSheet: View {
                                 Button {
                                     if let n = choice.n { shell.press(n) }
                                 } label: {
+                                    // The votes read after the choice: each is a name.
                                     HStack(alignment: .top) {
                                         Text(choice.text)
                                             .fontWeight(card.decided == choice.id ? .bold : .regular)
@@ -219,6 +241,7 @@ struct MovesSheet: View {
                                     }
                                 }
                                 .disabled(!card.asked || choice.n == nil)
+                                .accessibilityIdentifier("choice-\(choice.n ?? 0)")
                             }
                         } footer: {
                             VStack(alignment: .leading, spacing: 4) {
@@ -232,7 +255,26 @@ struct MovesSheet: View {
                         }
                         if let reaction = sheet.reaction {
                             Section {
-                                Button(reaction.yes) { shell.react(true) }.foregroundStyle(Color.primary).accessibilityIdentifier("react-yes")
+                                if let answers = reaction.answers, !answers.isEmpty {
+                                    // Several answers on offer: each is pressed by its number, as a move is.
+                                    ForEach(answers, id: \.n) { answer in
+                                        Button(answer.label) { shell.press(answer.n) }
+                                            .foregroundStyle(Color.primary)
+                                            .accessibilityIdentifier("react-answer-\(answer.n)")
+                                    }
+                                } else {
+                                    Button {
+                                        shell.react(true)
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(reaction.yes).foregroundStyle(Color.primary)
+                                            if let what = reaction.what {
+                                                Text(what).font(.footnote).foregroundStyle(Color.secondary)
+                                            }
+                                        }
+                                    }
+                                    .accessibilityIdentifier("react-yes")
+                                }
                                 Button(reaction.no) { shell.react(false) }.foregroundStyle(Color.primary).accessibilityIdentifier("react-no")
                             }
                         }
@@ -295,6 +337,7 @@ struct MovesSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        .overlay(alignment: .topLeading) { StateMark(shell: shell) }
     }
 
     private var title: String {
@@ -320,5 +363,21 @@ struct LinesSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+/// What stands now, in one line a UI test reads (`-tour 1`); nothing is drawn without the flag.
+struct StateMark: View {
+    let shell: Shell
+
+    var body: some View {
+        if shell.tour {
+            Text(shell.mark)
+                .font(.system(size: 4))
+                .foregroundStyle(Color.clear)
+                .lineLimit(1)
+                .accessibilityIdentifier("shell-state")
+                .allowsHitTesting(false)
+        }
     }
 }

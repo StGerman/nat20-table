@@ -1,16 +1,27 @@
 // The iPhone layout: a tab bar, the dock as its accessory, and the page's content under both.
 import SwiftUI
+import UIKit
 import WebKit
 
 struct PhoneRoot: View {
     // One shell for the app: a second one would load every page twice.
     private let shell = Shell.shared
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
-        if let table = shell.table {
-            Tabs(shell: shell, table: table)
-        } else {
-            ConnectScreen(shell: shell)
+        Group {
+            if let table = shell.table {
+                Tabs(shell: shell, table: table)
+                    // The table waits for the human and the story is read, not touched: at a table
+                    // the phone keeps its screen on.
+                    .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+                    .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+            } else {
+                ConnectScreen(shell: shell)
+            }
+        }
+        .onChange(of: phase) { _, now in
+            if now == .active { shell.woke() }
         }
     }
 }
@@ -21,9 +32,10 @@ struct Tabs: View {
 
     var body: some View {
         let tabs = shell.chrome?.tabs
+        let words = shell.words
         let stage = shell.chrome?.stage == true
         TabView(selection: $shell.screen) {
-            Tab(tabs?.story ?? "Рассказ", systemImage: "book", value: Screen.story) {
+            Tab(tabs?.story ?? words.story, systemImage: "book", value: Screen.story) {
                 ContentScreen(shell: shell, content: table.story)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         VStack(spacing: 0) {
@@ -32,10 +44,10 @@ struct Tabs: View {
                         }
                     }
             }
-            Tab(tabs?.`where` ?? "Где все", systemImage: "map", value: Screen.place) {
+            Tab(tabs?.`where` ?? words.place, systemImage: "map", value: Screen.place) {
                 ContentScreen(shell: shell, content: table.place)
             }
-            Tab(tabs?.sheet ?? "Лист", systemImage: "person.text.rectangle", value: Screen.sheet) {
+            Tab(tabs?.sheet ?? words.sheet, systemImage: "person.text.rectangle", value: Screen.sheet) {
                 ContentScreen(shell: shell, content: table.sheet)
             }
         }
@@ -50,7 +62,10 @@ struct Tabs: View {
         }
         .onChange(of: shell.screen) { _, now in
             if now == .sheet { shell.freshSheet() }
+            // An ask that is its own sheet waited while another tab was read.
+            if now == .story { shell.offer() }
         }
+        .overlay(alignment: .topLeading) { StateMark(shell: shell) }
         .sheet(item: $shell.opened) { opened in
             switch opened {
             case .moves:
@@ -67,6 +82,7 @@ struct ContentScreen: View {
     let shell: Shell
     let content: Content
     private let edge = UserDefaults.standard.bool(forKey: "edge")
+    @State private var leaving = false
 
     var body: some View {
         NavigationStack {
@@ -83,16 +99,20 @@ struct ContentScreen: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         // The table's own pause: the other players wait until it is lifted.
-                        Button(shell.chrome?.dock.form == "paused" ? "Продолжить игру" : "Пауза") {
+                        Button(shell.chrome?.dock.form == "paused" ? shell.words.goOn : shell.words.pause) {
                             shell.pause()
                         }
                         .accessibilityIdentifier("menu-pause")
-                        Button("Встать из-за стола", role: .destructive) {
-                            shell.leave()
+                        // A live table goes on without the phone, so leaving it is asked about;
+                        // a recording is only closed.
+                        Button(shell.words.leave, role: .destructive) {
+                            if shell.live { leaving = true } else { shell.leave() }
                         }
+                        .accessibilityIdentifier("menu-leave")
                     } label: {
                         Image(systemName: "ellipsis")
                     }
+                    .accessibilityLabel(shell.words.menu)
                     .accessibilityIdentifier("menu")
                 }
                 ToolbarItem(placement: .principal) {
@@ -109,6 +129,13 @@ struct ContentScreen: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(shell.chrome?.stage == true ? .hidden : .automatic, for: .navigationBar)
+            .confirmationDialog(shell.words.leave, isPresented: $leaving, titleVisibility: .visible) {
+                Button(shell.words.leave, role: .destructive) { shell.leave() }
+                    .accessibilityIdentifier("leave-yes")
+                Button(shell.words.stay, role: .cancel) {}
+            } message: {
+                Text(shell.words.leaveAsk)
+            }
         }
     }
 

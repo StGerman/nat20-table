@@ -1,4 +1,4 @@
-# The hybrid shell spike: a SwiftUI shell around the page (game/src/page) in a web view.
+# The SwiftUI shell (decision 0093): a SwiftUI program around the page (game/src/page) in a web view.
 # No Xcode project is committed: `xcodegen generate` writes it from this file.
 name: GlassTable
 options:

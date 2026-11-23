@@ -42,9 +42,18 @@ struct Chrome: Codable, Equatable {
         var rows: [ClosedRow]
     }
 
+    struct Answer: Codable, Equatable {
+        var n: Int
+        var label: String
+    }
+
+    /// With one answer on offer `what` names it and yes takes it; with several, `answers` holds
+    /// each, pressed by its number.
     struct Reaction: Codable, Equatable {
         var yes: String
         var no: String
+        var what: String?
+        var answers: [Answer]?
     }
 
     struct Sheet: Codable, Equatable {
@@ -116,4 +125,5 @@ struct Chrome: Codable, Equatable {
     var dock: Dock
     var tabs: Tabs
     var stage: Bool
+    var sheetStale: Bool
 }

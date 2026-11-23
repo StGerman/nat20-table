@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prints the simulator the spike uses: an iPhone 17 on the newest iOS runtime that has one, or
+# Prints the simulator the shell's job uses: an iPhone 17 on the newest iOS runtime that has one, or
 # failing that the newest runtime's first iPhone.
 set -euo pipefail
 DEVICE="$(xcrun simctl list devices available -j | python3 -c '

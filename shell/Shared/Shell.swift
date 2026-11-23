@@ -38,17 +38,29 @@ final class Shell {
     var typing = false
     /// Why the page would not take what was typed.
     var notice: String?
-    /// What the page handed over for the host, newest last.
-    var sent: [String] = []
+    /// How many messages the pages have handed over for the host.
+    var sent = 0
 
     /// The table the shell sits at: none is the connect screen.
     var table: Table?
-    /// A live table's socket is up; a recorded run is always "up".
-    var online = true
+    /// A live table's socket; a recorded run is always "up".
+    var link = Link.up
+    /// The table is a live one: there is a socket, and leaving it is asked about.
+    var live: Bool { wire != nil }
+    /// The shell's own lines, in the table's language once it has said it.
+    var words: Words { Words.of(chrome?.language) }
     @ObservationIgnored private var wire: Wire?
     @ObservationIgnored private var forcedFor: String?
     /// The sheet that is open shows what a command answered with (/options, /where).
     @ObservationIgnored private var answered = false
+    /// The UI test's hooks (Tour/Tour.swift): `-tour 1` shows the state mark, `-keepSent 1` keeps
+    /// what the pages handed over in a file, `-dropBeforeSend <n>` loses the socket and the nth
+    /// message with it, `-reloadAfter <n>` loads the story's page again after the nth.
+    let tour = UserDefaults.standard.bool(forKey: "tour")
+    private let keepSent = UserDefaults.standard.bool(forKey: "keepSent")
+    private let dropBeforeSend = UserDefaults.standard.integer(forKey: "dropBeforeSend")
+    private let reloadAfter = UserDefaults.standard.integer(forKey: "reloadAfter")
+    @ObservationIgnored private var kept: [String] = []
 
     static let shared = Shell()
     /// The app's name as the project file gives it (`APP_NAME` in project.yml), the one place it is written.
@@ -62,7 +74,9 @@ final class Shell {
         } else if let link = defaults.string(forKey: "table"), let url = URL(string: link) {
             connect(url, keep: false)
         }
-        // The spike's way to show a state no finger reached: `-screen where|sheet`, `-open moves`, `-press <n>`.
+        // The UI test's file starts empty.
+        if keepSent { keep() }
+        // The pictures job's way to a state no finger reached: `-screen where|sheet`, `-open moves`, `-press <n>`.
         switch defaults.string(forKey: "screen") {
         case "where": screen = .place
         case "sheet": screen = .sheet
@@ -101,28 +115,60 @@ final class Shell {
         if keep { UserDefaults.standard.set(url.absoluteString, forKey: "table") }
         self.wire?.close()
         sit(.live)
-        online = false
+        link = .down
         let next = Wire(
             url: url,
+            // The pages' own place in the story: a page that was loaded again holds nothing, so the
+            // host tells the run from the start and the other pages pass over what they have.
+            from: { [weak self] in
+                guard let table = self?.table else { return 0 }
+                return min(table.story.seq, table.place.seq, table.sheet.seq)
+            },
             line: { [weak self] text in self?.host(text) },
-            state: { [weak self] on in
-                self?.online = on
-                say("nat20-wire \(on ? "up" : "down")")
+            state: { [weak self] link in
+                self?.link = link
+                say("nat20-wire \(link)")
             }
         )
         wire = next
         next.open()
     }
 
-    /// Back to the connect screen.
+    /// Back to the connect screen. The table is told nothing: it goes on, the open ask waits, and
+    /// the same link sits down again (it stays in the link field).
     func leave() {
         wire?.close()
         wire = nil
         table = nil
         chrome = nil
         opened = nil
-        online = true
-        UserDefaults.standard.removeObject(forKey: "table")
+        typing = false
+        link = .up
+        let defaults = UserDefaults.standard
+        if let last = defaults.string(forKey: "table") { defaults.set(last, forKey: "lastTable") }
+        defaults.removeObject(forKey: "table")
+    }
+
+    /// Another window took the seat and the human wants it back here.
+    func playHere() {
+        link = .down
+        wire?.open()
+    }
+
+    /// A page was loaded again and holds nothing: the socket is opened again, so the host says
+    /// `hello` and tells the run from the start. A recorded run's page reads its own file again.
+    func cameBack() {
+        say("nat20-diag a page came back")
+        if link != .replaced { wire?.open() }
+    }
+
+    /// The app is on screen again: the system may have cut the socket or ended a page meanwhile.
+    func woke() {
+        guard let table else { return }
+        wire?.check()
+        table.story.check()
+        table.place.check()
+        table.sheet.check()
     }
 
     private func host(_ text: String) {
@@ -140,21 +186,74 @@ final class Shell {
         }
         chrome = next
         notice = nil
-        // An ask that is its own list (a pick, a road choice, a reaction, a question) opens its sheet once.
-        let forced = next.dock.sheet?.forced == true || next.dock.card?.asked == true
-        if forced, let ask = next.dock.ask, forcedFor != ask {
-            forcedFor = ask
-            opened = .moves
-        } else if opened == .moves, next.dock.sheet == nil, next.dock.card == nil {
+        offer()
+    }
+
+    /// An ask that is its own list (a pick, a road choice, a reaction, a question) opens its sheet
+    /// once, and only over the story: «Где все» and «Лист» are read undisturbed, and the sheet
+    /// opens when the human is back.
+    func offer() {
+        guard let dock = chrome?.dock else { return }
+        // No ask stands (it was answered, or the socket came back): if the same ask is offered
+        // again, its sheet opens again.
+        if dock.ask == nil { forcedFor = nil }
+        let forced = dock.sheet?.forced == true || dock.card?.asked == true
+        if forced, let ask = dock.ask {
+            if forcedFor != ask, screen == .story {
+                forcedFor = ask
+                opened = .moves
+            }
+        } else if opened == .moves, dock.sheet == nil, dock.card == nil {
             opened = nil
         }
     }
 
-    /// The page hands over a message for the host. With no host (a recorded run) it is only kept.
+    /// The page hands over a message for the host. With no host (a recorded run) it is only counted.
     func send(_ line: String) {
         say("nat20-send \(line)")
-        sent.append(line)
+        sent += 1
+        if keepSent {
+            kept.append(line)
+            keep()
+        }
+        if sent == dropBeforeSend {
+            wire?.cut()
+            return
+        }
         wire?.send(line)
+        if sent == reloadAfter { table?.story.recover() }
+    }
+
+    /// What the pages handed over, one message a line, where the UI test's job reads it.
+    private func keep() {
+        guard let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let text = kept.map { $0 + "\n" }.joined()
+        try? text.write(to: folder.appendingPathComponent("sent.jsonl"), atomically: true, encoding: .utf8)
+    }
+
+    /// One line on what stands now, for the UI test to read (`-tour 1`): the socket, the dock's
+    /// form, the open ask, the control that answers it, and how many messages the pages handed over.
+    var mark: String {
+        guard let dock = chrome?.dock else { return "\(link)|none|-|none|\(sent)" }
+        let control: String
+        if !dock.open {
+            control = "none"
+        } else if dock.form == "reaction" {
+            control = dock.sheet?.reaction?.answers?.isEmpty == false ? "answers" : "reaction"
+        } else if dock.form == "paused" {
+            control = "paused"
+        } else if dock.form == "answer", dock.sheet?.question != nil {
+            control = "question"
+        } else if dock.card?.asked == true {
+            control = "card"
+        } else if dock.sheet?.forced == true {
+            control = "rows"
+        } else if !dock.chips.isEmpty || dock.endTurn != nil {
+            control = "chips"
+        } else {
+            control = "line"
+        }
+        return "\(link)|\(dock.form)|\(dock.ask ?? "-")|\(control)|\(sent)"
     }
 
     func open(_ body: [String: Any]) {
@@ -181,9 +280,11 @@ final class Shell {
         say("nat20-open \(what)")
     }
 
-    /// «Лист» asks the seat for a fresh sheet when the table waits on the human, as /sheet does.
+    /// «Лист» asks the seat for a sheet, as /sheet does, only when the page has none or an old one
+    /// and the table waits on the human: the host answers and asks again under a new id, so every
+    /// touch of the tab would otherwise be an answer.
     func freshSheet() {
-        if chrome?.dock.open == true { act(["kind": "command", "name": "sheet"]) }
+        if let chrome, chrome.sheetStale, chrome.dock.open { act(["kind": "command", "name": "sheet"]) }
     }
 
     func press(_ n: Int) {
@@ -206,6 +307,12 @@ final class Shell {
     private func act(_ what: [String: Any], done: ((Bool) -> Void)? = nil) {
         Task {
             guard let story = table?.story else { return }
+            // A press that cannot reach the table is not handed to the page, which would show the
+            // ask as answered.
+            guard link == .up else {
+                done?(false)
+                return
+            }
             let result = await story.act(what)
             if result.ok {
                 if opened == .moves { opened = nil }
@@ -250,10 +357,11 @@ final class Bridge: NSObject, WKScriptMessageHandler {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
         case "chrome":
-            guard main, let json = body["json"] as? String, let data = json.data(using: .utf8) else { return }
+            guard let json = body["json"] as? String, let data = json.data(using: .utf8) else { return }
             do {
                 let chrome = try JSONDecoder().decode(Chrome.self, from: data)
-                shell?.apply(chrome)
+                content?.seq = chrome.seq
+                if main { shell?.apply(chrome) }
             } catch {
                 say("nat20-diag chrome did not decode: \(error)")
             }
