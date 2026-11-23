@@ -1,0 +1,88 @@
+# The SwiftUI shell (CON-22, decision 0093): builds the shell around the page for the iPhone
+# simulator on a hosted Apple Silicon machine, saves pictures of it, and runs its UI test against a
+# table that replays a recorded run over the real seat wire. No engine, no model, no signing.
+# Not part of ci-ok until it has been stable for a milestone (decision 0093): a round takes about
+# 20 minutes, most of it the simulator's first boot.
+name: shell
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/shell.yml
+      - shell/**
+      - game/src/page/**
+      - game/src/seat-wire/**
+      - game/test/page-wires.ts
+      - game/test/fixtures/*.seat-wire.jsonl
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shell-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    # Twice: the Xcode the shell was first written against, and the Xcode 27 image (a preview label),
+    # which is what Stas's Mac and iPhone run. One failing does not stop the other.
+    name: ios (simulator, ${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, xcode-27]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: The page the shell shows
+        run: npm run page:build
+      - name: The Xcode project, from project.yml
+        working-directory: shell
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i ios || true
+          xcrun simctl list runtimes
+      - name: Build for the simulator
+        working-directory: shell
+        run: |
+          set -o pipefail
+          xcodebuild -project GlassTable.xcodeproj -scheme GlassTable -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build 2>&1 \
+            | tee build.log | ci/pretty.sh
+      - name: Pictures from the simulator
+        working-directory: shell
+        run: ci/shots.sh build/Build/Products/Debug-iphonesimulator/GlassTable.app shots
+      # The tour is built on its own: a UI test's runner is signed to run locally, which the app's
+      # build above leaves out.
+      - name: Build the tour
+        working-directory: shell
+        run: |
+          set -o pipefail
+          xcodebuild -project GlassTable.xcodeproj -scheme GlassTable -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-tour ARCHS=arm64 ONLY_ACTIVE_ARCH=NO build-for-testing 2>&1 \
+            | tee build-tour.log | ci/pretty.sh
+      - name: A finger's tour of a live table, recorded
+        working-directory: shell
+        run: ci/tour.sh shots
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: shell-ios-${{ matrix.runner }}
+          path: |
+            shell/shots
+            shell/build.log
+            shell/build-tour.log
+          retention-days: 7

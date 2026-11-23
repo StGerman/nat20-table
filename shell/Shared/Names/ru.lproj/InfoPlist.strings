@@ -1,0 +1,4 @@
+/* The app's name under its icon, and why it asks for the local network. */
+"CFBundleDisplayName" = "Мелкий шрифт";
+"CFBundleName" = "Мелкий шрифт";
+"NSLocalNetworkUsageDescription" = "«Мелкий шрифт» садится за стол, который идёт на вашем Mac.";

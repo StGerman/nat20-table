@@ -1,0 +1,6 @@
+// A build on a real phone needs an Apple team. The simulator needs none.
+// The team is yours, so it lives in Local.xcconfig next to this file, which is not committed:
+//   DEVELOPMENT_TEAM = ABCDE12345
+// README.md says how to fill it in once.
+CODE_SIGN_STYLE = Automatic
+#include? "Local.xcconfig"
