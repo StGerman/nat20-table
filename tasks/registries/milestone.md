@@ -29,7 +29,6 @@ Not written yet. It comes with the scope and the system design, each row naming 
 2. The woodpile and the trough in the mill yard: drawn flat, or given geometry (MON-10).
 3. N, the number of prepared places.
 4. A player fact for "what we learned in this place".
-5. Where the milestone stands in the order.
 
 # Tasks
 
@@ -37,4 +36,4 @@ MAP-31, the Mill NPCs' deaths. The other rows come after the scope and design ar
 
 # Status
 
-open, no number. Opened 2026-11-21 at Stas's ask («Давай объединим NPC registry and Places registry в один milestone»). Not in the order yet.
+open, no number. Opened 2026-11-21 at Stas's ask («Давай объединим NPC registry and Places registry в один milestone»). Order (Stas, 2026-11-23 20:12Z): Glass Table → Sign in with ChatGPT → People and places registries, so it comes before «Камень A».
