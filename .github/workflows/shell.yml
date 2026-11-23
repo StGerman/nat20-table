@@ -2,7 +2,7 @@
 # simulator on a hosted Apple Silicon machine, saves pictures of it, and runs its UI test against a
 # table that replays a recorded run over the real seat wire. No engine, no model, no signing.
 # Not part of ci-ok until it has been stable for a milestone (decision 0093): a round takes about
-# 20 minutes, most of it the simulator's first boot.
+# half an hour, most of it the simulator's first boot and the UI test.
 name: shell
 
 on:
@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         runner: [macos-26, xcode-27]
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

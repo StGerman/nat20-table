@@ -15,14 +15,15 @@ xcrun simctl ui "$DEVICE" appearance light
 
 LINKFILE="$(mktemp)"
 rm -f "$LINKFILE"
-node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$HERE/../../game/test/fixtures/yard.seat-wire.jsonl" "$LINKFILE" ru "$OUT/tour-host.jsonl" > "$OUT/tour-host.log" 2>&1 &
+node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" "$HERE/../../game/test/fixtures/yard.seat-wire.jsonl" "$LINKFILE" ru "did=$OUT/tour-host.jsonl" > "$OUT/tour-host.log" 2>&1 &
 HOST=$!
 for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
 LINK="$(cat "$LINKFILE")"
 rm -f "$LINKFILE"
-# A second table on the wire that holds every kind of ask (game/test/page-wires.ts); when it is
-# played out, the host's own second window takes the seat.
-node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" every-ask "$LINKFILE" ru "$OUT/tour-asks-host.jsonl" take-seat > "$OUT/tour-asks-host.log" 2>&1 &
+# A second table on the wire that holds every kind of ask (game/test/page-wires.ts): the first two
+# asks of each kind wait for the shell. When it is played out, the host's own second window takes
+# the seat.
+node --experimental-strip-types --no-warnings "$HERE/replay-host.ts" every-ask "$LINKFILE" ru "did=$OUT/tour-asks-host.jsonl" each=2 take-seat > "$OUT/tour-asks-host.log" 2>&1 &
 HOST2=$!
 for _ in $(seq 1 30); do [ -s "$LINKFILE" ] && break; sleep 1; done
 ASKS_LINK="$(cat "$LINKFILE")"

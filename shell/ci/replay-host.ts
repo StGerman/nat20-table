@@ -4,11 +4,16 @@
 // as the next stretch of the story. The answer is not checked against the recording.
 //
 // `every-ask` in place of a file is the wire that holds every kind of ask (game/test/page-wires.ts,
-// AGT-153). With a fourth argument the host keeps what it did in that file, one JSON object a line:
-// each frame the shell sent as it came (`heard`), each ask and its answer, the end. `ci/heard.mjs`
-// reads it. With `take-seat` as the fifth, a second window of its own sits down once the recording
-// is played out, so the shell is closed as a replaced window is.
-// usage: node replay-host.ts <seat-wire.jsonl | every-ask> <file to write the link to> [language] [what the host did, .jsonl] [take-seat]
+// AGT-153). The words after the two paths, in any order:
+// - `ru` or `en`: the table's language (default `ru`);
+// - `did=<file>`: the host keeps what it did there, one JSON object a line: each frame the shell
+//   sent as it came (`heard`), each ask and its answer, the end. `ci/heard.ts` reads it;
+// - `each=<n>`: only the first n asks of each kind wait for the shell; the rest of the recording's
+//   asks are passed over and the story plays on, so a UI test presses every kind without pressing
+//   the same kind thirty times;
+// - `take-seat`: a second window of the host's own sits down once the recording is played out, so
+//   the shell is closed as a replaced window is.
+// usage: node replay-host.ts <seat-wire.jsonl | every-ask> <file to write the link to> [ru|en] [did=<file>] [each=<n>] [take-seat]
 import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -17,11 +22,16 @@ import { HostMessageSchema } from "../../game/src/seat-wire/schema.ts";
 import { WebSeat } from "../../game/src/seat-wire/web-seat.ts";
 import type { HumanPrompt, SuggestUpdate, TableEvent } from "../../game/src/table/types.ts";
 
-const [fixture, linkFile, language = "ru", didFile, after] = process.argv.slice(2);
+const [fixture, linkFile, ...words] = process.argv.slice(2);
 if (!fixture || !linkFile) {
-  console.error("usage: node replay-host.ts <seat-wire.jsonl | every-ask> <file to write the link to> [language] [what the host did, .jsonl] [take-seat]");
+  console.error("usage: node replay-host.ts <seat-wire.jsonl | every-ask> <file to write the link to> [ru|en] [did=<file>] [each=<n>] [take-seat]");
   process.exit(2);
 }
+const word = (name: string) => words.find((w) => w.startsWith(`${name}=`))?.slice(name.length + 1);
+const language = words.includes("en") ? "en" : "ru";
+const didFile = word("did");
+const each = Number(word("each") ?? Infinity);
+const asked = new Map<string, number>();
 type Line = { seq?: number; seat?: string; event?: unknown; message?: unknown };
 const lines: Line[] =
   fixture === "every-ask"
@@ -36,7 +46,7 @@ const did = (what: Record<string, unknown>) => {
 if (didFile) writeFileSync(didFile, "");
 const handle = lines[0]?.seat ?? "bren";
 const runDir = mkdtempSync(path.join(tmpdir(), "replay-host-"));
-const seat = new WebSeat(handle, { runDir, run: path.basename(fixture), language: language === "ru" ? "ru" : "en", party: ["bren", "torva", "maren", "ilsa"], origins: [], host: "0.0.0.0", heard: (frame) => did({ heard: frame }) });
+const seat = new WebSeat(handle, { runDir, run: path.basename(fixture), language, party: ["bren", "torva", "maren", "ilsa"], origins: [], host: "0.0.0.0", heard: (frame) => did({ heard: frame }) });
 const { port, token } = await seat.listen();
 writeFileSync(linkFile, `ws://127.0.0.1:${port}/?token=${token}\n`);
 console.log(`replay-host: ${lines.length} lines of ${path.basename(fixture)} on port ${port}`);
@@ -49,7 +59,9 @@ for (const line of lines) {
   const message = HostMessageSchema.parse(line.message);
   switch (message.type) {
     case "ask": {
-      const kind = (message.prompt as { kind?: string }).kind;
+      const kind = (message.prompt as { kind?: string }).kind ?? "";
+      asked.set(kind, (asked.get(kind) ?? 0) + 1);
+      if (asked.get(kind)! > each) break;
       console.log(`replay-host: ask ${message.id} (${kind}) waits for the shell`);
       const intent = await seat.ask(message.prompt as unknown as HumanPrompt);
       console.log(`replay-host: answered ${JSON.stringify(intent)}`);
@@ -81,7 +93,7 @@ for (const line of lines) {
 }
 console.log("replay-host: the recording is played out");
 did({ played: true });
-if (after === "take-seat") {
+if (words.includes("take-seat")) {
   // A second window with the same token, as a Mac window opened beside the phone would be: the seat
   // closes the shell's socket with its replaced code. When the shell takes the seat back, this one
   // is closed the same way and stays closed.
