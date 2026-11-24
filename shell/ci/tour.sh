@@ -43,6 +43,9 @@ kill -INT "$VIDEO" 2>/dev/null || true
 wait "$VIDEO" 2>/dev/null || true
 kill "$HOST" "$HOST2" 2>/dev/null || true
 tail -40 "$OUT/tour-test.log"
+# What the app said about its socket and its pages while the test ran; cut off if the log is slow.
+perl -e 'alarm 120; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 15m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/tour-app.log" 2>&1 || true
+grep -h "nat20-wire\|nat20-diag .* again\|came back" "$OUT/tour-app.log" | grep -v "send failed\|log run" | tail -40 || true
 cat "$OUT/tour-host.log" "$OUT/tour-asks-host.log"
 # What the accessibility audit found on the shell's screens: read by a person, it fails nothing.
 grep -h "nat20-audit" "$OUT/tour-test.log" > "$OUT/accessibility.txt" || true
