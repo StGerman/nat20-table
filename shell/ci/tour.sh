@@ -55,6 +55,14 @@ if grep -q quit "$OUT/tour-host.jsonl"; then
   echo "the shell sent a quit when the human left the table" >&2
   STATUS=1
 fi
+# The first tour presses a chip, then a row, then types a line, and the host heard each in that
+# order: a press that lit its control and was not taken is named here, not by what stood in the
+# way of the test two minutes later.
+FIRST="$(grep '"answered"' "$OUT/tour-host.jsonl" | head -3 | sed 's/.*"kind":"\([a-z]*\)".*/\1/' | tr '\n' ' ' || true)"
+if [ "$FIRST" != "option option text " ]; then
+  echo "the first table heard '$FIRST' first, not a chip, a row and a typed line: a press was not taken" >&2
+  STATUS=1
+fi
 # Only the pages' lines were sent, every kind of ask was answered, the lost press was asked again.
 BUNDLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' build-tour/Build/Products/Debug-iphonesimulator/GlassTable.app/Info.plist)"
 SENT="$(xcrun simctl get_app_container "$DEVICE" "$BUNDLE" data)/Documents/sent.jsonl"

@@ -28,6 +28,9 @@ final class Tour: XCTestCase {
         XCTAssertTrue(chip.waitForExistence(timeout: 90), "the turn's chips came over the socket")
         picture(app, "01-the-turn")
         audit(app, "the turn")
+        // The audit tries the screen at other text sizes and sets it back as it ends: the screen is
+        // left to stand before it is pressed.
+        pause(3)
 
         // A chip is a move: the host answers and the story goes on to the next ask.
         chip.tap()
