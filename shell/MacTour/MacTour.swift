@@ -17,6 +17,7 @@ final class MacTour: XCTestCase {
     private let game = "Игра"
     private let russian = ["-AppleLanguages", "(ru)"]
     private let pauseTitle = "Пауза"
+    private let playHereTitle = "Играть здесь"
 
     override func setUp() {
         continueAfterFailure = true
@@ -76,7 +77,8 @@ final class MacTour: XCTestCase {
         pause(4)
         XCTAssertEqual(mark(app)?.link, "replaced", "a replaced shell does not ask for the seat again by itself")
         picture("31-open-elsewhere")
-        here.click()
+        // The seat is taken back from the menu: the dock's button has its command too.
+        XCTAssertTrue(command(app, { $0.menuItems[self.playHereTitle].firstMatch }), "the menu takes the seat back")
         XCTAssertNotNil(until(app, 30) { $0.link == "up" }, "«Играть здесь» took the seat back")
         picture("32-back-here")
 

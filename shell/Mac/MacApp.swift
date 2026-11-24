@@ -23,7 +23,8 @@ struct MacApp: App {
 
 /// Closing the window ends the app, and at a live table the run: the host is told `quit` first, so
 /// it saves the party before it stops (Glass Table design §7). The phone only leaves; the Mac is
-/// where the run ends.
+/// where the run ends. A host that cannot be told (its socket stays down, the page is gone) does
+/// not keep the app open: the run goes on there, and the same link sits down at it again.
 @MainActor
 final class Closing: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -32,9 +33,9 @@ final class Closing: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let shell = Shell.shared
-        guard shell.live, shell.link == .up else { return .terminateNow }
+        guard shell.live, shell.link != .replaced else { return .terminateNow }
         Task { @MainActor in
-            await shell.quit()
+            _ = await shell.quit()
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
@@ -78,6 +79,10 @@ struct TableCommands: Commands {
                 .disabled(!menu.table)
             if let leave = menu.leave {
                 Button(leave) { shell.leave() }
+            }
+            if let playHere = menu.playHere {
+                Button(playHere) { shell.playHere() }
+                    .keyboardShortcut(.return, modifiers: .command)
             }
         }
     }

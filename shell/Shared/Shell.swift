@@ -47,6 +47,8 @@ final class Shell {
     var link = Link.up
     /// The table is a live one: there is a socket, and leaving it is asked about.
     var live: Bool { wire != nil }
+    /// This link's socket has been up at least once: a host was there to hear the shell.
+    @ObservationIgnored private var reached = false
     /// The shell's own lines, in the table's language once it has said it.
     var words: Words { Words.of(chrome?.language) }
     @ObservationIgnored private var wire: Wire?
@@ -116,6 +118,7 @@ final class Shell {
         self.wire?.close()
         sit(.live)
         link = .down
+        reached = false
         let next = Wire(
             url: url,
             // The pages' own place in the story: a page that was loaded again holds nothing, so the
@@ -140,6 +143,7 @@ final class Shell {
     private func linked(_ now: Link) {
         link = now
         if now == .up {
+            reached = true
             forcedFor = nil
             offer()
         } else if opened == .moves {
@@ -296,12 +300,15 @@ final class Shell {
         var line: String?
         /// A recorded run is left from the menu; a live table ends when the window is closed.
         var leave: String?
+        /// Another window took the seat: the menu takes it back, as the dock's button does.
+        var playHere: String?
     }
 
     var menu: MenuState {
         let words = self.words
         var menu = MenuState(pause: chrome?.dock.form == "paused" ? words.goOn : words.pause)
         if table != nil, !live { menu.leave = words.leave }
+        if live, link == .replaced { menu.playHere = words.playHere }
         guard let dock = chrome?.dock, link == .up else { return menu }
         menu.table = true
         guard dock.open else { return menu }
@@ -336,11 +343,29 @@ final class Shell {
     }
 
     /// The Mac's window is closed: the page is asked for a `quit`, which ends the run and has the
-    /// host save the party (Glass Table design §7). The message is given a moment to leave.
-    func quit() async {
-        guard live, link == .up, let story = table?.story else { return }
-        _ = await story.act(["kind": "command", "name": "quit"])
-        try? await Task.sleep(for: .milliseconds(500))
+    /// host save the party (Glass Table design §7). The message is given a moment to leave. False
+    /// when the host was not told: the run goes on there, and the same link sits down at it again.
+    func quit() async -> Bool {
+        // Another window holds the seat: the run is that window's to end.
+        guard live, link != .replaced, let story = table?.story else { return true }
+        // A socket that dropped under a table it had reached comes back in a second: it is waited for.
+        if link == .down, reached {
+            for _ in 0..<30 where link == .down { try? await Task.sleep(for: .milliseconds(100)) }
+        }
+        guard link == .up else {
+            say("nat20-diag quit was not sent: the socket is \(link)")
+            return false
+        }
+        // A page that does not take it is loaded again by `act`; it is asked once more.
+        for again in [false, true] {
+            if again { try? await Task.sleep(for: .seconds(1)) }
+            if await story.act(["kind": "command", "name": "quit"]).ok {
+                try? await Task.sleep(for: .milliseconds(500))
+                return true
+            }
+        }
+        say("nat20-diag quit was not sent: the page did not take it")
+        return false
     }
 
     /// One line on what stands now, for the UI test to read (`-tour 1`): the socket, the dock's
