@@ -71,13 +71,20 @@ final class Tour: XCTestCase {
             let field = app.textFields["type-line"]
             XCTAssertTrue(openLine(app, line, field), "the line opens over the keyboard")
             field.typeText("I look around")
-            pause(1)
-            XCTAssertEqual(field.value as? String, "I look around", "the line shows what was typed")
+            // A simulator that has not typed since it booted asks the system for the keyboard's
+            // language data at the first key, and a runner has none: the app stands until the
+            // request fails (7 s in one round, 67 s in another). The tour waits for the line as a
+            // person would, and says how long it took.
+            let typed = Date()
+            let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "I look around"), object: field)
+            XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: 120), .completed, "the line shows what was typed")
+            let waited = Int(Date().timeIntervalSince(typed))
+            if waited > 15 { print("nat20-tour the typed line showed after \(waited) s") }
             picture(app, "07-the-keyboard")
             field.typeText("\n")
             // The line is sent: it goes, and its keyboard with it.
             let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
-            XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 15), .completed, "the keyboard goes when the line is sent")
+            XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 60), .completed, "the keyboard goes when the line is sent")
             pause(2)
             picture(app, "08-after-typing")
         }

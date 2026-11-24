@@ -60,12 +60,12 @@ wait "$VIDEO" 2>/dev/null || true
 kill "$HOST" "$HOST2" "$SYSTEM" 2>/dev/null || true
 stage "the app's log is read"
 tail -40 "$OUT/tour-test.log"
-# A keyboard that did not come at the first touch of the dock's line: the tour touched the line
-# again, and the job says how often, with what the keyboard's service said.
-AGAIN="$(grep -c "nat20-tour the keyboard did not come" "$OUT/tour-test.log" || true)"
-if [ "$AGAIN" != "0" ]; then
-  echo "::warning::the simulator's keyboard did not come at $AGAIN touch(es) of the dock's line"
-  grep -h "KeyboardArbiter" "$OUT/tour-system.log" | cut -c1-300 | tail -20 || true
+# What the tour had to wait for or do twice (a keyboard that did not come at the first touch of the
+# dock's line, a typed line that showed late): the job says so, with what the keyboard's service and
+# the system's language data said at the time.
+if grep -q "nat20-tour" "$OUT/tour-test.log"; then
+  grep -h "nat20-tour" "$OUT/tour-test.log" | sort -u | sed 's/^.*nat20-tour /::warning::/'
+  grep -h "linguisticdata\|KeyboardArbiter:Client\] .*[Ee]rror" "$OUT/tour-system.log" | cut -c1-300 | tail -10 || true
 fi
 # What the app said about its socket and its pages while the test ran; cut off if the log is slow.
 perl -e 'alarm 120; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 15m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/tour-app.log" 2>&1 || true
