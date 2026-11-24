@@ -1,0 +1,70 @@
+# The SwiftUI shell (decision 0093): a SwiftUI program around the page (game/src/page) in a web view.
+# No Xcode project is committed: `xcodegen generate` writes it from this file.
+name: GlassTable
+options:
+  bundleIdPrefix: dev.nat20
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+# Signing for a real phone: Signing.xcconfig, and your own team in Local.xcconfig (not committed).
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
+settings:
+  base:
+    # The app's name (Stas, 2026-11-22): Fine Print, «Мелкий шрифт» in Russian (Shared/Names). These two
+    # lines and Shared/Names are the only places it is written. The target, the scheme and the project
+    # keep the working name `GlassTable`, which nobody sees.
+    APP_NAME: Fine Print
+    APP_BUNDLE_ID: dev.nat20.fineprint
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  GlassTable:
+    type: application
+    platform: iOS
+    sources:
+      - path: Shared
+      - path: iOS
+        excludes:
+          - Info.plist
+      # The built page (`npm run page:build`), copied whole as `page/`.
+      - path: ../game/dist/page
+        type: folder
+        buildPhase: resources
+      # Recorded runs, for a table with no host.
+      - path: ../game/test/fixtures/yard.seat-wire.jsonl
+        buildPhase: resources
+      - path: ../game/test/fixtures/the-way-back-ru.seat-wire.jsonl
+        buildPhase: resources
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleDisplayName: $(APP_NAME)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: $(APP_NAME) connects to the table running on your Mac.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "1"
+    scheme:
+      testTargets:
+        - GlassTableTour
+  # A finger's tour of a live table (Tour/Tour.swift), run by ci/tour.sh.
+  GlassTableTour:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tour
+    dependencies:
+      - target: GlassTable
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tour
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: GlassTable

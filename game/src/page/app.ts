@@ -133,7 +133,9 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
       { className: `win native show-${shell.show} ${s?.mode === "combat" ? "scene-fight" : "scene-road"}`, lang: view.hello.language },
       h("div", { className: "ambient", "aria-hidden": true }),
       content,
-      view.stage && shell.show === "story" ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish, settled }) : null,
+      // The finish is chosen on «Лист», which is another page in a native shell: the story's page
+      // reads the choice as each roll takes the stage, not once when it was loaded.
+      view.stage && shell.show === "story" ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish: savedFinish(), settled }) : null,
     );
   }
   return h(

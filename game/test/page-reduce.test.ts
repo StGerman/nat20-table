@@ -10,6 +10,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HostMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "../src/seat-wire/schema.ts";
+import { chromeOf } from "../src/page/chrome.ts";
 import { answered, EMPTY, meOf, placed, reduce, replaced, settle, type PageView } from "../src/page/reduce.ts";
 import { NAMES_RU, NARRATION, narratedFight, TALK } from "./page-wires.ts";
 import type { HumanPrompt, PlayerIntent, TableEvent } from "../src/table/types.ts";
@@ -373,11 +374,22 @@ test("page reducer: a sheet goes to «Лист», not over the story, and is old
   v = reduce(v, HostMessageSchema.parse({ type: "ask", id: "a1", prompt: { kind: "explore" } }));
   v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 2, event: { kind: "info", title: "Где вы", text: "У фургона." } }));
   assert.equal(v.overlay?.title, "Где вы");
+  // A native shell asks the seat for a sheet only while this holds (CON-22): not on every touch of «Лист».
+  assert.equal(chromeOf(v).sheetStale, true, "no sheet yet");
   v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 3, event: { kind: "info", title: "Лист персонажа", text: "Брен: человек, воин, уровень 2\nЗдоровье 20 из 20" } }));
   assert.equal(v.overlay, undefined, "the sheet is not an overlay, and takes the place of the last one");
   assert.equal(v.sheet?.n, 1);
   assert.equal(v.sheet?.me, meOf(v), "fresh while the character is as it was");
+  assert.equal(chromeOf(v).sheetStale, false);
   v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 4, event: me(12) }));
   assert.notEqual(v.sheet?.me, meOf(v), "old once the character changed");
+  assert.equal(chromeOf(v).sheetStale, true);
   assert.equal(v.story.length, 0, "nothing in the story");
+  // The purse is on the sheet and not on the panel's line: a sheet is old once anything happened.
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 5, event: { kind: "info", title: "Лист персонажа", text: "Брен: человек, воин, уровень 2\nЗдоровье 12 из 20" } }));
+  assert.equal(chromeOf(v).sheetStale, false, "fresh again");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 6, event: me(12) }));
+  assert.equal(chromeOf(v).sheetStale, false, "the same frame sent again changes nothing");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 7, event: { kind: "narration", speaker: "dm", text: "Торговец отсчитывает жалованье." } }));
+  assert.equal(chromeOf(v).sheetStale, true, "old once a line was told");
 });
