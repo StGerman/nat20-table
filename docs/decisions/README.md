@@ -101,6 +101,9 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0092](0092-fine-print-and-the-undersigned.md) | The game is Fine Print / «Мелкий шрифт», the party's company is the Undersigned / «Нижеподписавшиеся»; no literacy field and no roll to read a contract | Proposed | 2026-11-23 | Stas (thread, card); on merge |
 | [0093](0093-swiftui-shell-over-the-page.md) | The client's shell is SwiftUI over the same page, on the iPhone and the Mac; the page stays the only game logic; replaces 0090's Tauri shell | Proposed | 2026-11-22 | Stas (project chat, card); the hybrid shape on merge |
 | [0094](0094-contract-line-that-bites.md) | The next contract's last line is the short-purse rule, read aloud and quoted at the gate; a signing card only after `settle`; party order goes short; a pack may state the purse in days | Accepted | 2026-11-23 | Stas (thread, «Ок по всем») |
+| [0095](0095-arrival-in-file-order.md) | An arrival puts the first eligible card of the place's pile on the table, in file order; road and night piles keep the draw of three and the DM's pick | Proposed | 2026-11-23 | Lev proposed; Stas on merge |
+| [0096](0096-a-scenes-card-in-a-site-pack.md) | A scene of a site pack may put one deck card on the table, answered as a road card; it carries a coin, a promise and the dawn decision | Proposed | 2026-11-23 | Lev proposed; Stas on merge |
+| [0097](0097-held-creatures-lost-by-the-round.md) | A held creature is lost by the round while its holder stands, never at a fight's early end; the count writes its deeds at a won fight's end | Proposed | 2026-11-23 | Lev proposed; Stas on merge |
 
 ## Open questions to watch
 
