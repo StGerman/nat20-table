@@ -61,8 +61,11 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build 2>&1 \
             | tee build.log | ci/pretty.sh
+      # Nineteen pictures take about fourteen minutes. On the Xcode 27 image the step once stood for
+      # thirty-six and left nothing: it is limited, and each call of the simulator's inside it too.
       - name: Pictures from the simulator
         working-directory: shell
+        timeout-minutes: 25
         run: ci/shots.sh build/Build/Products/Debug-iphonesimulator/GlassTable.app shots
       # The tour is built on its own: a UI test's runner is signed to run locally, which the app's
       # build above leaves out.

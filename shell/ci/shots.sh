@@ -11,21 +11,25 @@ mkdir -p "$OUT"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEVICE="$("$HERE/device.sh")"
 echo "simulator $DEVICE"
+# A call of the simulator's that never returns is cut off after its seconds: the step then fails at
+# the picture it stood at, which its log names, and not at its limit with nothing said.
+sim() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 xcrun simctl boot "$DEVICE" || true
-xcrun simctl bootstatus "$DEVICE" -b
+sim 600 xcrun simctl bootstatus "$DEVICE" -b
 # A new simulator shows its keyboard's lesson on sliding over the letters in place of the keys, and
 # the line being typed loses the keyboard when the lesson goes: it is marked as seen.
 xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true || true
-xcrun simctl install "$DEVICE" "$APP"
+sim 300 xcrun simctl install "$DEVICE" "$APP"
 
 shot() {
   local name="$1"
   shift
-  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  echo "shots $(date -u +%H:%M:%S): $name"
+  sim 60 xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   # The app's own log lines (NSLog) land in the .err file.
-  xcrun simctl launch --stdout="$PWD/$OUT/$name.out" --stderr="$PWD/$OUT/$name.err" "$DEVICE" "$BUNDLE" "$@"
+  sim 120 xcrun simctl launch --stdout="$PWD/$OUT/$name.out" --stderr="$PWD/$OUT/$name.err" "$DEVICE" "$BUNDLE" "$@"
   sleep "${WAIT:-14}"
-  xcrun simctl io "$DEVICE" screenshot "$OUT/$name.png"
+  sim 120 xcrun simctl io "$DEVICE" screenshot "$OUT/$name.png"
 }
 
 xcrun simctl ui "$DEVICE" appearance light
