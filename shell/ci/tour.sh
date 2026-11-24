@@ -9,6 +9,10 @@ OUT="$1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEVICE="$("$HERE/device.sh")"
 mkdir -p "$OUT"
+# Each stage is named as it starts: the test's own words go to a file, so a tour that stands still
+# would otherwise leave the job's log empty.
+stage() { echo "tour $(date -u +%H:%M:%S): $*"; }
+stage "the simulator boots"
 xcrun simctl boot "$DEVICE" 2>/dev/null || true
 xcrun simctl bootstatus "$DEVICE" -b > /dev/null
 xcrun simctl ui "$DEVICE" appearance light
@@ -33,15 +37,21 @@ xcrun simctl io "$DEVICE" recordVideo --codec h264 --force "$OUT/tour.mp4" > "$O
 VIDEO=$!
 sleep 2
 STATUS=0
+stage "the test runs"
 # The two tests take about ten minutes. One that hangs is cut off at twenty-five, so the step fails
 # with its logs and pictures kept, not at the job's limit with nothing.
 TEST_RUNNER_TABLE_LINK="$LINK" TEST_RUNNER_ASKS_LINK="$ASKS_LINK" perl -e 'alarm 1500; exec @ARGV' xcodebuild test-without-building -project GlassTable.xcodeproj -scheme GlassTable \
   -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build-tour \
   -resultBundlePath "$OUT/tour.xcresult" > "$OUT/tour-test.log" 2>&1 || STATUS=$?
-# The recorder writes the file when it is interrupted, not killed.
+stage "the test ended with $STATUS; the recording is closed"
+# The recorder writes the file when it is interrupted, not killed. One that does not end in a
+# minute is killed, and the recording is lost.
 kill -INT "$VIDEO" 2>/dev/null || true
+for _ in $(seq 1 60); do kill -0 "$VIDEO" 2>/dev/null || break; sleep 1; done
+kill -KILL "$VIDEO" 2>/dev/null || true
 wait "$VIDEO" 2>/dev/null || true
 kill "$HOST" "$HOST2" 2>/dev/null || true
+stage "the app's log is read"
 tail -40 "$OUT/tour-test.log"
 # What the app said about its socket and its pages while the test ran; cut off if the log is slow.
 perl -e 'alarm 120; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 15m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/tour-app.log" 2>&1 || true
@@ -64,11 +74,13 @@ if [ "$FIRST" != "option option text " ]; then
   STATUS=1
 fi
 # Only the pages' lines were sent, every kind of ask was answered, the lost press was asked again.
+stage "what the host heard is read"
 BUNDLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' build-tour/Build/Products/Debug-iphonesimulator/GlassTable.app/Info.plist)"
-SENT="$(xcrun simctl get_app_container "$DEVICE" "$BUNDLE" data)/Documents/sent.jsonl"
+SENT="$(perl -e 'alarm 60; exec @ARGV' xcrun simctl get_app_container "$DEVICE" "$BUNDLE" data || true)/Documents/sent.jsonl"
 cp "$SENT" "$OUT/tour-asks-sent.jsonl" || touch "$OUT/tour-asks-sent.jsonl"
 node --experimental-strip-types --no-warnings "$HERE/heard.ts" "$OUT/tour-asks-host.jsonl" "$OUT/tour-asks-sent.jsonl" || STATUS=1
-xcrun xcresulttool export attachments --path "$OUT/tour.xcresult" --output-path "$OUT/tour" || true
+stage "the test's pictures are taken out"
+perl -e 'alarm 300; exec @ARGV' xcrun xcresulttool export attachments --path "$OUT/tour.xcresult" --output-path "$OUT/tour" || true
 # The test's pictures under their own names; Xcode's own recording and snapshots repeat tour.mp4.
 python3 - "$OUT/tour" <<'PY' || true
 import json, os, sys

@@ -74,8 +74,11 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-tour ARCHS=arm64 ONLY_ACTIVE_ARCH=NO build-for-testing 2>&1 \
             | tee build-tour.log | ci/pretty.sh
+      # The tour takes about twelve minutes. One that stands still fails here, with the job's time
+      # left to keep what it wrote, and its log says which stage it stood at.
       - name: A finger's tour of a live table, recorded
         working-directory: shell
+        timeout-minutes: 35
         run: ci/tour.sh shots
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
