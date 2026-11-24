@@ -65,29 +65,26 @@ final class Tour: XCTestCase {
                 grabber.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.99)))
                 pause(2)
             }
-            if line.isHittable {
-                // The dock's line opens a line over the keyboard, where what is typed can be read.
-                line.tap()
-                let field = app.textFields["type-line"]
-                if field.waitForExistence(timeout: 10) {
-                    pause(2)
-                    if !app.keyboards.firstMatch.exists { field.tap() }
-                    pause(1)
-                    if app.keyboards.firstMatch.exists {
-                        // The keyboard's own lesson, where the simulator still shows it (ci/tour.sh marks it seen).
-                        for name in ["Continue", "Продолжить"] {
-                            let lesson = app.keyboards.buttons[name].firstMatch
-                            if lesson.exists { lesson.tap() }
-                        }
-                        field.typeText("I look around")
-                        pause(1)
-                        picture(app, "07-the-keyboard")
-                        field.typeText("\n")
-                        pause(4)
-                    }
-                }
-                picture(app, "08-after-typing")
-            }
+            // The dock's line opens a line over the keyboard, where what is typed can be read. Each
+            // step is held to: a line that did not open or was not sent passed unseen before.
+            XCTAssertTrue(line.isHittable, "the dock's line can be touched")
+            line.tap()
+            let field = app.textFields["type-line"]
+            XCTAssertTrue(field.waitForExistence(timeout: 10), "the line opens over the keyboard")
+            pause(2)
+            if !app.keyboards.firstMatch.exists { field.tap() }
+            pause(1)
+            XCTAssertTrue(app.keyboards.firstMatch.exists, "the keyboard stands under the line")
+            field.typeText("I look around")
+            pause(1)
+            XCTAssertEqual(field.value as? String, "I look around", "the line shows what was typed")
+            picture(app, "07-the-keyboard")
+            field.typeText("\n")
+            // The line is sent: it goes, and its keyboard with it.
+            let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+            XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 15), .completed, "the keyboard goes when the line is sent")
+            pause(2)
+            picture(app, "08-after-typing")
         }
 
         // The story under the bars: scrolled back, the tab bar steps aside; scrolled on, it returns.

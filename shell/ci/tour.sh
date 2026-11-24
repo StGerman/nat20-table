@@ -59,6 +59,11 @@ tail -40 "$OUT/tour-test.log"
 # What the app said about its socket and its pages while the test ran; cut off if the log is slow.
 perl -e 'alarm 120; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 15m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/tour-app.log" 2>&1 || true
 grep -h "nat20-wire\|nat20-diag .* again\|came back" "$OUT/tour-app.log" | grep -v "send failed\|log run" | tail -40 || true
+# What the system said against the app while the test ran: its faults and errors, and a view that
+# stopped following its state.
+perl -e 'alarm 120; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 15m --info --style compact --predicate 'process == "GlassTable" AND (messageType == fault OR messageType == error OR eventMessage CONTAINS[c] "cycle" OR eventMessage CONTAINS[c] "AttributeGraph" OR eventMessage CONTAINS "Modifying state" OR eventMessage CONTAINS "nat20-")' > "$OUT/tour-app-faults.log" 2>&1 || true
+grep -ch "" "$OUT/tour-app-faults.log" || true
+grep -hi "cycle\|AttributeGraph\|Modifying state" "$OUT/tour-app-faults.log" | cut -c1-300 | sort | uniq -c | sort -rn | head -20 || true
 cat "$OUT/tour-host.log" "$OUT/tour-asks-host.log"
 # What the accessibility audit found on the shell's screens: read by a person, it fails nothing.
 grep -h "nat20-audit" "$OUT/tour-test.log" > "$OUT/accessibility.txt" || true
