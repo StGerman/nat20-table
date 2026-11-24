@@ -15,6 +15,9 @@ stage() { echo "tour $(date -u +%H:%M:%S): $*"; }
 stage "the simulator boots"
 xcrun simctl boot "$DEVICE" 2>/dev/null || true
 xcrun simctl bootstatus "$DEVICE" -b > /dev/null
+# A new simulator shows its keyboard's lesson on sliding over the letters in place of the keys, and
+# the line being typed loses the keyboard when the lesson goes: it is marked as seen.
+xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true || true
 xcrun simctl ui "$DEVICE" appearance light
 
 LINKFILE="$(mktemp)"

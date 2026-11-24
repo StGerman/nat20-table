@@ -49,8 +49,9 @@ for (const lost of left) {
   if (!heard.some((frame) => !frame.startsWith('{"type":"resume"') && id(frame) === id(lost))) wrong.push(`a lost message's ask was never answered: ${lost}`);
 }
 
-// The first socket, the one after the drop, the one after the page was loaded again, and «Играть здесь».
-if (resumes.length < 4) wrong.push(`${resumes.length} resumes heard, at least 4 expected: ${resumes.join(", ")}`);
+// The first socket, the one after the drop, the one after the page was loaded again, and «Играть здесь»:
+// one more is a socket the shell dropped while it was alive.
+if (resumes.length !== 4) wrong.push(`${resumes.length} resumes heard, 4 expected: ${resumes.join(", ")}`);
 if (resumes[0] !== 0) wrong.push(`the first resume asked from ${resumes[0]}, not 0`);
 if (!resumes.slice(1).some((n) => n > 0)) wrong.push("no socket that came back asked from the pages' place in the story");
 if (!resumes.slice(1).some((n) => n === 0)) wrong.push("no resume from 0 after the story's page was loaded again");

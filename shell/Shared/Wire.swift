@@ -14,7 +14,8 @@ enum Link: Equatable {
 final class Wire {
     /// The seat's close code for a window it replaced (`CLOSE_REPLACED`, game/src/seat-wire/messages.ts).
     private static let replacedCode = 4001
-    /// Seconds between pings. A ping still unanswered at the next one means the socket is dead.
+    /// Seconds between pings. A ping still unanswered at the next one, with no line from the host
+    /// since, means the socket is dead.
     private static let every = 10
 
     private let url: URL
@@ -101,6 +102,9 @@ final class Wire {
             while true {
                 let message = try await task.receive()
                 guard self.task === task else { return }
+                // A line from the host says the socket is alive as well as a pong does: in a burst
+                // of lines the pong waits its turn behind them, and a live socket is not dropped.
+                pinged = nil
                 if link != .up {
                     link = .up
                     state(.up)

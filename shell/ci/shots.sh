@@ -13,6 +13,9 @@ DEVICE="$("$HERE/device.sh")"
 echo "simulator $DEVICE"
 xcrun simctl boot "$DEVICE" || true
 xcrun simctl bootstatus "$DEVICE" -b
+# A new simulator shows its keyboard's lesson on sliding over the letters in place of the keys, and
+# the line being typed loses the keyboard when the lesson goes: it is marked as seen.
+xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true || true
 xcrun simctl install "$DEVICE" "$APP"
 
 shot() {

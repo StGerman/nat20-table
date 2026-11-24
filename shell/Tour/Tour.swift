@@ -74,6 +74,11 @@ final class Tour: XCTestCase {
                     if !app.keyboards.firstMatch.exists { field.tap() }
                     pause(1)
                     if app.keyboards.firstMatch.exists {
+                        // The keyboard's own lesson, where the simulator still shows it (ci/tour.sh marks it seen).
+                        for name in ["Continue", "Продолжить"] {
+                            let lesson = app.keyboards.buttons[name].firstMatch
+                            if lesson.exists { lesson.tap() }
+                        }
                         field.typeText("I look around")
                         pause(1)
                         picture(app, "07-the-keyboard")
