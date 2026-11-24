@@ -65,7 +65,7 @@ struct DockBar: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("dock-line")
-                    if dock.sheet != nil || dock.card != nil {
+                    if shell.listed {
                         Button {
                             shell.opened = .moves
                         } label: {
@@ -350,9 +350,7 @@ struct MovesSheet: View {
                 }
             }
             // «Что ещё можно» names the list a turn opens; an ask that is its own list has no name.
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(title.isEmpty ? .hidden : .visible, for: .navigationBar)
+            .sheetTitle(title, hidden: title.isEmpty)
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
@@ -378,11 +376,24 @@ struct LinesSheet: View {
                     Text(row)
                 }
             }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetTitle(title, hidden: false)
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+extension View {
+    /// A sheet's small title on the phone. The Mac shows the same list in a popover, which has no bar.
+    @ViewBuilder
+    func sheetTitle(_ title: String, hidden: Bool) -> some View {
+        #if os(iOS)
+        self.navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(hidden ? .hidden : .visible, for: .navigationBar)
+        #else
+        self.navigationTitle(title)
+        #endif
     }
 }
 

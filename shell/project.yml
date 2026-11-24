@@ -5,6 +5,7 @@ options:
   bundleIdPrefix: dev.nat20
   deploymentTarget:
     iOS: "26.0"
+    macOS: "26.0"
   createIntermediateGroups: true
 # Signing for a real phone: Signing.xcconfig, and your own team in Local.xcconfig (not committed).
 configFiles:
@@ -68,3 +69,53 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tour
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: GlassTable
+  # The same shell on the Mac (CON-23): the shared model and controls in a window, with a menu bar.
+  GlassTableMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Shared
+      - path: Mac
+        excludes:
+          - Info.plist
+      - path: ../game/dist/page
+        type: folder
+        buildPhase: resources
+      - path: ../game/test/fixtures/yard.seat-wire.jsonl
+        buildPhase: resources
+      - path: ../game/test/fixtures/the-way-back-ru.seat-wire.jsonl
+        buildPhase: resources
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: $(APP_NAME)
+        LSApplicationCategoryType: public.app-category.role-playing-games
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: $(APP_NAME) connects to the table running on a Mac.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
+        # Signed to run on the Mac that built it. A signed, notarised app is CON-21.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+    scheme:
+      testTargets:
+        - GlassTableMacTour
+  # The menu bar's tour of a live table (MacTour/MacTour.swift), run by ci/mac-tour.sh.
+  GlassTableMacTour:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: MacTour
+    dependencies:
+      - target: GlassTableMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).mactour
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: GlassTableMac
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""

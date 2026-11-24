@@ -1,6 +1,9 @@
 *.xcodeproj
 iOS/Info.plist
+Mac/Info.plist
 build/
 shots/
 build-tour/
+build-mac/
+shots-mac/
 Local.xcconfig

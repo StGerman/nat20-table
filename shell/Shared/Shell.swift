@@ -47,6 +47,8 @@ final class Shell {
     var link = Link.up
     /// The table is a live one: there is a socket, and leaving it is asked about.
     var live: Bool { wire != nil }
+    /// This link's socket has been up at least once: a host was there to hear the shell.
+    @ObservationIgnored private var reached = false
     /// The shell's own lines, in the table's language once it has said it.
     var words: Words { Words.of(chrome?.language) }
     @ObservationIgnored private var wire: Wire?
@@ -116,6 +118,7 @@ final class Shell {
         self.wire?.close()
         sit(.live)
         link = .down
+        reached = false
         let next = Wire(
             url: url,
             // The pages' own place in the story: a page that was loaded again holds nothing, so the
@@ -140,6 +143,7 @@ final class Shell {
     private func linked(_ now: Link) {
         link = now
         if now == .up {
+            reached = true
             forcedFor = nil
             offer()
         } else if opened == .moves {
@@ -207,6 +211,12 @@ final class Shell {
     /// opens when the human is back.
     func offer() {
         guard let dock = chrome?.dock else { return }
+        if Self.answersStand {
+            // The window shows such an ask under the story: the list of a turn that stood open
+            // over it has nothing left to show.
+            if opened == .moves, ownList || dock.sheet == nil { opened = nil }
+            return
+        }
         // No ask stands (it was answered, or the socket came back): if the same ask is offered
         // again, its sheet opens again.
         if dock.ask == nil { forcedFor = nil }
@@ -219,6 +229,27 @@ final class Shell {
         } else if opened == .moves, dock.sheet == nil, dock.card == nil {
             opened = nil
         }
+    }
+
+    /// The dock's ask is its own list, not a turn's list of moves: a card, a reaction, a question,
+    /// a pick of rows.
+    var ownList: Bool {
+        guard let dock = chrome?.dock else { return false }
+        return dock.card != nil || dock.sheet?.forced == true
+    }
+
+    /// The Mac's window stands such an ask's answers under the story (Mac/Answers); the phone opens
+    /// them as a sheet over it.
+    #if os(macOS)
+    static let answersStand = true
+    #else
+    static let answersStand = false
+    #endif
+
+    /// There is a list to open: a turn's moves, and on the phone an ask that is its own list.
+    var listed: Bool {
+        guard let dock = chrome?.dock, dock.sheet != nil || dock.card != nil else { return false }
+        return !(Self.answersStand && ownList)
     }
 
     /// The page hands over a message for the host. With no host (a recorded run) it is only counted.
@@ -237,11 +268,104 @@ final class Shell {
         if sent == reloadAfter { table?.story.recover() }
     }
 
-    /// What the pages handed over, one message a line, where the UI test's job reads it.
+    /// What the pages handed over, one message a line, where the UI test's job reads it: the app's
+    /// documents on the phone, the user's temporary folder on the Mac (its documents are asked about).
     private func keep() {
+        #if os(macOS)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("nat20-sent.jsonl")
+        #else
         guard let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let file = folder.appendingPathComponent("sent.jsonl")
+        #endif
         let text = kept.map { $0 + "\n" }.joined()
-        try? text.write(to: folder.appendingPathComponent("sent.jsonl"), atomically: true, encoding: .utf8)
+        try? text.write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    /// What the Mac's menu bar offers now: each answer the open ask takes by a number, then the
+    /// rest of the dock's actions. The first nine answers take the keys 1 to 9.
+    struct MenuState: Equatable {
+        struct Item: Equatable, Identifiable {
+            let n: Int
+            let label: String
+            var id: Int { n }
+        }
+
+        var pause: String
+        /// The table is there to be paused: a live table or a recorded one, with the socket up.
+        var table = false
+        var moves: [Item] = []
+        var yes: String?
+        var no: String?
+        var list: String?
+        var line: String?
+        /// A recorded run is left from the menu; a live table ends when the window is closed.
+        var leave: String?
+        /// Another window took the seat: the menu takes it back, as the dock's button does.
+        var playHere: String?
+    }
+
+    var menu: MenuState {
+        let words = self.words
+        var menu = MenuState(pause: chrome?.dock.form == "paused" ? words.goOn : words.pause)
+        if table != nil, !live { menu.leave = words.leave }
+        if live, link == .replaced { menu.playHere = words.playHere }
+        guard let dock = chrome?.dock, link == .up else { return menu }
+        menu.table = true
+        guard dock.open else { return menu }
+        let item = { (move: Chrome.Move) in MenuState.Item(n: move.n, label: move.label) }
+        if dock.form == "paused" {
+            // Only the pause is lifted.
+        } else if let card = dock.card, card.asked {
+            menu.moves = card.choices.compactMap { choice in choice.n.map { MenuState.Item(n: $0, label: choice.text) } }
+        } else if let reaction = dock.sheet?.reaction {
+            if let answers = reaction.answers, !answers.isEmpty {
+                menu.moves = answers.map { MenuState.Item(n: $0.n, label: $0.label) }
+            } else {
+                menu.yes = reaction.yes
+            }
+            menu.no = reaction.no
+        } else if let sheet = dock.sheet, sheet.forced {
+            menu.moves = sheet.groups.flatMap { $0.moves }.map(item)
+        } else {
+            menu.moves = (dock.chips + (dock.endTurn.map { [$0] } ?? [])).map(item)
+        }
+        if listed { menu.list = dock.more ?? words.whole }
+        menu.line = dock.placeholder
+        return menu
+    }
+
+    /// The human's own words, from the Mac's menu: the list's popover steps aside and the line
+    /// opens for typing.
+    func write() {
+        if opened == .moves { opened = nil }
+        screen = .story
+        typing = true
+    }
+
+    /// The Mac's window is closed: the page is asked for a `quit`, which ends the run and has the
+    /// host save the party (Glass Table design §7). The message is given a moment to leave. False
+    /// when the host was not told: the run goes on there, and the same link sits down at it again.
+    func quit() async -> Bool {
+        // Another window holds the seat: the run is that window's to end.
+        guard live, link != .replaced, let story = table?.story else { return true }
+        // A socket that dropped under a table it had reached comes back in a second: it is waited for.
+        if link == .down, reached {
+            for _ in 0..<30 where link == .down { try? await Task.sleep(for: .milliseconds(100)) }
+        }
+        guard link == .up else {
+            say("nat20-diag quit was not sent: the socket is \(link)")
+            return false
+        }
+        // A page that does not take it is loaded again by `act`; it is asked once more.
+        for again in [false, true] {
+            if again { try? await Task.sleep(for: .seconds(1)) }
+            if await story.act(["kind": "command", "name": "quit"]).ok {
+                try? await Task.sleep(for: .milliseconds(500))
+                return true
+            }
+        }
+        say("nat20-diag quit was not sent: the page did not take it")
+        return false
     }
 
     /// One line on what stands now, for the UI test to read (`-tour 1`): the socket, the dock's

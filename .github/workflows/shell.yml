@@ -1,6 +1,7 @@
-# The SwiftUI shell (CON-22, decision 0093): builds the shell around the page for the iPhone
-# simulator on a hosted Apple Silicon machine, saves pictures of it, and runs its UI test against a
-# table that replays a recorded run over the real seat wire. No engine, no model, no signing.
+# The SwiftUI shell (CON-22, CON-23, decision 0093): builds the shell around the page for the iPhone
+# simulator and for the Mac on a hosted Apple Silicon machine, saves pictures of it, and runs its UI
+# tests against a table that replays a recorded run over the real seat wire. No engine, no model,
+# no signing.
 # Not part of ci-ok until it has been stable for a milestone (decision 0093): a round takes about
 # half an hour, most of it the simulator's first boot and the UI test.
 name: shell
@@ -91,4 +92,51 @@ jobs:
             shell/shots
             shell/build.log
             shell/build-tour.log
+          retention-days: 7
+
+  mac:
+    # The same shell built for the Mac (CON-23), on the same two images. Its UI test answers every
+    # kind of ask from the menu bar, by a command and by its key.
+    name: mac (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, xcode-27]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: The page the shell shows
+        run: npm run page:build
+      - name: The Xcode project, from project.yml
+        working-directory: shell
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+          sw_vers
+      - name: Build the Mac shell and its tour
+        working-directory: shell
+        run: |
+          set -o pipefail
+          xcodebuild -project GlassTable.xcodeproj -scheme GlassTableMac -configuration Debug \
+            -destination 'platform=macOS,arch=arm64' -derivedDataPath build-mac build-for-testing 2>&1 \
+            | tee build-mac.log | ci/pretty.sh
+      - name: The menu bar's tour of a live table
+        working-directory: shell
+        run: ci/mac-tour.sh shots-mac
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: shell-mac-${{ matrix.runner }}
+          path: |
+            shell/shots-mac
+            shell/build-mac.log
           retention-days: 7
