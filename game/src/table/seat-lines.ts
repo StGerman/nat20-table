@@ -64,6 +64,8 @@ export interface PeopleBook {
   /** Each person's run-language lines, keyed by `lineKey(person, English line)`. */
   lines: ReadonlyMap<string, string>;
   party: ReadonlyArray<{ handle: string; names: readonly string[]; look?: string; look_ru?: string }>;
+  /** The pack's own NPCs that a scene places as creatures (`npc` on a scene creature), with every form of their names. */
+  npcs?: ReadonlyArray<{ id: string; names: readonly string[] }>;
 }
 
 export const NO_PEOPLE: PeopleBook = { lines: new Map(), party: [] };

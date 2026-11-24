@@ -214,6 +214,39 @@ impl Session {
     /// Loads a scene file already read and checked, carrying `party` in, and logs
     /// `scene_loaded`. Nothing changes on a refusal.
     fn enter_scene(&mut self, scene: &SceneFile, party: &[Handle]) -> Result<(), ApiError> {
+        // A person of the story the world remembers dead (their `killed_<npc>` deed, or a
+        // roster person dead to the campaign's world) is not there: a later scene that places
+        // them again (the Silent Mill's reeve, on the green and at the wrap-up) leaves them out. A fight the scene is built around keeps its participants, as before.
+        let fights = |handle: &str| {
+            scene
+                .encounters
+                .iter()
+                .any(|e| e.participants.iter().any(|p| p.0 == handle))
+        };
+        let dead = |c: &nat20_api_contract::SceneCreature| {
+            !fights(&c.handle.0)
+                && c.npc.as_deref().is_some_and(|npc| {
+                    self.remembers(&world::killed_deed(npc))
+                        || self
+                            .campaign
+                            .as_ref()
+                            .is_some_and(|c| c.world.state.npcs.get(npc).is_some_and(|n| !n.alive))
+                })
+        };
+        let living;
+        let scene = if scene.creatures.iter().any(dead)
+            || scene.spawns.iter().any(|s| s.creatures.iter().any(dead))
+        {
+            let mut kept = scene.clone();
+            kept.creatures.retain(|c| !dead(c));
+            for spawn in &mut kept.spawns {
+                spawn.creatures.retain(|c| !dead(c));
+            }
+            living = kept;
+            &living
+        } else {
+            scene
+        };
         // The place NPCs stay as the party leaves them (API-48); a refused load puts the
         // campaign back as it was.
         let campaign_before = self.campaign.clone();
@@ -408,6 +441,22 @@ impl Session {
         let (Some(campaign), Some(game)) = (self.campaign.as_mut(), self.game.as_mut()) else {
             return Ok(());
         };
+        // A scene creature that is a roster person of the world (the Mill's reeve on a Wend
+        // campaign) is met and kept as the place NPCs are: the world writes back how they
+        // leave. In handle order, so a replay meets them in the same order.
+        let mut placed: Vec<&String> = self
+            .card_npcs
+            .iter()
+            .filter(|(handle, npc)| handle == npc && game.has_creature(handle))
+            .map(|(handle, _)| handle)
+            .filter(|h| campaign.world.state.npcs.contains_key(h.as_str()))
+            .filter(|h| !self.npcs_here.contains(h))
+            .collect();
+        placed.sort();
+        for handle in placed {
+            campaign.met(handle);
+            self.npcs_here.push(handle.clone());
+        }
         for npc in campaign.npcs_to_place(game.scene_id()) {
             if game.has_creature(&npc.id) {
                 continue;

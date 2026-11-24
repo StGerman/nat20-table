@@ -7,10 +7,13 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { REPO } from "../src/engine.ts";
+import { GameEngine, REPO } from "../src/engine.ts";
 import { type Adventure, SCHEMA_FILE, schemaText } from "../src/pack/adventure.ts";
 import { checkPack, repoPacks } from "../src/pack/check.ts";
 import { skeletonFile } from "../src/pack/read.ts";
+import { peopleBook } from "../src/pack/campaign.ts";
+import { SeatNames } from "../src/table/seat-lines.ts";
+import { peopleOf } from "../src/ui/people.ts";
 
 const MILL = path.join(REPO, "scenarios/the_silent_mill");
 
@@ -285,5 +288,59 @@ test("the pack:check command prints each problem and exits 1", () => {
     assert.match(run.stdout, /1 problem\(s\)\n {2}- format_version 3 is not one this game reads/);
   } finally {
     close();
+  }
+});
+
+test("on a Wend campaign, the reeve the green places is met, keeps the pack's forms, and a later scene leaves him out once he is dead to the world", async () => {
+  const mill = campaignMill(WEND, (s) => {
+    for (const scene of s.scenes) scene.exits = [];
+  });
+  const runDir = mkdtempSync(path.join(tmpdir(), "mill-"));
+  const engine = await GameEngine.start({ pack: mill.pack, runDir, seed: 1 });
+  try {
+    assert.ok((await engine.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" })).ok);
+    const started = await engine.request("dm", { cmd: "start_campaign", party: ["bren", "torva", "maren", "ilsa"] });
+    assert.ok(started.ok, started.error?.message);
+    const seen = await engine.request("bren", { cmd: "get_state" });
+    assert.ok(seen.result?.cmd === "get_state" && seen.result.state.view === "player");
+    const state = seen.result.state;
+    const reeve = (state.world?.npcs ?? []).find((n) => n.id === "osric_hale");
+    assert.ok(reeve, "the world's reeve is one the party has met");
+    assert.equal(state.others.filter((c) => c.handle === "osric_hale").length, 1, "placed once, by the scene");
+    const adventure = JSON.parse(readFileSync(skeletonFile(mill.pack), "utf8")) as Adventure;
+    const names = new SeatNames("ru", new Map([["osric_hale", "Осрик Хейл"]]), peopleBook(mill.pack, adventure.party, adventure.npcs));
+    const person = peopleOf(state, names).find((p) => p.id === "osric_hale");
+    assert.ok(person?.forms.includes("старосте"), "the pack's forms join the world's");
+    assert.equal(peopleOf(state, names).filter((p) => p.id === "osric_hale").length, 1);
+    const saved = await engine.request("dm", { cmd: "save_roster" });
+    assert.ok(saved.result?.cmd === "save_roster");
+    // The next contract, on a world where the reeve has since died.
+    const roster = saved.result.roster;
+    const world = roster.world as unknown as { state: { contract?: unknown; memory: { npcs: Record<string, { alive: boolean }> } } };
+    delete world.state.contract;
+    (world.state.memory as { left_at?: string }).left_at = "wendford";
+    delete (roster as { contract_start?: unknown }).contract_start;
+    world.state.memory.npcs.osric_hale!.alive = false;
+    const next = await GameEngine.start({ pack: mill.pack, runDir, seed: 1, roster });
+    try {
+      const loaded = await next.request("dm", { cmd: "load_scene", scene_id: "s1_village_green" });
+      assert.ok(loaded.ok, loaded.error?.message);
+      const again = await next.request("dm", { cmd: "start_campaign", party: ["bren", "torva", "maren", "ilsa"] });
+      assert.ok(again.ok, again.error?.message);
+      // The wrap-up, later in the contract: the reeve the world knows dead is not at his porch.
+      const wrap = await next.request("dm", { cmd: "load_scene", scene_id: "s6_wrap_up", party: ["bren", "torva", "maren", "ilsa"] });
+      assert.ok(wrap.ok, wrap.error?.message);
+      const dm = await next.request("dm", { cmd: "get_state" });
+      assert.ok(dm.result?.cmd === "get_state" && dm.result.state.view === "dm");
+      const here = dm.result.state.creatures.map((c) => c.handle);
+      assert.ok(!here.includes("osric_hale"), "the dead reeve is not placed");
+      assert.ok(here.includes("bertil_pell"));
+    } finally {
+      next.close();
+    }
+  } finally {
+    engine.close();
+    rmSync(runDir, { recursive: true });
+    mill.close();
   }
 });
