@@ -163,6 +163,20 @@ const server = Bun.serve({
 });
 console.log(JSON.stringify({ port: server.port, token }));
 
+// The app holds the other end of standard input and writes nothing to it: when it closes the app is
+// gone, however it went, and the host ends what it started (the model call, the engine) and itself.
+// Watched from here on, so an app that dies in the middle of a check leaves nothing behind.
+const gone = new AbortController();
+let engine: EngineClient | undefined;
+function end(): void {
+  gone.abort();
+  engine?.close();
+  process.exit(0);
+}
+process.stdin.on("end", end);
+process.on("SIGTERM", end);
+process.stdin.resume();
+
 record({
   id: "1 compiled host runs from the bundle",
   ok: true,
@@ -172,9 +186,9 @@ record({
 await timed("2 bundled nat20-api-server answers hello", async () => {
   const binary = process.env.NAT20_API_SERVER || path.join(here, "nat20-api-server");
   if (!existsSync(binary)) throw new Error(`no engine at ${binary}`);
-  const engine = await EngineClient.start(binary, { timeoutMs: 15_000 });
+  // Kept running, as a table's engine is: it has to end when the app does.
+  engine = await EngineClient.start(binary, { timeoutMs: 15_000 });
   const { version, engine_rev, schema_sha256 } = engine.hello;
-  engine.close();
   return `${binary}: contract ${version}, core ${engine_rev}, schema ${schema_sha256.slice(0, 12)} matches`;
 });
 
@@ -201,6 +215,7 @@ if (process.env.NAT20_SPIKE_NO_MODEL === "1") {
         prompt: "Ответь одним словом: да.",
         options: {
           pathToClaudeCodeExecutable: claude.file,
+          abortController: gone,
           model: process.env.SPIKE_MODEL || "claude-haiku-5-5",
           maxTurns: 1,
           tools: [],
@@ -236,6 +251,3 @@ if (!items.some((i) => i.id.startsWith("5 "))) {
 const file = writeReport();
 shell?.send(JSON.stringify({ type: "done", report: file, all_ok: items.every((i) => i.ok) }));
 log(`report: ${file}`);
-// The app ends the host when it quits; a host whose app is gone (stdin closed) exits by itself.
-process.stdin.on("end", () => process.exit(0));
-process.stdin.resume();

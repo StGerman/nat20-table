@@ -36,7 +36,8 @@ they are needed. `open` is called with an empty environment, so the app gets no 
    reports are beside it).
 
 Each round makes one small model call on your Claude login. After each round the script kills the
-app and looks for a host left running.
+app with a signal it cannot answer, and looks for anything it started that is still running: the
+host, and the engine the host keeps running as a table's would be.
 
 With the Developer ID, once the account is active (CON-21's half):
 `xcrun notarytool store-credentials glass-table --apple-id <id> --team-id <team>` once, then

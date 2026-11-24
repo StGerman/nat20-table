@@ -101,12 +101,27 @@ sign_all() {
 
 # The newest file of this name written since the app was last launched, if there is one.
 fresh() { find "$REPORTS" -maxdepth 1 -name "$1" -newer "$BUILD/launched" | sort | tail -1; }
-running() { pgrep -f "$INSIDE/" >/dev/null; }
+# The process $1 and everything under it, one id a line.
+tree() {
+  local child
+  echo "$1"
+  for child in $(pgrep -P "$1"); do tree "$child"; done
+}
+# Which of the processes $@ are still there.
+alive() {
+  local pid
+  for pid in "$@"; do
+    if kill -0 "$pid" 2>/dev/null; then ps -o pid=,comm= -p "$pid"; fi
+  done
+  return 0
+}
 
 # Launches the app ($1: open, by this script, or finder, by a double-click), waits for the host's
-# report and prints it, then kills the app and looks for a host left behind. Fails when no report came.
+# report and prints it, then kills the app and looks for anything it started that outlived it. Fails
+# when no report came.
 launch() {
-  local came=0 wait=120 hostlog
+  local came=0 wait=120 hostlog app before name
+  local -a pids
   touch "$BUILD/launched"
   if [ "$1" = "finder" ]; then
     wait=300
@@ -130,18 +145,34 @@ launch() {
     hostlog="$(fresh 'host-*.log')"
     if [ -n "$hostlog" ]; then cat "$hostlog"; else echo "(no host log: the host never started)"; fi
   fi
-  # The hard way out: the app is killed, not asked to quit. The host has to notice by itself.
-  pkill -f "$INSIDE/$NAME" || echo "(the app was not running any more)"
+  # The hard way out: the app is killed with a signal it cannot answer, so nothing in it cleans up.
+  # The host, the engine it keeps running and anything else under the app have to end by themselves.
+  app="$(pgrep -f "$INSIDE/$NAME" | head -1)"
+  if [ -z "$app" ]; then
+    echo "(the app was not running any more)"
+    [ "$came" = 1 ]
+    return
+  fi
+  while read -r pid; do pids+=("$pid"); done < <(tree "$app")
+  before="$(alive "${pids[@]}")"
+  echo "running before the app is killed:"
+  echo "$before"
+  if [ "$came" = 1 ]; then
+    for name in glass-table-host nat20-api-server; do
+      echo "$before" | grep -q "$name" || echo "MISSING before the kill: $name"
+    done
+  fi
+  kill -KILL "$app"
   for _ in $(seq 1 10); do
-    running || break
+    [ -z "$(alive "${pids[@]}")" ] && break
     sleep 1
   done
-  if running; then
-    echo "LEFT BEHIND after the app was killed:"
-    pgrep -fl "$INSIDE/" || true
-    pkill -f "$INSIDE/" || true
+  if [ -n "$(alive "${pids[@]}")" ]; then
+    echo "LEFT BEHIND 10 s after the app was killed:"
+    alive "${pids[@]}"
+    kill -KILL "${pids[@]}" 2>/dev/null || true
   else
-    echo "the host and the engine ended with the app"
+    echo "all ${#pids[@]} ended with the app"
   fi
   [ "$came" = 1 ]
 }

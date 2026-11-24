@@ -44,7 +44,7 @@ jobs:
       # Round A is the first report: the host signed with its entitlements. Round B, with none, is
       # read by a person. No Claude Code is installed here, so items 3 and 4 fail by design. The app
       # must not have been handed this step's own PATH: a double-clicked app has no shell PATH.
-      - name: Every item but the live call works, with no shell PATH, and no host is left behind
+      - name: Every item but the live call works, with no shell PATH, and nothing outlives the app
         run: |
           reports="$HOME/Library/Application Support/glass-table-spike"
           node -e '
@@ -58,8 +58,9 @@ jobs:
             if (shell) console.log("FAIL the app was given a shell PATH");
             process.exit(bad.length || shell ? 1 : 0);
           ' "$(ls "$reports"/report-*.json | sort | head -1)"
-          if grep -q "LEFT BEHIND" "$reports"/spike-*.log; then
-            echo "FAIL a host or an engine outlived the app"
+          # The host and the engine it keeps running have to be there when the app is killed, and gone after.
+          if grep -E "LEFT BEHIND|MISSING before" "$reports"/spike-*.log; then
+            echo "FAIL the host or the engine was not running before the app was killed, or outlived it"
             exit 1
           fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
