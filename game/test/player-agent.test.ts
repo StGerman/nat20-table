@@ -13,7 +13,7 @@ import { readPack } from "../src/pack/read.ts";
 import { sessionOptions } from "../src/agents/sdk-session.ts";
 import { REPO } from "../src/engine.ts";
 import { TurnCancelled, TurnTimeout } from "../src/errors.ts";
-import { addressLines, castParty, talkLines } from "../src/play/run.ts";
+import { addressLines, castParty, fightLines, talkLines } from "../src/play/run.ts";
 import { packIds } from "../src/table/guards.ts";
 import { TableLoop } from "../src/table/loop.ts";
 import { ScriptedDm, ScriptedSeat } from "../src/table/scripted.ts";
@@ -644,4 +644,9 @@ test("an AI player knows the DM's you is the human's character, never its own", 
   assert.match(prompt, /In the DM's narration to the whole table, "you" means Bren, never Maren/);
   assert.match(playerPrompt("maren", card, "cleric"), /"you" means the human's character, never Maren/, "a human's handle unknown: the rule still holds");
   assert.doesNotMatch(playerPrompt("maren", card, "cleric", "en", false), /"you" means/, "no human, no rule");
+});
+
+test("fightLines counts fight talk with no target, and says nothing with no fight", () => {
+  assert.deepEqual(fightLines({ reactions: [], fight: { rounds: 4, lines: 9 } }, []), ["- Fight talk: 9 AI lines in 4 combat rounds, 2.25 a round"]);
+  assert.deepEqual(fightLines({ reactions: [], fight: { rounds: 0, lines: 0 } }, []), []);
 });
