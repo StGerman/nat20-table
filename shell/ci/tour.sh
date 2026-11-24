@@ -39,6 +39,10 @@ rm -f "$LINKFILE"
 xcrun simctl io "$DEVICE" recordVideo --codec h264 --force "$OUT/tour.mp4" > "$OUT/tour-video.log" 2>&1 &
 VIDEO=$!
 sleep 2
+# What the keyboard's service and the system say against the app, taken as it is said: read back
+# afterwards, the simulator's log has lost the words of its lines.
+xcrun simctl spawn "$DEVICE" log stream --level info --style compact --predicate 'subsystem == "com.apple.KeyboardArbiter" OR (process == "GlassTable" AND (messageType == fault OR messageType == error))' > "$OUT/tour-system.log" 2>&1 &
+SYSTEM=$!
 STATUS=0
 stage "the test runs"
 # The two tests take about ten minutes. One that hangs is cut off at twenty-five, so the step fails
@@ -53,9 +57,16 @@ kill -INT "$VIDEO" 2>/dev/null || true
 for _ in $(seq 1 60); do kill -0 "$VIDEO" 2>/dev/null || break; sleep 1; done
 kill -KILL "$VIDEO" 2>/dev/null || true
 wait "$VIDEO" 2>/dev/null || true
-kill "$HOST" "$HOST2" 2>/dev/null || true
+kill "$HOST" "$HOST2" "$SYSTEM" 2>/dev/null || true
 stage "the app's log is read"
 tail -40 "$OUT/tour-test.log"
+# A keyboard that did not come at the first touch of the dock's line: the tour touched the line
+# again, and the job says how often, with what the keyboard's service said.
+AGAIN="$(grep -c "nat20-tour the keyboard did not come" "$OUT/tour-test.log" || true)"
+if [ "$AGAIN" != "0" ]; then
+  echo "::warning::the simulator's keyboard did not come at $AGAIN touch(es) of the dock's line"
+  grep -h "KeyboardArbiter" "$OUT/tour-system.log" | cut -c1-300 | tail -20 || true
+fi
 # What the app said about its socket and its pages while the test ran; cut off if the log is slow.
 perl -e 'alarm 120; exec @ARGV' xcrun simctl spawn "$DEVICE" log show --last 15m --style compact --predicate 'eventMessage CONTAINS "nat20-"' > "$OUT/tour-app.log" 2>&1 || true
 grep -h "nat20-wire\|nat20-diag .* again\|came back" "$OUT/tour-app.log" | grep -v "send failed\|log run" | tail -40 || true

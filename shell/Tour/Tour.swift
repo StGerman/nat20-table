@@ -68,13 +68,8 @@ final class Tour: XCTestCase {
             // The dock's line opens a line over the keyboard, where what is typed can be read. Each
             // step is held to: a line that did not open or was not sent passed unseen before.
             XCTAssertTrue(line.isHittable, "the dock's line can be touched")
-            line.tap()
             let field = app.textFields["type-line"]
-            XCTAssertTrue(field.waitForExistence(timeout: 10), "the line opens over the keyboard")
-            pause(2)
-            if !app.keyboards.firstMatch.exists { field.tap() }
-            pause(1)
-            XCTAssertTrue(app.keyboards.firstMatch.exists, "the keyboard stands under the line")
+            XCTAssertTrue(openLine(app, line, field), "the line opens over the keyboard")
             field.typeText("I look around")
             pause(1)
             XCTAssertEqual(field.value as? String, "I look around", "the line shows what was typed")
@@ -241,7 +236,11 @@ final class Tour: XCTestCase {
             return tap(app, first("chip-"))
         default:
             // The human's own words: the dock's line opens a line over the keyboard.
-            return tap(app, app.buttons["dock-line"].firstMatch) && write(app, app.textFields["type-line"], "I look around")
+            let line = app.buttons["dock-line"].firstMatch
+            let field = app.textFields["type-line"]
+            guard reach(app, line), openLine(app, line, field) else { return false }
+            field.typeText("I look around\n")
+            return true
         }
     }
 
@@ -249,15 +248,40 @@ final class Tour: XCTestCase {
     /// first, as a thumb would.
     @MainActor
     private func tap(_ app: XCUIApplication, _ element: XCUIElement) -> Bool {
+        guard reach(app, element) else { return false }
+        element.tap()
+        return true
+    }
+
+    @MainActor
+    private func reach(_ app: XCUIApplication, _ element: XCUIElement) -> Bool {
         guard element.waitForExistence(timeout: 15) else { return false }
         for _ in 0..<3 where !element.isHittable {
             let grabber = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.49))
             grabber.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.99)))
             pause(2)
         }
-        guard element.exists, element.isHittable else { return false }
-        element.tap()
-        return true
+        return element.exists && element.isHittable
+    }
+
+    /// Touches the dock's line and waits for its line and its keyboard. On the iOS 27 simulator the
+    /// keyboard does not always come at the first touch: its service fails the app, and the line
+    /// closes with the focus it lost. A person touches the line again, and so does the tour, once.
+    /// It says so in the log, where the job counts it (ci/tour.sh).
+    @MainActor
+    private func openLine(_ app: XCUIApplication, _ line: XCUIElement, _ field: XCUIElement) -> Bool {
+        for touch in 1...2 {
+            if field.exists { field.tap() } else { line.tap() }
+            if field.waitForExistence(timeout: 10), app.keyboards.firstMatch.waitForExistence(timeout: 15), field.exists {
+                return true
+            }
+            print("nat20-tour the keyboard did not come at touch \(touch) of the dock's line")
+            picture(app, "no-keyboard-at-touch-\(touch)")
+            // A line that lost its focus closes; the dock's line is touched again when it has.
+            let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: field)
+            _ = XCTWaiter().wait(for: [closed], timeout: 15)
+        }
+        return false
     }
 
     @MainActor
