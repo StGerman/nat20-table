@@ -126,12 +126,25 @@ final class Shell {
             },
             line: { [weak self] text in self?.host(text) },
             state: { [weak self] link in
-                self?.link = link
                 say("nat20-wire \(link)")
+                self?.linked(link)
             }
         )
         wire = next
         next.open()
+    }
+
+    /// The socket went or came back. While it is away the dock says so, and the ask's sheet does
+    /// not stand over that line with rows that would do nothing; what was typed stays in the dock.
+    /// When it is back the host offers the open ask again, and an ask that is its own list opens.
+    private func linked(_ now: Link) {
+        link = now
+        if now == .up {
+            forcedFor = nil
+            offer()
+        } else if opened == .moves {
+            opened = nil
+        }
     }
 
     /// Back to the connect screen. The table is told nothing: it goes on, the open ask waits, and

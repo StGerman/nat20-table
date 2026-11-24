@@ -226,8 +226,7 @@ struct Chips: View {
 
 /// The sheet of the open ask.
 struct MovesSheet: View {
-    let shell: Shell
-    @State private var draft = ""
+    @Bindable var shell: Shell
 
     var body: some View {
         NavigationStack {
@@ -327,18 +326,21 @@ struct MovesSheet: View {
                             }
                         }
                     }
-                    // The sheet covers the dock, so the human's own words are typed here.
+                    // The sheet covers the dock, so the human's own words are typed here: the same
+                    // line as the dock's, and why the page would not take it is said under it.
                     if dock.open {
                         Section {
-                            TextField(dock.placeholder, text: $draft)
+                            TextField(dock.placeholder, text: $shell.draft)
                                 .accessibilityIdentifier("sheet-line")
                                 .submitLabel(.send)
                                 .onSubmit {
-                                    let text = draft
+                                    let text = shell.draft
                                     shell.typed(text) { ok in
-                                        if ok { draft = "" }
+                                        if ok { shell.draft = "" }
                                     }
                                 }
+                        } footer: {
+                            if let notice = shell.notice { Text(notice) }
                         }
                     }
                 }
