@@ -1,6 +1,6 @@
 # The Godmother (the lair under the Barrow Oak): system design
 
-Status: Proposed. Lev Neiman, 2026-11-24, branch `claude/project-thread-4t5v2z` at c617f9c (table #492). Scope: `docs/scope/the-godmother-scope.md`, §9 answered by Stas in its §10. It answers the twelve questions of the scope's §6 by number (§3). Three Proposed records carry the choices with real alternatives: 0095 (arrival in file order), 0096 (a scene's card in a site pack), 0097 (held creatures lost by the round). Author's read: no verdict on itself. Zoya's board check and Vera's read of §11 are not made yet; the calling thread quotes both in §17 before this goes to Stas (decision 0069).
+Status: Proposed. Lev Neiman, 2026-11-24, branch `claude/project-thread-4t5v2z` at c617f9c (table #492). Scope: `docs/scope/the-godmother-scope.md`, §9 answered by Stas in its §10. It answers the twelve questions of the scope's §6 by number (§3). Three Proposed records carry the choices with real alternatives: 0095 (arrival in file order), 0096 (a scene's card in a site pack), 0097 (held creatures lost by the round). Author's read: no verdict on itself. Zoya's board check and Vera's read of §11 were made on 2026-11-24 and are quoted in §17 (decision 0069); Lev has not answered them or the review findings in §17.4, so §1 to §16 stand as he wrote them.
 
 Naming (Stas, 2026-11-23): the hill folk call the spider the Godmother («Крёстная»), which is also the pack's name; the pack id is `the_godmother` and her handle in a scene is `godmother`. Her true name, Arachta («Арахта»), is the Narrator's, and only Nell says it; no mechanism reads it. She is a beast: she never speaks and never yields. The map's `pack_slot` for `barrow_oak` (`lair_of_arachas` in `worlds/wend/map.json`) and the assertion in `crates/nat20-world/tests/worlds.rs` are renamed in the first content PR (§13 PR 11).
 
@@ -64,7 +64,7 @@ A scene file names its reads. Each read is an id with the deeds it needs and the
   { "id": "fire_seen",   "if": ["signal_fire_lit"], "unless": ["back_way"] }
 ],
 "creatures": [ { "handle": "wenna", "read": "wenna_lived" } ],
-"spawns":    [ { "when": { "on": "round", "round": 3 }, "read": "fire_seen" } ]
+"spawns":    [ { "when": { "kind": "round", "round": 3 }, "read": "fire_seen" } ]
 ```
 
 and in `adventure.json`, under the same scene:
@@ -120,7 +120,7 @@ Rules:
 
 Cost, said once: at Saltmouth the author's order replaces the DM's judgement, and "a fight card first" (0089) holds there only if the file is written that way. Every seeded fixture with an arrival draw is re-recorded, because the d100 leaves the dice stream.
 
-The existing `soon` queue could have made this one reader certain without a rule change. Stas chose the arrival rule (scope §10 answer 1); it also frees the fourteen arrival cards that already carry an `if` from the roll.
+The existing `soon` queue could have made this one reader certain without a rule change. Stas chose the arrival rule (scope §10 answer 1); it also frees the sixteen arrival cards that already carry an `if` from the roll.
 
 ### 5.2 In a scene of a site pack (decision 0096)
 
@@ -461,6 +461,18 @@ She was given the five Russian lines of §11 alone, with «Марен» and «Т
 >
 > 4. Где стало скучно
 > Скучно нигде не было, всё короткое. Абзац перед походом я прочитала дважды из-за слов «начать» и «останется в прошлом». «Можно идти как есть» и «Идём как есть», а потом ещё «Отряд идёт как есть»: «как есть» повторяется три раза совсем близко, я это слышу. «Паутину» тоже повторено в двух соседних фразах, и это похоже на эхо. «Одно слово на дорогу» мне понравилось, звучит как старая присказка, и я улыбнулась. «Тэм в коконе больше не шевелится» сказано коротко и холодно, и это сработало: мне стало не по себе, хорошо это или плохо.
+
+### 17.4 Review findings open against the draft
+
+One review round on e5bb161 (Rule 8). Three were errors of fact and are fixed in place: the spawn example's tag (`kind`), the arrival counts in 0095 and §5.1 (16 of 17 carry an `if`; 11 are `once: true`, 6 are `once: "contract"`), and the status line. Five are design defects, checked against the tree, and stay open until Lev's next pass:
+
+1. **0095: a recurring arrival card at the head of a pile starves the cards behind it.** Six arrival cards are `once: "contract"`; `rufus_due` returns every contract with no `unless`, so in file order it is shown at every Saltmouth arrival and the cards after it never come. Fix: every `once: true` card before any `once: "contract"` card, with a test, and a rule for where a pack's own arrival card sits.
+2. **§5.2: a scene card marked `chained: true` that nothing adds does not load.** `Deck::validate` answers "chained card ... is never added" (`crates/nat20-world/src/deck.rs`). Fix: name the validator change in §5.2, PR 9 and 0096, or use another marker.
+3. **§3 question 4, §7: with the signal fire lit, fight 2 can end by surrender while the two spawned Giant Wolf Spiders are still hostile.** The surrender lists eight creatures and the fight holds ten. Fix: say whether a spawn's handles may be named in a surrender, or what happens to the two.
+4. **§5.2 rule 1 against §4.2 rule 5.** A scene that lists `cards` answers `bad_scene` outside a site session, while the base scene is meant to play with no site. Fix: ignore `cards` outside a site session, or run exit row 3's no-deed case in a site session with an empty memory.
+5. **`roots_to_the_end` has no reader**, so the pack fails the design's own `pack:check` rule (§4.2 rule 9). Fix: a scene 6 read, or drop the deed; check `bald_hill_to_the_end` the same way.
+
+The branch is the session's own `claude/...` branch, against Rule 8's naming: a cloud thread can push nowhere else.
 
 ## Sources
 

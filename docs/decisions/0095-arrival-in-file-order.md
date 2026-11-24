@@ -9,7 +9,7 @@
 
 A card that reads a deed pays the deed back only if it comes to the table. Today every pile is drawn the same way: one d100 a card, up to three offered, the DM picks (0063), a fight first (0089). A reader that shares a pile can lose the roll or the pick. Facts checked on c617f9c:
 
-- The decks hold 50 cards: 22 road, 11 night, 17 arrival. Of the 17 arrival cards, 14 carry an `if` on the card and 14 are `once: true`. Only `the_fair_price` has no `if`.
+- The decks hold 50 cards: 22 road, 11 night, 17 arrival. Of the 17 arrival cards, 16 carry an `if` on the card; 11 are `once: true` and 6 are `once: "contract"`, which come back every contract (corrected in review, 2026-11-24). Only `the_fair_price` has no `if`.
 - A party arrives at a place once a contract, so a reader that loses waits a whole contract.
 - The Highsteads pile holds at most one card (two cards that exclude each other). The Millbeck bridge pile holds one. Wendford holds seven: four that read the bridge, of which one bridge crossing writes at most one; two Mill cards that exclude each other; and `the_fair_price` on *The Way Back*. Saltmouth holds seven with five independent conditions: the only pile where more than two can hold together.
 - Of the 17, two can come to a fight (`rufus_due`, `oddas_mark`), both at Saltmouth.
