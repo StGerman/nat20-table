@@ -3,7 +3,8 @@
 # compiled host and the engine inside it, signs all three under the hardened runtime, optionally
 # notarises the app, launches it the way Finder does, and prints the report. It launches the app
 # twice: with the host signed with the entitlements Bun's docs give (round A), then with none
-# (round B), so one run says whether they are needed.
+# (round B), so one run says whether they are needed. Then it asks for one double-click in Finder
+# (round C), the launch the question is about.
 #
 #   game/spike/glass-table/run.sh                      # ad-hoc signature: no Apple account needed
 #   game/spike/glass-table/run.sh --entitlements full  # round A only (none: round B only)
@@ -102,25 +103,30 @@ sign_all() {
 fresh() { find "$REPORTS" -maxdepth 1 -name "$1" -newer "$BUILD/launched" | sort | tail -1; }
 running() { pgrep -f "$INSIDE/" >/dev/null; }
 
-# Launches the app, waits for the host's report and prints it, then kills the app and looks for a
-# host left behind. Fails when no report came.
+# Launches the app ($1: open, by this script, or finder, by a double-click), waits for the host's
+# report and prints it, then kills the app and looks for a host left behind. Fails when no report came.
 launch() {
-  local came=0 hostlog
+  local came=0 wait=120 hostlog
   touch "$BUILD/launched"
-  # `open` goes through Launch Services, as a double-click does: no shell PATH, no terminal environment.
-  if [ "${NAT20_SPIKE_NO_MODEL:-}" = "1" ]; then
-    open -n --env NAT20_SPIKE_NO_MODEL=1 "$APP"
+  if [ "$1" = "finder" ]; then
+    wait=300
+    open -R "$APP"
+    echo "Double-click «$NAME» in the Finder window that has just opened. Waiting up to 5 minutes."
+  elif [ "${NAT20_SPIKE_NO_MODEL:-}" = "1" ]; then
+    env -i /usr/bin/open -n --env NAT20_SPIKE_NO_MODEL=1 "$APP"
   else
-    open -n "$APP"
+    # `open` goes through Launch Services, as a double-click does, but hands the app the environment
+    # it was called with: it is called with none, so the app gets no shell PATH.
+    env -i /usr/bin/open -n "$APP"
   fi
-  for _ in $(seq 1 120); do
+  for _ in $(seq 1 "$wait"); do
     [ -n "$(fresh 'report-*.json')" ] && { came=1; break; }
     sleep 1
   done
   if [ "$came" = 1 ]; then
     cat "$(fresh 'report-*.json')"
   else
-    echo "no report in 120 s: the host did not finish. Its own log says how far it got:"
+    echo "no report in $wait s: the host did not finish. Its own log says how far it got:"
     hostlog="$(fresh 'host-*.log')"
     if [ -n "$hostlog" ]; then cat "$hostlog"; else echo "(no host log: the host never started)"; fi
   fi
@@ -159,7 +165,7 @@ else
 fi
 
 step "6 round A: launched the way Finder launches it (host entitlements: $FIRST)"
-launch || { echo "round A gave no report"; exit 1; }
+launch open || { echo "round A gave no report"; exit 1; }
 
 if [ "$ENTITLEMENTS" = "both" ]; then
   step "7 round B: the same app, the host signed with no entitlements"
@@ -167,10 +173,19 @@ if [ "$ENTITLEMENTS" = "both" ]; then
     echo "skipped: signing again would undo the notarisation"
   else
     sign_all none
-    launch || echo "round B gave no report: the compiled host does not run under the hardened runtime without its entitlements"
+    launch open || echo "round B gave no report: the compiled host does not run under the hardened runtime without its entitlements"
+    echo
+    echo "signed again as in round A, for the round below"
+    sign_all full >/dev/null 2>&1
   fi
 fi
 
+step "8 round C: launched by Finder itself"
+if [ -t 0 ]; then
+  launch finder || echo "round C gave no report"
+else
+  echo "skipped: nobody is at this machine to double-click"
+fi
+
 step "done"
-echo "Double-click $APP in Finder once and check the window lists the same items, then close it."
 echo "Paste this log: $LOG"

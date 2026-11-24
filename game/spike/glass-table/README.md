@@ -27,14 +27,16 @@ in. From the table checkout:
 
 It builds for a few minutes, then opens the spike's window twice, for a few seconds each, and closes
 it itself: round A with the host signed with its entitlements, round B with none, which says whether
-they are needed. Each round makes one small model call on your Claude login. After each round it
-kills the app and looks for a host left running.
+they are needed. `open` is called with an empty environment, so the app gets no shell `PATH`.
 
-3. Double-click `game/spike/glass-table/build/Glass Table Spike.app` in Finder once: the window
-   should list the same five items. Close it.
+3. Round C: the script shows the app in a Finder window and waits. Double-click it there. The
+   window lists the five items, and the script closes it when the report is in.
 4. Paste the log the script names in its last line (`spike-<time>.log` under
    `~/Library/Application Support/glass-table-spike/`; the host's own `host-<time>.log` and the
    reports are beside it).
+
+Each round makes one small model call on your Claude login. After each round the script kills the
+app and looks for a host left running.
 
 With the Developer ID, once the account is active (CON-21's half):
 `xcrun notarytool store-credentials glass-table --apple-id <id> --team-id <team>` once, then

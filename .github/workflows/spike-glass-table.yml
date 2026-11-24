@@ -42,15 +42,21 @@ jobs:
       - name: Build, sign ad-hoc, launch through Launch Services twice, print the reports
         run: game/spike/glass-table/run.sh
       # Round A is the first report: the host signed with its entitlements. Round B, with none, is
-      # read by a person. No Claude Code is installed here, so items 3 and 4 fail by design.
-      - name: Every item but the live call works, and no host is left behind
+      # read by a person. No Claude Code is installed here, so items 3 and 4 fail by design. The app
+      # must not have been handed this step's own PATH: a double-clicked app has no shell PATH.
+      - name: Every item but the live call works, with no shell PATH, and no host is left behind
         run: |
           reports="$HOME/Library/Application Support/glass-table-spike"
           node -e '
             const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
             const bad = r.items.filter((i) => !i.ok && !i.id.startsWith("3 ") && !i.id.startsWith("4 "));
             for (const i of bad) console.log("FAIL", i.id, i.detail);
-            process.exit(bad.length ? 1 : 0);
+            const first = r.items.find((i) => i.id.startsWith("1 "));
+            const path = (first.detail.match(/PATH=(.*)$/) || [])[1] || "";
+            console.log("the app was given PATH=" + path);
+            const shell = /homebrew|hostedtoolcache|\.cargo/.test(path);
+            if (shell) console.log("FAIL the app was given a shell PATH");
+            process.exit(bad.length || shell ? 1 : 0);
           ' "$(ls "$reports"/report-*.json | sort | head -1)"
           if grep -q "LEFT BEHIND" "$reports"/spike-*.log; then
             echo "FAIL a host or an engine outlived the app"
