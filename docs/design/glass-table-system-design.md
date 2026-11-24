@@ -3,6 +3,7 @@
 - **Status:** Proposed; accepted on merge
 - **Date:** 2026-11-21, main c1746be
 - **Decision:** `docs/decisions/0090-local-web-client-in-a-shell.md` (Proposed)
+- **Amended by:** `docs/design/swiftui-shell-design.md` (decision 0093, 2026-11-23): the shell is SwiftUI, not Tauri, and the iPhone takes the same one. It replaces what §3, §8 and §11 (PRs 3 and 9) say of the shell; the rest stands
 - **Scope:** `docs/scope/glass-table-scope.md`
 - **Asked by:** Stas, 2026-11-20 22:05Z (a prototype on Apple's interface guidelines and Liquid Glass), 22:50Z (he picked the Glass Table look and feel), 2026-11-21 01:01Z (this design), 01:11Z (one package of the JS and Rust parts: «Звучит отлично запланируй с Яном пожалуйста»), 07:29Z (card: Glass Table goes first in the milestone order)
 - **Prototype it describes:** [Glass Table](https://claude.ai/artifact/MSgifgUKiLPXCmq4XxQf1L), version 4, with Lev's gap list and Vera's three reads

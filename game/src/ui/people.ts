@@ -54,13 +54,15 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
     const health = inScene.get(p.handle);
     out.push({ id: p.handle, name: ru ? names.who(p.handle) : (p.names[0] ?? names.person(p.handle)), forms: [...p.names], state: "companion", ...(look ? { look } : {}), remembers: [], ...(health ? { health, inScene: true } : {}) });
   }
+  // The pack's forms of a person the world also knows (the reeve's «староста»), beside the world's.
+  const packForms = new Map((book.npcs ?? []).map((n) => [n.id, n.names]));
   for (const n of state.world?.npcs ?? []) {
     const health = inScene.get(n.id);
     const state_: PersonState = !n.alive ? "dead" : health === "down" ? "unconscious" : health ? "here" : "elsewhere";
     out.push({
       id: n.id,
       name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name),
-      forms: n.names ?? [],
+      forms: [...new Set([...(n.names ?? []), ...(packForms.get(n.id) ?? [])])],
       state: state_,
       ...(n.look ? { look: line(n.id, n.look) } : {}),
       // None on a dead person's card (rule N6).
@@ -69,6 +71,14 @@ export function peopleOf(state: State, names: SeatNames, book: PeopleBook = name
       ...(health ? { inScene: true } : {}),
       ...(state_ !== "here" && state_ !== "unconscious" && n.last_seen ? { lastSeen: names.place(n.last_seen, state.world?.places.find((p) => p.id === n.last_seen)?.name) } : {}),
     });
+  }
+  // The pack's own NPCs a scene places (the Silent Mill's reeve and miller): here while they stand
+  // in the scene, as the engine has them; the world's NPCs above are already listed.
+  const listed = new Set(out.map((p) => p.id));
+  for (const n of book.npcs ?? []) {
+    const health = inScene.get(n.id);
+    if (!health || listed.has(n.id)) continue;
+    out.push({ id: n.id, name: ru ? names.who(n.id) : (n.names[0] ?? names.person(n.id)), forms: [...n.names], state: health === "down" ? "unconscious" : "here", remembers: [], health, inScene: true });
   }
   for (const n of state.world?.heard ?? []) {
     out.push({ id: n.id, name: ru ? names.who(n.id) : (n.names?.[0] ?? n.name), forms: n.names ?? [], state: "heard", ...(n.heard ? { heard: line(n.id, n.heard) } : {}), remembers: [] });

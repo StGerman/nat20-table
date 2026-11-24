@@ -149,6 +149,14 @@
             "type": "string",
             "minLength": 1
           },
+          "names": {
+            "description": "Every form of their name the story may use, in each language and case («Осрик», «Осрика», «старосте»): the seat makes each a name token while a scene places them.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "prose": {
             "type": "string",
             "minLength": 1,

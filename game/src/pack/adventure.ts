@@ -73,6 +73,10 @@ const Npc = z
     id,
     name: z.string().min(1).describe("What the characters call them."),
     name_ru: z.string().min(1).optional().describe("What a Russian run calls them (AGT-38), such as «староста Осрик Хейл»."),
+    names: z
+      .array(z.string().min(1))
+      .optional()
+      .describe("Every form of their name the story may use, in each language and case («Осрик», «Осрика», «старосте»): the seat makes each a name token while a scene places them."),
     prose: packPath.describe("Who they are, voice, wants, what they know and tell, what they hide."),
     stat_block: id
       .optional()

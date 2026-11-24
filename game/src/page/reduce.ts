@@ -248,6 +248,14 @@ export function answered(view: PageView): PageView {
   return { ...v, dock: v.dock.form === "ended" ? v.dock : { form: "waiting", ...(v.busy ? { on: v.busy } : {}) } };
 }
 
+/**
+ * Another window took the seat (`CLOSE_REPLACED`): this one offers no move, since none would reach
+ * the table, and says where the game is. The story stays as it was.
+ */
+export function replaced(view: PageView, text: string): PageView {
+  return { ...view, ask: undefined, sent: undefined, busy: text, dock: view.dock.form === "ended" ? view.dock : { form: "waiting", on: text } };
+}
+
 /** How the seat labels a character: the host's names, else the handle as the terminal shows it. */
 function namer(view: PageView): (handle: string) => string {
   const names = view.hello?.names ?? {};

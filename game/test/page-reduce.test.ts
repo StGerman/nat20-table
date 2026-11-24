@@ -10,7 +10,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { HostMessageSchema, WIRE_HASH, WIRE_VERSION, type HostMessage } from "../src/seat-wire/schema.ts";
-import { answered, EMPTY, meOf, placed, reduce, settle, type PageView } from "../src/page/reduce.ts";
+import { answered, EMPTY, meOf, placed, reduce, replaced, settle, type PageView } from "../src/page/reduce.ts";
 import { NAMES_RU, NARRATION, narratedFight, TALK } from "./page-wires.ts";
 import type { HumanPrompt, PlayerIntent, TableEvent } from "../src/table/types.ts";
 import { InkSeat } from "../src/ui/ink-seat.ts";
@@ -255,6 +255,21 @@ test("page reducer: the dead of the first frame with people were told before; an
   v = reduce(v, HostMessageSchema.parse({ type: "unnarrated" }));
   assert.deepEqual(v.told, ["npc:old_tam"]);
   assert.deepEqual(v.untold, []);
+});
+
+test("page reducer: a window whose seat another window took offers no move, says where the game is and keeps its story", () => {
+  let v = reduce(EMPTY, hello(WIRES[0]));
+  // The recorded yard up to its first ask: a story on the page and a turn open.
+  for (const r of WIRES[0].records) {
+    v = reduce(v, HostMessageSchema.parse(r.event ? { type: "event", seq: r.seq, event: r.event } : r.message));
+    if (v.ask) break;
+  }
+  assert.ok(v.ask && v.story.length > 0);
+  const gone = replaced(v, "The game is open on another device or in another tab.");
+  assert.equal(gone.ask, undefined);
+  assert.deepEqual(gone.dock, { form: "waiting", on: "The game is open on another device or in another tab." });
+  assert.deepEqual(gone.story, v.story);
+  assert.equal(gone.seq, v.seq);
 });
 
 test("page reducer: an answer the host refuses reopens its ask; one it takes does not", () => {

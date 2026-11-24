@@ -74,7 +74,7 @@ function folder(run: RunRecord, log: Array<Record<string, unknown>>, transcript:
 
 const row = (dir: string, id: string) => computeVerdict(dir).rows.find((r) => r.row === id);
 
-const ROSTER = { name: "grey_lantern", party: "new", loaded_sha256: null, chain: null, saved_sha256: "a".repeat(64), not_saved: null };
+const ROSTER = { name: "undersigned", party: "new", loaded_sha256: null, chain: null, saved_sha256: "a".repeat(64), not_saved: null };
 
 const MILL_LOG: Array<Record<string, unknown>> = [
   { kind: "scene_loaded", scene: "s3_mill_yard" },
@@ -123,7 +123,7 @@ const WENDFORD: Array<Record<string, unknown>> = [
   { kind: "traveled", leg: { arrived: false, at: { kind: "road" } } },
 ];
 
-const CONTINUE = { name: "grey_lantern", party: "continue", loaded_sha256: "b".repeat(64), chain: null, saved_sha256: null, not_saved: null };
+const CONTINUE = { name: "undersigned", party: "continue", loaded_sha256: "b".repeat(64), chain: null, saved_sha256: null, not_saved: null };
 
 function run2(log = WENDFORD, transcript: Array<Record<string, unknown>> = []): string {
   return folder(runRecord({ settings: { pack: { value: FAIR, from: "flag" } } as never, campaign: { start_day: 4, day_limit: 6 }, roster: CONTINUE as never, seats: { human: "bren", ai: ["torva", "maren", "ilsa"] } }), log, transcript);

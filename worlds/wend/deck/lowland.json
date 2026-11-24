@@ -671,9 +671,9 @@
             "target": "blades",
             "chained": true,
             "once": true,
-            "text": "The peddler with the shaking hands catches up with the camp after dark and sees the grey lantern stitched on a Blade's sleeve, the sign of their old company. He goes quiet, then asks whether any of the company are still alive.",
-            "text_ru": "Коробейник с трясущимися руками догоняет стоянку после темноты и видит серый фонарь, вышитый на рукаве одного из наёмников: так метил себя их старый отряд. Он замолкает, потом спрашивает, жив ли ещё кто-нибудь из отряда.",
-            "note": "Tobin carried a battle-mage's books in the lord's border war, the war the Grey Lanterns fought in. Told about the company and its dead, he laughs and cries in one breath and remembers a red-scaled girl with a notebook (Ilsa's hook). Read well, his hands: he froze at a breach and a fire spell went wrong; read badly, a cheerful lie. Whatever they choose, from now on he tells every alehouse the Grey Lanterns are the last honest company in the kingdom.",
+            "text": "The peddler with the shaking hands comes up to the camp after dark and sees the sign of their company on the Blades' sleeves: seven small crosses stitched in a row. He counts them twice, goes quiet, then asks whether that is all who are left.",
+            "text_ru": "Коробейник с трясущимися руками выходит к стоянке, когда уже стемнело, и видит на рукавах наёмников знак отряда: семь вышитых крестиков в ряд. Он пересчитывает их дважды, замолкает, потом спрашивает, неужели это все, кто остался.",
+            "note": "Tobin carried a battle-mage's books in the lord's border war, the war the Undersigned fought in; he knew the company when it was forty and knows these faces. He has not heard of the sheet: he reads the crosses as the living. If they tell him, a companion tells it as Holt told it (lore), never the human's character. Told about the company and its dead, he laughs and cries in one breath and remembers a red-scaled girl with a notebook (Ilsa's hook). Read well, his hands: he froze at a breach and a fire spell went wrong; read badly, a cheerful lie. Whatever they choose, from now on he tells every alehouse the Undersigned are the last honest company in the kingdom.",
             "choices": [
                 {
                     "id": "tell",

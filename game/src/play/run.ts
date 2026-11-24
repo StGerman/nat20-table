@@ -147,7 +147,7 @@ export function castParty(pack: string, casting: Casting = "default"): PackParty
   for (const p of ai) if (!classes.has(p.handle)) throw new Error(`${pack}: party ${p.handle} has an AI seat and no pregen in the first scene, so no class`);
   const humanEntry = adventure.party.find((p) => p.handle === human);
   const humanCard = humanEntry?.card ? readFileSync(path.resolve(pack, humanEntry.card), "utf8") : undefined;
-  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure), people: peopleBook(pack, adventure.party) };
+  return { ...(human ? { human } : {}), ...(humanCard ? { humanCard } : {}), ai: ai.map((p) => p.handle), cards, names, classes, russianNames: [...russianNames(adventure, { npcs: false }), ...knownPlaceNames(pack)], glyphs: adventure.glyphs, seatRu: seatRuNames(pack, adventure), people: peopleBook(pack, adventure.party, adventure.npcs) };
 }
 
 /** One line of the pick list (AGT-35): a party member as a player picking a pregen sees it. */

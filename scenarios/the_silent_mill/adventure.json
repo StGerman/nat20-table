@@ -17,9 +17,9 @@
         { "handle": "ilsa", "seat": "ai", "card": "cards/ilsa.md", "pronouns": "she/her", "names": ["Ilsa", "Ильса", "Ильсы", "Ильсе", "Ильсу", "Ильсой", "Ильза", "Ильзы", "Ильзе", "Ильзу", "Ильзой"], "name_ru": "Ильза" }
     ],
     "npcs": [
-        { "id": "osric_hale", "name": "Osric Hale, the reeve", "name_ru": "староста Осрик Хейл", "prose": "prose/npcs/osric_hale.md" },
-        { "id": "bertil_pell", "name": "Bertil Pell, the miller", "name_ru": "мельник Бертил Пелл", "prose": "prose/npcs/bertil_pell.md" },
-        { "id": "wenna_thorne", "name": "Wenna Thorne, the apprentice", "name_ru": "подмастерье Венна Торн", "prose": "prose/npcs/wenna_thorne.md" },
+        { "id": "osric_hale", "name": "Osric Hale, the reeve", "name_ru": "староста Осрик Хейл", "names": ["Osric", "Osric Hale", "the reeve", "Осрик", "Осрика", "Осрику", "Осриком", "Осрике", "Осрик Хейл", "староста", "старосты", "старосте", "старосту", "старостой"], "prose": "prose/npcs/osric_hale.md", "creatures": [{ "scene": "s1_village_green", "handle": "osric_hale" }, { "scene": "s6_wrap_up", "handle": "osric_hale" }] },
+        { "id": "bertil_pell", "name": "Bertil Pell, the miller", "name_ru": "мельник Бертил Пелл", "names": ["Bertil", "Bertil Pell", "the miller", "Бертил", "Бертила", "Бертилу", "Бертилом", "Бертиле", "Бертил Пелл", "мельник", "мельника", "мельнику", "мельником", "мельнике"], "prose": "prose/npcs/bertil_pell.md", "creatures": [{ "scene": "s1_village_green", "handle": "bertil_pell" }, { "scene": "s6_wrap_up", "handle": "bertil_pell" }] },
+        { "id": "wenna_thorne", "name": "Wenna Thorne, the apprentice", "name_ru": "подмастерье Венна Торн", "names": ["Wenna", "Wenna Thorne", "Венна", "Венны", "Венне", "Венну", "Венной", "Венна Торн"], "prose": "prose/npcs/wenna_thorne.md", "creatures": [{ "scene": "s6_wrap_up", "handle": "wenna_thorne" }] },
         {
             "id": "snitt",
             "name": "Snitt", "name_ru": "Снитт",

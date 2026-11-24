@@ -31,7 +31,7 @@ Each outline covers a rectangle of cells. The nickname is what the others call t
 | Saltmouth houses | rows 4-7, C7-C9 | paper men |
 | Roadfolk | rows 8-9, C1-C3 | wheel-folk |
 | Nobody's people | rows 8-9, C4-C9 | hedge-born |
-| Grey Lanterns (the party) | a dashed outline joining Torva, Maren, Bren and Ilsa, in the grey middle (see Persons) | sell-swords |
+| The Undersigned (the party) | a dashed outline joining Torva, Maren, Bren and Ilsa, in the grey middle (see Persons) | sell-swords |
 
 The grey middle is no safe zone: nobody vouches for sell-swords.
 
