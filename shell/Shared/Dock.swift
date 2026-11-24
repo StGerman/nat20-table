@@ -116,6 +116,9 @@ struct TypeLine: View {
                 // The keyboard went: the line goes with it, and the dock shows what is left unsent.
                 if !now { shell.typing = false }
             }
+            // The dock closed under the line (the answer was taken, the table moved on) before the
+            // lost focus was seen: the line must not come back, keyboard and all, at the next ask.
+            .onDisappear { shell.typing = false }
         }
     }
 
@@ -125,6 +128,7 @@ struct TypeLine: View {
             if ok { shell.draft = "" }
         }
         focused = false
+        shell.typing = false
     }
 }
 

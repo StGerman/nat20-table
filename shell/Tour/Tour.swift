@@ -212,6 +212,11 @@ final class Tour: XCTestCase {
     @MainActor
     private func answer(_ app: XCUIApplication, _ now: Mark) -> Bool {
         let first = { (prefix: String) in app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix)).firstMatch }
+        // The keyboard is there only while the human types: left standing after a typed line, it
+        // comes up at every later ask and covers the rows of its sheet.
+        if ["card", "rows", "chips", "answers", "reaction"].contains(now.control) {
+            XCTAssertFalse(app.keyboards.firstMatch.exists, "no keyboard stands over the \(now.control) ask")
+        }
         switch now.control {
         case "answers":
             // The second answer on offer: it has a control of its own.
