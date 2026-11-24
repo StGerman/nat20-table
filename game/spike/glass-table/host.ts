@@ -1,12 +1,13 @@
-// Glass Table spike (CON-20, design §8, scope §6): the stand-in for the table host. Compiled with
-// `bun build --compile` and started by the Tauri shell from inside the app bundle, it checks one by
-// one what the app needs before any app code is written, and writes a report:
+// Glass Table spike (CON-20, Glass Table design §8, decision 0093): the stand-in for the table host.
+// Compiled with `bun build --compile` and started by the Swift Mac app (app/SpikeApp.swift) from
+// inside the app bundle, it checks one by one what the Mac app needs before it is built to start the
+// table (CON-21), and writes a report:
 //
 //   1. it runs as a compiled Bun file from the bundle, and what PATH the app was given;
 //   2. it starts the bundled `nat20-api-server` and gets `hello` with the schema these types expect;
 //   3. it finds the player's own Claude Code with no shell PATH (the SDK's bundled copy is never used);
 //   4. it makes one live model call through the Agent SDK, under the hardened runtime;
-//   5. it serves a WebSocket on 127.0.0.1 with a per-launch token, and the shell's page connects.
+//   5. it serves a WebSocket on 127.0.0.1 with a per-launch token, and the app's own socket connects.
 //
 // Item 4 calls a model on the Claude login of whoever runs it (decision 0036): never in a cloud
 // session, and CI sets NAT20_SPIKE_NO_MODEL=1 to skip it. Merges no game code: it reads the game's
@@ -42,7 +43,7 @@ const here = path.dirname(process.execPath);
 const reportDir = path.join(homedir(), "Library", "Application Support", "glass-table-spike");
 const token = randomBytes(16).toString("hex");
 const logFile = path.join(reportDir, `host-${new Date(started).toISOString().replace(/[:.]/g, "-")}.log`);
-let page: Socket | undefined;
+let shell: Socket | undefined;
 mkdirSync(reportDir, { recursive: true });
 
 /** Launch Services drops an app's stderr, so every line also goes to a file beside the report. */
@@ -54,7 +55,7 @@ function log(line: string): void {
 function record(item: Item): void {
   items.push(item);
   log(`${item.ok ? "ok  " : "FAIL"} ${item.id}: ${item.detail}`);
-  page?.send(JSON.stringify({ type: "item", item }));
+  shell?.send(JSON.stringify({ type: "item", item }));
 }
 
 async function timed(id: string, run: () => Promise<string>): Promise<boolean> {
@@ -123,16 +124,16 @@ function writeReport(): string {
   return file;
 }
 
-// 5 first, so the page sees the other items arrive. The shell reads this one stdout line.
+// 5 first, so the app sees the other items arrive. The app reads this one stdout line.
 const server = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
   fetch(request, srv) {
     const url = new URL(request.url);
-    // The shell's page has the tauri:// origin (http://tauri.localhost on some builds); nothing else may take the seat.
+    // The app holds the socket itself, as the shell does (decision 0093), and a program's socket names
+    // no origin. A page in a browser always names one, and may not take the seat.
     const origin = request.headers.get("origin") ?? "";
-    const fromShell = origin === "tauri://localhost" || origin === "http://tauri.localhost" || process.env.NAT20_SPIKE_ANY_ORIGIN === "1";
-    if (url.pathname === "/seat" && sameToken(url.searchParams.get("token")) && fromShell && !page) {
+    if (url.pathname === "/seat" && sameToken(url.searchParams.get("token")) && !origin && !shell) {
       return srv.upgrade(request) ? undefined : new Response("upgrade failed", { status: 400 });
     }
     if (url.pathname === "/seat") log(`seat refused: origin ${JSON.stringify(origin)}, token ${sameToken(url.searchParams.get("token")) ? "right" : "wrong"}`);
@@ -140,23 +141,23 @@ const server = Bun.serve({
   },
   websocket: {
     open(ws) {
-      page = ws;
+      shell = ws;
       ws.send(JSON.stringify({ type: "hello", items }));
     },
     message(ws, data) {
-      let message: { type?: string; userAgent?: string };
+      let message: { type?: string; client?: string };
       try {
         message = JSON.parse(String(data));
       } catch {
         return;
       }
-      if (message.type === "page") {
-        record({ id: "5 page connected over WebSocket with the token", ok: true, detail: message.userAgent ?? "" });
+      if (message.type === "shell") {
+        record({ id: "5 the app's socket connected with the token", ok: true, detail: message.client ?? "" });
       }
       ws.send(JSON.stringify({ type: "ack" }));
     },
     close() {
-      page = undefined;
+      shell = undefined;
     },
   },
 });
@@ -226,15 +227,15 @@ if (process.env.NAT20_SPIKE_NO_MODEL === "1") {
   record({ id: "4 one live model call under the hardened runtime", ok: false, detail: "not run: item 3 found no Claude Code" });
 }
 
-// Give the page a moment to connect, then write the report whatever it shows.
+// Give the app a moment to connect, then write the report whatever it shows.
 const deadline = Date.now() + 20_000;
 while (!items.some((i) => i.id.startsWith("5 ")) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
 if (!items.some((i) => i.id.startsWith("5 "))) {
-  record({ id: "5 page connected over WebSocket with the token", ok: false, detail: "no page connected in 20 s after the checks" });
+  record({ id: "5 the app's socket connected with the token", ok: false, detail: "no socket connected in 20 s after the checks" });
 }
 const file = writeReport();
-page?.send(JSON.stringify({ type: "done", report: file, all_ok: items.every((i) => i.ok) }));
+shell?.send(JSON.stringify({ type: "done", report: file, all_ok: items.every((i) => i.ok) }));
 log(`report: ${file}`);
-// The shell kills the host on exit; a host whose shell is gone (stdin closed) exits by itself.
+// The app ends the host when it quits; a host whose app is gone (stdin closed) exits by itself.
 process.stdin.on("end", () => process.exit(0));
 process.stdin.resume();

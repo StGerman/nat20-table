@@ -1,0 +1,33 @@
+# The spike's Mac app (CON-20): a SwiftUI window that starts the compiled host from inside its own
+# bundle. No Xcode project is committed: `xcodegen generate` writes it from this file, as in shell/.
+name: GlassTableSpike
+options:
+  bundleIdPrefix: dev.nat20
+  deploymentTarget:
+    macOS: "26.0"
+targets:
+  GlassTableSpike:
+    type: application
+    platform: macOS
+    sources:
+      - path: SpikeApp.swift
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Glass Table Spike
+        # The socket to the host is ws:// on 127.0.0.1, as the shell's is.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_NAME: Glass Table Spike
+        PRODUCT_BUNDLE_IDENTIFIER: dev.nat20.glass-table-spike
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        # run.sh signs the app and the two programs inside it itself, so its log says what each was
+        # signed with. No App Sandbox: a sandboxed app's children inherit the sandbox, and Claude Code
+        # could then read neither its own login nor the player's folders.
+        CODE_SIGNING_ALLOWED: NO
+    # Written out, so `xcodebuild -scheme` finds it on a machine that has never opened the project.
+    scheme: {}

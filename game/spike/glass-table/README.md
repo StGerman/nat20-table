@@ -1,31 +1,43 @@
 # Glass Table spike (CON-20)
 
-Checks, before any app code, what decision 0090 assumes (design §8): a Tauri window starts the
-Bun-compiled host and `nat20-api-server` from inside the app bundle, the host finds the player's own
-Claude Code with no shell `PATH`, makes one live model call under the hardened runtime, and the page
-talks to the host over a WebSocket on 127.0.0.1 with a per-launch token. Signed, notarised, launched
-from Finder. It merges no game code.
+Checks, before the Mac app is built to start the table (CON-21), what decision 0093 assumes of it: a
+Swift Mac app starts the Bun-compiled host and `nat20-api-server` from inside its own bundle, the
+host finds the player's own Claude Code with no shell `PATH`, makes one live model call under the
+hardened runtime, and the app's own socket reaches the host on 127.0.0.1 with a per-launch token.
+Signed, launched as Finder launches it. It merges no game code.
 
 | File | What |
 |---|---|
 | `host.ts` | the stand-in for the table host: the five checks and the report |
-| `shell/` | the Tauri shell (its own Cargo workspace) and the page |
+| `app/` | the Swift Mac app: a window that starts the host, connects its socket and lists the items (`project.yml` for `xcodegen`) |
 | `run.sh` | build, sign, notarise, launch as Finder does, print the report |
-| `shell/entitlements.plist` | the entitlements Bun's docs give for a compiled Bun file under the hardened runtime; `run.sh --entitlements none` signs the host with none (the plist takes no comments: AMFI refuses them) |
+| `entitlements.plist` | the entitlements Bun's docs give for a compiled Bun file under the hardened runtime (the plist takes no comments: AMFI refuses them) |
+
+The app has no App Sandbox: a sandboxed app's children inherit the sandbox, and Claude Code could
+then read neither its own login nor the player's folders. The app itself needs no entitlement. Its
+socket names no origin, as the shell's does not; the host refuses one that does (a page in a browser).
 
 ## On Stas's Mac
 
-Needs Rust, Node 22, Xcode command line tools, Bun (`brew install oven-sh/bun/bun`) and Claude Code
-signed in. From the table checkout, on this branch:
+Needs what the shell needs (Xcode, `brew install xcodegen`, Node 22), Rust, and Claude Code signed
+in. From the table checkout:
 
-1. Ad-hoc, no Apple account: `game/spike/glass-table/run.sh`
-2. Is JIT needed: `game/spike/glass-table/run.sh --entitlements none`
-3. With the Developer ID, once the account is active:
-   `xcrun notarytool store-credentials glass-table --apple-id <id> --team-id <team>` once, then
-   `game/spike/glass-table/run.sh --sign "Developer ID Application: <name> (<team>)" --notary-profile glass-table`
-4. Double-click `game/spike/glass-table/shell/target/release/bundle/macos/Glass Table Spike.app` in Finder once.
+1. `git log -1 --oneline` shows the commit you mean to check.
+2. `game/spike/glass-table/run.sh`
 
-Each run writes `spike-<time>.log`, the host's own `host-<time>.log` and a report under
-`~/Library/Application Support/glass-table-spike/`. Paste the spike logs.
+It builds for a few minutes, then opens the spike's window twice, for a few seconds each, and closes
+it itself: round A with the host signed with its entitlements, round B with none, which says whether
+they are needed. Each round makes one small model call on your Claude login. After each round it
+kills the app and looks for a host left running.
 
-The `spike-glass-table` workflow runs step 1 on a hosted Apple Silicon runner with no model call.
+3. Double-click `game/spike/glass-table/build/Glass Table Spike.app` in Finder once: the window
+   should list the same five items. Close it.
+4. Paste the log the script names in its last line (`spike-<time>.log` under
+   `~/Library/Application Support/glass-table-spike/`; the host's own `host-<time>.log` and the
+   reports are beside it).
+
+With the Developer ID, once the account is active (CON-21's half):
+`xcrun notarytool store-credentials glass-table --apple-id <id> --team-id <team>` once, then
+`game/spike/glass-table/run.sh --sign "Developer ID Application: <name> (<team>)" --notary-profile glass-table`.
+
+The `spike-glass-table` workflow runs step 2 on a hosted Apple Silicon machine with no model call.

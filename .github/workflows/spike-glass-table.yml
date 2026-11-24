@@ -1,7 +1,8 @@
-# The Glass Table spike (CON-20): builds the spike app on an Apple Silicon runner with an ad-hoc
-# signature under the hardened runtime and launches it, so a build error is found here and not on
-# Stas's evening at the Mac. Calls no model (NAT20_SPIKE_NO_MODEL=1) and signs with no secret; the
-# live call, the Developer ID and notarisation are checked on his Mac. Not part of ci-ok.
+# The Glass Table spike (CON-20): builds the spike's Swift Mac app on a hosted Apple Silicon machine,
+# signs it ad-hoc under the hardened runtime with the compiled host and the engine inside it, and
+# launches it, so a build error is found here and not on Stas's evening at the Mac. Calls no model
+# (NAT20_SPIKE_NO_MODEL=1) and signs with no secret; the live call, the Developer ID and
+# notarisation are checked on his Mac. Not part of ci-ok.
 name: spike-glass-table
 
 on:
@@ -14,10 +15,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: spike-glass-table-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   spike:
+    # The Xcode 27 image (a preview label): what Stas's Mac runs.
     name: spike (darwin-arm64, ad-hoc)
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 45
     env:
       NAT20_SPIKE_NO_MODEL: "1"
@@ -29,18 +35,30 @@ jobs:
         run: rustup toolchain install
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
-      - name: Bun, the version the Bun check used
-        run: npm install -g bun@1.4.4
-      - name: Build, sign ad-hoc, launch through Launch Services, print the report
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: brew install xcodegen
+      - name: Build, sign ad-hoc, launch through Launch Services twice, print the reports
         run: game/spike/glass-table/run.sh
-      - name: Every item but the live call works
+      # Round A is the first report: the host signed with its entitlements. Round B, with none, is
+      # read by a person. No Claude Code is installed here, so items 3 and 4 fail by design.
+      - name: Every item but the live call works, and no host is left behind
         run: |
-          pkill -f "Glass Table Spike" || true
-          report="$(ls -t "$HOME/Library/Application Support/glass-table-spike"/report-*.json | head -1)"
+          reports="$HOME/Library/Application Support/glass-table-spike"
           node -e '
             const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
             const bad = r.items.filter((i) => !i.ok && !i.id.startsWith("3 ") && !i.id.startsWith("4 "));
             for (const i of bad) console.log("FAIL", i.id, i.detail);
             process.exit(bad.length ? 1 : 0);
-          ' "$report"
+          ' "$(ls "$reports"/report-*.json | sort | head -1)"
+          if grep -q "LEFT BEHIND" "$reports"/spike-*.log; then
+            echo "FAIL a host or an engine outlived the app"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: spike-glass-table
+          path: ~/Library/Application Support/glass-table-spike
+          retention-days: 7
