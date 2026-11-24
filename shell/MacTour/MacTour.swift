@@ -80,8 +80,11 @@ final class MacTour: XCTestCase {
         XCTAssertNotNil(until(app, 30) { $0.link == "up" }, "«Играть здесь» took the seat back")
         picture("32-back-here")
 
-        // Closing the window ends the app and tells the host `quit` (the job reads that it came).
-        app.typeKey("q", modifierFlags: .command)
+        // Closing the window, by its red button, ends the app and tells the host `quit` (the job
+        // reads that it came): the page is asked for it after its window has gone.
+        let close = app.windows.firstMatch.buttons[XCUIIdentifierCloseWindow].firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 10), "the window has its close button")
+        close.click()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 30), "the app ended when it was closed")
     }
 
