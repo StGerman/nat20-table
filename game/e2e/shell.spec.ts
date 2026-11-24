@@ -3,11 +3,16 @@
 // through the shell's own entry points, each ask puts up a control in the chrome state, and what
 // the page hands back for the press is a message the seat wire takes. The shell here is this test:
 // with no `webkit.messageHandlers.shell`, the page keeps what it would have posted on the window.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import type { Chrome } from "../src/page/chrome.ts";
 import { PageMessageSchema, WIRE_VERSION } from "../src/seat-wire/messages.ts";
 import { WIRE_HASH } from "../src/seat-wire/schema.ts";
 import { ASK_KINDS, everyAsk, NAMES_RU } from "../test/page-wires.ts";
+
+const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../test/fixtures");
 
 type Posted = { type: "chrome"; json: string } | { type: "send"; message: unknown } | { type: "open" | "ready" };
 /** What a shell hands the page for a press (`Window.__nat20Shell`, declared in the page's entry). */
@@ -115,4 +120,39 @@ test("in a browser, a reaction with two answers on offer shows each as its own b
   await page.waitForFunction(() => window.__nat20?.done === true);
   await expect(page.locator(".sheet [data-answer]")).toHaveText(["Удар длинным мечом", "Удар щитом", "нет"]);
   await expect(page.locator(".sheet .sheet-lead")).toHaveText("можно ответить: гоблин 1.");
+});
+
+test("inside a native shell, «Где все» and «Лист» play a recorded run to its end: they show no stage and wait for none", async ({ page }) => {
+  // The yard holds the human's own rolls. Only the story's page shows a roll on its stage; the
+  // other two are separate pages, and their replay must not wait for a stage that never clears.
+  for (const show of ["where", "sheet"]) {
+    await page.goto(`/index.html?shell=native&show=${show}&replay=/fixtures/yard.seat-wire.jsonl&language=ru&handle=bren`);
+    await page.waitForFunction(() => window.__nat20?.done === true, undefined, { timeout: 20_000 });
+    await expect(page.locator(".stage, canvas[data-face]")).toHaveCount(0);
+  }
+});
+
+test("inside a native shell, a die finish chosen on «Лист» is the one the story's next roll shows", async ({ page, context }) => {
+  const hello = { type: "hello", wire: WIRE_VERSION, hash: WIRE_HASH, run: "yard", language: "ru", handle: "bren", title: "", names: NAMES_RU };
+  // The story's page is loaded first, as in the shell: the choice is made after it read its own.
+  await page.goto("/index.html?shell=native&show=story");
+  await page.waitForFunction(() => window.__nat20Shell !== undefined);
+  await host(page, [hello]);
+
+  const sheet = await context.newPage();
+  await sheet.goto("/index.html?shell=native&show=sheet");
+  await sheet.waitForFunction(() => window.__nat20Shell !== undefined);
+  await host(sheet, [hello]);
+  const finish = await sheet.locator('[data-test="finish"] button[aria-pressed="false"]').first().getAttribute("data-finish");
+  expect(finish).toBeTruthy();
+  const chosen = sheet.locator(`[data-test="finish"] button[data-finish="${finish}"]`);
+  await chosen.click();
+  await expect(chosen).toHaveAttribute("aria-pressed", "true");
+
+  // The human's own roll takes the story's stage.
+  const lines = readFileSync(path.join(FIXTURES, "yard.seat-wire.jsonl"), "utf8").split("\n").filter((l) => l.trim() !== "").map((l) => JSON.parse(l) as { seq?: number; event?: { kind?: string; own?: boolean; roll?: string }; message?: unknown });
+  const roll = lines.findIndex((r) => r.event?.kind === "engine" && r.event.own === true && r.event.roll !== undefined);
+  expect(roll).toBeGreaterThan(0);
+  await host(page, lines.slice(0, roll + 1).map((r) => (r.event !== undefined ? { type: "event", seq: r.seq, event: r.event } : r.message)));
+  await expect(page.locator("canvas[data-face]").first()).toHaveAttribute("data-finish", finish!);
 });

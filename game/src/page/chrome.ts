@@ -7,7 +7,7 @@ import { UI_WORDS, type UiWords } from "../table/words.ts";
 import type { TableEvent } from "../table/types.ts";
 import type { Choice } from "../table/choices.ts";
 import { PEOPLE_WORDS } from "../ui/people.ts";
-import { meOf, type PageView } from "./reduce.ts";
+import { happened, meOf, type PageView } from "./reduce.ts";
 
 type Situation = NonNullable<Extract<TableEvent, { kind: "situation" }>["situation"]>;
 
@@ -149,7 +149,8 @@ export interface Chrome {
   tabs: { story: string; where: string; sheet: string; people: string; canWhere: boolean };
   /** The human's own roll holds the screen. */
   stage: boolean;
-  /** «Лист» has no sheet to show, or one from before the character last changed: a shell asks the seat for a fresh one only then. */
+  /** «Лист» has no sheet to show, or one from before the character last changed or anything last
+   *  happened at the table: a shell asks the seat for a fresh one only then. */
   sheetStale: boolean;
 }
 
@@ -250,6 +251,6 @@ export function chromeOf(view: PageView): Chrome {
     },
     tabs: { story: words.page.story, where: words.page.where, sheet: words.page.sheet, people: PEOPLE_WORDS[view.hello?.language ?? "en"].title, canWhere: view.situation?.positions !== undefined || (view.situation?.situation?.road?.map?.length ?? 0) > 0 },
     stage: view.stage !== undefined,
-    sheetStale: view.sheet === undefined || view.sheet.me !== meOf(view),
+    sheetStale: view.sheet === undefined || view.sheet.me !== meOf(view) || view.sheet.at !== happened(view),
   };
 }

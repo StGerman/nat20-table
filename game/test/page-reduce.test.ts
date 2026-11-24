@@ -385,4 +385,11 @@ test("page reducer: a sheet goes to «Лист», not over the story, and is old
   assert.notEqual(v.sheet?.me, meOf(v), "old once the character changed");
   assert.equal(chromeOf(v).sheetStale, true);
   assert.equal(v.story.length, 0, "nothing in the story");
+  // The purse is on the sheet and not on the panel's line: a sheet is old once anything happened.
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 5, event: { kind: "info", title: "Лист персонажа", text: "Брен: человек, воин, уровень 2\nЗдоровье 12 из 20" } }));
+  assert.equal(chromeOf(v).sheetStale, false, "fresh again");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 6, event: me(12) }));
+  assert.equal(chromeOf(v).sheetStale, false, "the same frame sent again changes nothing");
+  v = reduce(v, HostMessageSchema.parse({ type: "event", seq: 7, event: { kind: "narration", speaker: "dm", text: "Торговец отсчитывает жалованье." } }));
+  assert.equal(chromeOf(v).sheetStale, true, "old once a line was told");
 });
