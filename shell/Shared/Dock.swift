@@ -65,7 +65,7 @@ struct DockBar: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("dock-line")
-                    if dock.sheet != nil || dock.card != nil {
+                    if shell.listed {
                         Button {
                             shell.opened = .moves
                         } label: {

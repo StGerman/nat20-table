@@ -25,7 +25,7 @@ It prints two links. Paste the `ws://127.0.0.1…` one into the simulator, or th
 
 ## The Mac
 
-The same project has a second scheme, `GlassTableMac` (`Mac/`): pick it and My Mac, and press Run. The window holds the three pages as tabs and the dock under them; the list of an ask opens as a popover over the dock. Paste the `ws://127.0.0.1…` link of a table started on the same Mac (`npm run play:demo -- --seat web`).
+The same project has a second scheme, `GlassTableMac` (`Mac/`): pick it and My Mac, and press Run. The window holds the three pages as tabs and the dock under them; an ask that is its own list (a card, a reaction, a pick) stands under the story, and a turn's list of moves opens as a popover over the dock. Paste the `ws://127.0.0.1…` link of a table started on the same Mac (`npm run play:demo -- --seat web`).
 
 The menu bar's game menu («Игра») holds every action of the dock, each with a key: the answers the open ask takes by number (⌘1 to ⌘9, by their place in the menu), yes and no to a reaction (⌘Y, ⌘N), the whole list (⌘L), the human's own words (⌘K) and the pause (⌘P).
 
@@ -58,4 +58,4 @@ The app is named Fine Print, «Мелкий шрифт» on a phone set to Russi
 
 The `mac` job of the same workflow builds the Mac shell and runs `MacTour/MacTour.swift` (`ci/mac-tour.sh`) at the same kind of table: it answers every kind of ask from the menu bar, by a command and by its key turn about, with the same lost socket, reloaded page and replaced window, then closes the window, and the job fails unless the host heard `quit`. It keeps pictures of the window, light and dark; on the Mac the shell keeps what its pages handed over in the user's temporary folder (`nat20-sent.jsonl`).
 
-The test's hooks are launch arguments, off without them: `-tour 1` draws a line of state the test reads, `-keepSent 1` keeps what the pages handed over in `Documents/sent.jsonl`, `-dropBeforeSend <n>` loses the socket and the nth message with it, `-reloadAfter <n>` loads the story's page again after the nth.
+The test's hooks are launch arguments, off without them: `-tour 1` draws a line of state the test reads, `-keepSent 1` keeps what the pages handed over in `Documents/sent.jsonl`, `-dropBeforeSend <n>` loses the socket and the nth message with it, `-reloadAfter <n>` loads the story's page again after the nth. On the Mac, `-dark 1` draws the window dark for the pictures.

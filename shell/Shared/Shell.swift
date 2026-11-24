@@ -207,6 +207,12 @@ final class Shell {
     /// opens when the human is back.
     func offer() {
         guard let dock = chrome?.dock else { return }
+        if Self.answersStand {
+            // The window shows such an ask under the story: the list of a turn that stood open
+            // over it has nothing left to show.
+            if opened == .moves, ownList || dock.sheet == nil { opened = nil }
+            return
+        }
         // No ask stands (it was answered, or the socket came back): if the same ask is offered
         // again, its sheet opens again.
         if dock.ask == nil { forcedFor = nil }
@@ -219,6 +225,27 @@ final class Shell {
         } else if opened == .moves, dock.sheet == nil, dock.card == nil {
             opened = nil
         }
+    }
+
+    /// The dock's ask is its own list, not a turn's list of moves: a card, a reaction, a question,
+    /// a pick of rows.
+    var ownList: Bool {
+        guard let dock = chrome?.dock else { return false }
+        return dock.card != nil || dock.sheet?.forced == true
+    }
+
+    /// The Mac's window stands such an ask's answers under the story (Mac/Answers); the phone opens
+    /// them as a sheet over it.
+    #if os(macOS)
+    static let answersStand = true
+    #else
+    static let answersStand = false
+    #endif
+
+    /// There is a list to open: a turn's moves, and on the phone an ask that is its own list.
+    var listed: Bool {
+        guard let dock = chrome?.dock, dock.sheet != nil || dock.card != nil else { return false }
+        return !(Self.answersStand && ownList)
     }
 
     /// The page hands over a message for the host. With no host (a recorded run) it is only counted.
@@ -259,7 +286,6 @@ final class Shell {
             var id: Int { n }
         }
 
-        var title: String
         var pause: String
         /// The table is there to be paused: a live table or a recorded one, with the socket up.
         var table = false
@@ -274,7 +300,7 @@ final class Shell {
 
     var menu: MenuState {
         let words = self.words
-        var menu = MenuState(title: words.game, pause: chrome?.dock.form == "paused" ? words.goOn : words.pause)
+        var menu = MenuState(pause: chrome?.dock.form == "paused" ? words.goOn : words.pause)
         if table != nil, !live { menu.leave = words.leave }
         guard let dock = chrome?.dock, link == .up else { return menu }
         menu.table = true
@@ -296,7 +322,7 @@ final class Shell {
         } else {
             menu.moves = (dock.chips + (dock.endTurn.map { [$0] } ?? [])).map(item)
         }
-        if dock.sheet != nil || dock.card != nil { menu.list = dock.more ?? words.whole }
+        if listed { menu.list = dock.more ?? words.whole }
         menu.line = dock.placeholder
         return menu
     }

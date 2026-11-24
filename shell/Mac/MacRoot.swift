@@ -1,11 +1,13 @@
-// The Mac's window: the three pages as tabs, and under them the dock with its chips. The list of
-// an ask opens as a popover over the dock, where the phone opens a sheet.
+// The Mac's window: the three pages as tabs, and under them an ask's answers, the chips and the
+// dock. The list of a turn's moves opens as a popover over the dock, where the phone opens a sheet.
 import SwiftUI
 import WebKit
 
 struct MacRoot: View {
     @Bindable var shell: Shell
     @Environment(\.scenePhase) private var phase
+    /// The UI test's dark pictures (`-dark 1`): a Mac's look is the system's, which a test cannot set.
+    private let dark = UserDefaults.standard.bool(forKey: "dark")
 
     var body: some View {
         Group {
@@ -16,6 +18,7 @@ struct MacRoot: View {
             }
         }
         .frame(minWidth: 440, minHeight: 600)
+        .preferredColorScheme(dark ? .dark : nil)
         .onChange(of: phase) { _, now in
             if now == .active { shell.woke() }
         }
@@ -43,6 +46,7 @@ struct MacTable: View {
             }
             // Under the pages, not over them: a window has the room, and nothing shows through.
             VStack(spacing: 0) {
+                Answers(shell: shell)
                 Chips(shell: shell)
                 TypeLine(shell: shell)
                 DockBar(shell: shell)

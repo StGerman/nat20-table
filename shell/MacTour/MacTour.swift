@@ -12,8 +12,10 @@
 import XCTest
 
 final class MacTour: XCTestCase {
-    /// The game's menu, as the table's language names it (`Words.game`; the test tables speak Russian).
+    /// The game's menu, as the Mac's language names it (`Words.game`). Every launch is a Russian Mac's,
+    /// whatever the runner speaks, so the bar and the table's commands read in one language.
     private let game = "Игра"
+    private let russian = ["-AppleLanguages", "(ru)"]
     private let pauseTitle = "Пауза"
 
     override func setUp() {
@@ -27,7 +29,7 @@ final class MacTour: XCTestCase {
         let app = XCUIApplication()
         // The second message the pages hand over is lost with the socket; after the fourth the
         // story's page is loaded again.
-        app.launchArguments = ["-table", link, "-tour", "1", "-keepSent", "1", "-dropBeforeSend", "2", "-reloadAfter", "4"]
+        app.launchArguments = ["-table", link, "-tour", "1", "-keepSent", "1", "-dropBeforeSend", "2", "-reloadAfter", "4"] + russian
         app.launch()
 
         // The ask and the count of messages at the last answer: the same ask offered again after a
@@ -88,19 +90,19 @@ final class MacTour: XCTestCase {
         let yard = ["-replay", "yard.seat-wire.jsonl", "-to", "74"]
         let shots: [(String, [String])] = [
             ("01-yard-turn-light", yard),
-            ("02-yard-turn-dark", yard + ["-AppleInterfaceStyle", "Dark"]),
+            ("02-yard-turn-dark", yard + ["-dark", "1"]),
             ("03-yard-list-light", yard + ["-open", "moves"]),
             ("04-yard-spent-light", ["-replay", "yard.seat-wire.jsonl", "-to", "92"]),
             ("05-road-card-light", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17"]),
-            ("06-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-AppleInterfaceStyle", "Dark"]),
+            ("06-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-dark", "1"]),
             ("07-yard-where-light", yard + ["-screen", "where"]),
             ("08-yard-sheet-light", yard + ["-screen", "sheet"]),
-            ("09-connect-ru-light", ["-AppleLanguages", "(ru)"]),
-            ("10-no-connection-ru-light", ["-AppleLanguages", "(ru)", "-table", "ws://127.0.0.1:9/?token=none"]),
+            ("09-connect-ru-light", []),
+            ("10-no-connection-ru-light", ["-table", "ws://127.0.0.1:9/?token=none"]),
         ]
         for (name, arguments) in shots {
             let app = XCUIApplication()
-            app.launchArguments = arguments
+            app.launchArguments = arguments + russian
             app.launch()
             pause(12)
             if name.hasPrefix("01") {
@@ -161,6 +163,11 @@ final class MacTour: XCTestCase {
     private func answer(_ app: XCUIApplication, _ now: Mark) -> Bool {
         switch now.control {
         case "chips", "rows", "card", "answers":
+            // An ask that is its own list stands in the window, under the story, row by row.
+            if now.control != "chips" {
+                let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'choice-' OR identifier BEGINSWITH 'row-' OR identifier BEGINSWITH 'react-answer-'"))
+                XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10), "the \(now.control) ask's answers stand in the window")
+            }
             // The first turn with chips is answered with the pause, from the menu: at an open ask
             // the pause is that ask's answer.
             if now.control == "chips", !byMenu.contains("pause") {

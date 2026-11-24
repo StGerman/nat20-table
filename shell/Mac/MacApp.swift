@@ -48,7 +48,9 @@ struct TableCommands: Commands {
     let menu: Shell.MenuState
 
     var body: some Commands {
-        CommandMenu(menu.title) {
+        // In the Mac's language, as the menus beside it are: a menu's name in the bar is set once
+        // and does not follow the table's. Its commands are the table's words.
+        CommandMenu(Words.of(nil).game) {
             ForEach(Array(menu.moves.enumerated()), id: \.element.id) { at, move in
                 Button(move.label) { shell.press(move.n) }
                     .keyboardShortcut(Self.key(at))
