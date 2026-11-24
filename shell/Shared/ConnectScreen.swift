@@ -1,5 +1,6 @@
-// Before a table: the link the run on the Mac prints (`--seat web --seat-lan`), pasted or typed, or
-// a recorded run from the bundle. The link of the table the human last left stays in the field.
+// Before a table: the link the run on the Mac prints (`--seat web`, with `--seat-lan` for a phone),
+// pasted or typed, or a recorded run from the bundle. The link of the table the human last left
+// stays in the field. The same screen on the phone and the Mac.
 import SwiftUI
 
 struct ConnectScreen: View {
@@ -13,9 +14,11 @@ struct ConnectScreen: View {
             Form {
                 Section {
                     TextField("ws://…", text: $link, axis: .vertical)
+                        #if os(iOS)
                         .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
                         .keyboardType(.URL)
+                        #endif
+                        .autocorrectionDisabled()
                         .lineLimit(1...4)
                         .accessibilityLabel(words.linkHeader)
                         .accessibilityIdentifier("link")
@@ -28,7 +31,7 @@ struct ConnectScreen: View {
                 } header: {
                     Text(words.linkHeader)
                 } footer: {
-                    Text(wrong ? words.linkWrong : words.linkFooter)
+                    Text(wrong ? words.linkWrong : footer(words))
                 }
                 Section {
                     Button(words.sit, action: join)
@@ -48,8 +51,17 @@ struct ConnectScreen: View {
                     Text(words.recordedFooter)
                 }
             }
+            .formStyle(.grouped)
             .navigationTitle(Shell.appName)
         }
+    }
+
+    private func footer(_ words: Words) -> String {
+        #if os(macOS)
+        return words.linkFooterMac
+        #else
+        return words.linkFooter
+        #endif
     }
 
     private func join() {

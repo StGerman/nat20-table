@@ -7,6 +7,8 @@ struct Words {
     /// The connect screen.
     let linkHeader: String
     let linkFooter: String
+    /// The same on the Mac, where the game runs beside the window.
+    let linkFooterMac: String
     let linkWrong: String
     let sit: String
     let recorded: String
@@ -32,10 +34,14 @@ struct Words {
     let playHere: String
     /// Controls that are a picture: what VoiceOver reads.
     let send: String
+    /// The Mac's menu bar: the menu of the game's commands, and the command that opens the whole list.
+    let game: String
+    let whole: String
 
     static let ru = Words(
         linkHeader: "Ссылка на игру",
         linkFooter: "Игра запускается на Mac и, когда всё готово, показывает ссылку. Она начинается с ws://. Вставьте её сюда или попросите того, кто запустил игру, прислать её вам. Телефон и Mac должны быть в одной сети Wi-Fi.",
+        linkFooterMac: "Игра запускается на этом Mac и, когда всё готово, показывает ссылку. Она начинается с ws://. Вставьте её сюда.",
         linkWrong: "По этой ссылке игра не открывается. Нужна та, что показывает игра на Mac: она начинается с ws://.",
         sit: "Сесть за стол",
         recorded: "Записанная игра",
@@ -56,12 +62,15 @@ struct Words {
         elsewhere: "Игра открыта на другом устройстве",
         elsewhereMore: "Ничего не потеряно.",
         playHere: "Играть здесь",
-        send: "Отправить"
+        send: "Отправить",
+        game: "Игра",
+        whole: "Весь список"
     )
 
     static let en = Words(
         linkHeader: "Game link",
         linkFooter: "The game starts on a Mac and shows a link when it is ready. The link begins with ws://. Paste it here, or ask whoever started the game to send it to you. The phone and the Mac must be on the same Wi-Fi.",
+        linkFooterMac: "The game starts on this Mac and shows a link when it is ready. The link begins with ws://. Paste it here.",
         linkWrong: "This link does not open a game. Use the one the game shows on the Mac: it begins with ws://.",
         sit: "Sit down at the table",
         recorded: "A recorded game",
@@ -82,7 +91,9 @@ struct Words {
         elsewhere: "The game is open on another device",
         elsewhereMore: "Nothing is lost.",
         playHere: "Play here",
-        send: "Send"
+        send: "Send",
+        game: "Game",
+        whole: "The whole list"
     )
 
     /// The table's language (`hello`, by way of the chrome state), or the phone's with no table.

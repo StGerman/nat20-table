@@ -237,11 +237,84 @@ final class Shell {
         if sent == reloadAfter { table?.story.recover() }
     }
 
-    /// What the pages handed over, one message a line, where the UI test's job reads it.
+    /// What the pages handed over, one message a line, where the UI test's job reads it: the app's
+    /// documents on the phone, the user's temporary folder on the Mac (its documents are asked about).
     private func keep() {
+        #if os(macOS)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("nat20-sent.jsonl")
+        #else
         guard let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let file = folder.appendingPathComponent("sent.jsonl")
+        #endif
         let text = kept.map { $0 + "\n" }.joined()
-        try? text.write(to: folder.appendingPathComponent("sent.jsonl"), atomically: true, encoding: .utf8)
+        try? text.write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    /// What the Mac's menu bar offers now: each answer the open ask takes by a number, then the
+    /// rest of the dock's actions. The first nine answers take the keys 1 to 9.
+    struct MenuState: Equatable {
+        struct Item: Equatable, Identifiable {
+            let n: Int
+            let label: String
+            var id: Int { n }
+        }
+
+        var title: String
+        var pause: String
+        /// The table is there to be paused: a live table or a recorded one, with the socket up.
+        var table = false
+        var moves: [Item] = []
+        var yes: String?
+        var no: String?
+        var list: String?
+        var line: String?
+        /// A recorded run is left from the menu; a live table ends when the window is closed.
+        var leave: String?
+    }
+
+    var menu: MenuState {
+        let words = self.words
+        var menu = MenuState(title: words.game, pause: chrome?.dock.form == "paused" ? words.goOn : words.pause)
+        if table != nil, !live { menu.leave = words.leave }
+        guard let dock = chrome?.dock, link == .up else { return menu }
+        menu.table = true
+        guard dock.open else { return menu }
+        let item = { (move: Chrome.Move) in MenuState.Item(n: move.n, label: move.label) }
+        if dock.form == "paused" {
+            // Only the pause is lifted.
+        } else if let card = dock.card, card.asked {
+            menu.moves = card.choices.compactMap { choice in choice.n.map { MenuState.Item(n: $0, label: choice.text) } }
+        } else if let reaction = dock.sheet?.reaction {
+            if let answers = reaction.answers, !answers.isEmpty {
+                menu.moves = answers.map { MenuState.Item(n: $0.n, label: $0.label) }
+            } else {
+                menu.yes = reaction.yes
+            }
+            menu.no = reaction.no
+        } else if let sheet = dock.sheet, sheet.forced {
+            menu.moves = sheet.groups.flatMap { $0.moves }.map(item)
+        } else {
+            menu.moves = (dock.chips + (dock.endTurn.map { [$0] } ?? [])).map(item)
+        }
+        if dock.sheet != nil || dock.card != nil { menu.list = dock.more ?? words.whole }
+        menu.line = dock.placeholder
+        return menu
+    }
+
+    /// The human's own words, from the Mac's menu: the list's popover steps aside and the line
+    /// opens for typing.
+    func write() {
+        if opened == .moves { opened = nil }
+        screen = .story
+        typing = true
+    }
+
+    /// The Mac's window is closed: the page is asked for a `quit`, which ends the run and has the
+    /// host save the party (Glass Table design §7). The message is given a moment to leave.
+    func quit() async {
+        guard live, link == .up, let story = table?.story else { return }
+        _ = await story.act(["kind": "command", "name": "quit"])
+        try? await Task.sleep(for: .milliseconds(500))
     }
 
     /// One line on what stands now, for the UI test to read (`-tour 1`): the socket, the dock's
