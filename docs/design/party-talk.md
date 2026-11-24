@@ -37,7 +37,7 @@ Each goal is checked on a run's transcript and report.
 1. A player who speaks second has heard the first. Test: with scripted players, the second speaker's brief holds the first speaker's line.
 2. Silence is normal: one or two speakers per talk round on average (2.75 in the exit run), and at least 30% of player slots silent.
 3. A player addressed by name answers first, in at least 90% of the rounds where the human's or the DM's line names it.
-4. In a fight, about one line from an AI player every two rounds and never more than one a round, with no added wait on any turn.
+4. In a fight, about one line from an AI player every two rounds and never more than one a round, with no added wait on any turn. *Dropped by Stas on 2026-11-24: the table's fight talk (about 4 lines a round) suits him; the report still counts it, against no target.*
 5. A talk round shows its first line within 7 s (p50) and ends within 20 s (p95).
 6. Characters address each other according to what they think of each other (§4.4): at least one address between characters per scene; at least 80% of requests and proposals to an AI player get an answer (a word, a deed or an in-character refusal) in the same round out of combat, or on that player's next turn in a fight. No address changes engine state by itself.
 
@@ -172,7 +172,7 @@ How R1 runs (spec `party-talk-r1-spec.md` in the project folder, `game/src/table
 - **Who may react:** a conscious AI player that isn't the next actor and isn't the one whose deed it was, the creature that last acted (its own critical hit or kill is for its own turn, R0). It is keyed on the seat map alone, so it holds when the human plays any character and when every character is an AI player.
 - **The wake:** a `bark` wake with `BarkTools`: `say` and `note` work, every other tool answers "not now". The first `say` takes the floor; a later one is refused ("X spoke first"). A line the speech guard refuses, or a `to` that isn't a companion, is dropped with no retry, and the floor is free again: lines are tried one at a time, so a refused line never shuts out one said at the same moment. A line from a player who fell unconscious while it thought is refused (SRD 5.2.1: an Incapacitated creature can't speak). A reaction shows at once even while the table collects lines, and its `to` never hands the floor on, even after the fight's end.
 - **Timing:** a reaction is cancelled after 8 s, or when its player is woken again and 5 s have passed. A cancelled wake interrupts its session the way a turn timeout does, so its late `say` is refused ("the moment has passed").
-- **Report:** fight talk (AI lines per combat round, on and between turns, against goal 4's about 0.5) and fight reactions (triggers, wakes, lines shown, passed, beaten by another's line, cancelled or timed out, bark wake p50 and p95).
+- **Report:** fight talk (AI lines per combat round, on and between turns, counted with no target since goal 4 was dropped) and fight reactions (triggers, wakes, lines shown, passed, beaten by another's line, cancelled or timed out, bark wake p50 and p95).
 
 ## 6. The echo line
 
