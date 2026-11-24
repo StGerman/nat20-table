@@ -33,7 +33,9 @@ xcrun simctl io "$DEVICE" recordVideo --codec h264 --force "$OUT/tour.mp4" > "$O
 VIDEO=$!
 sleep 2
 STATUS=0
-TEST_RUNNER_TABLE_LINK="$LINK" TEST_RUNNER_ASKS_LINK="$ASKS_LINK" xcodebuild test-without-building -project GlassTable.xcodeproj -scheme GlassTable \
+# The two tests take about ten minutes. One that hangs is cut off at twenty-five, so the step fails
+# with its logs and pictures kept, not at the job's limit with nothing.
+TEST_RUNNER_TABLE_LINK="$LINK" TEST_RUNNER_ASKS_LINK="$ASKS_LINK" perl -e 'alarm 1500; exec @ARGV' xcodebuild test-without-building -project GlassTable.xcodeproj -scheme GlassTable \
   -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build-tour \
   -resultBundlePath "$OUT/tour.xcresult" > "$OUT/tour-test.log" 2>&1 || STATUS=$?
 # The recorder writes the file when it is interrupted, not killed.
