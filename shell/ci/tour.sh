@@ -97,7 +97,13 @@ stage "what the host heard is read"
 BUNDLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' build-tour/Build/Products/Debug-iphonesimulator/GlassTable.app/Info.plist)"
 SENT="$(perl -e 'alarm 60; exec @ARGV' xcrun simctl get_app_container "$DEVICE" "$BUNDLE" data || true)/Documents/sent.jsonl"
 cp "$SENT" "$OUT/tour-asks-sent.jsonl" || touch "$OUT/tour-asks-sent.jsonl"
-node --experimental-strip-types --no-warnings "$HERE/heard.ts" "$OUT/tour-asks-host.jsonl" "$OUT/tour-asks-sent.jsonl" || STATUS=1
+# WebKit ends every page's process when its drawing process stops answering three times in half a
+# minute (seen on the Xcode 27 image). The shell loads the pages again and asks from 0: the job
+# says so, and the check of what the host heard is told, so it does not take those for dropped sockets.
+ENDED="$(grep -c "terminateAllWebContentProcesses" "$OUT/tour-system.log" 2>/dev/null || true)"
+ENDED="${ENDED:-0}"
+[ "$ENDED" = "0" ] || echo "::warning::WebKit ended the pages' processes while the tour ran ($ENDED of its lines say so); the shell loaded the pages again"
+node --experimental-strip-types --no-warnings "$HERE/heard.ts" "$OUT/tour-asks-host.jsonl" "$OUT/tour-asks-sent.jsonl" "ended=$ENDED" || STATUS=1
 stage "the test's pictures are taken out"
 perl -e 'alarm 300; exec @ARGV' xcrun xcresulttool export attachments --path "$OUT/tour.xcresult" --output-path "$OUT/tour" || true
 # The test's pictures under their own names; Xcode's own recording and snapshots repeat tour.mp4.
