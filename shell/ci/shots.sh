@@ -32,6 +32,8 @@ shot 02-yard-turn-edge-light -replay yard.seat-wire.jsonl -to 74 -edge 1
 shot 03-yard-sheet-light -replay yard.seat-wire.jsonl -to 74 -open moves
 shot 04-yard-pick-light -replay yard.seat-wire.jsonl -to 80
 shot 05-yard-press-light -replay yard.seat-wire.jsonl -to 74 -press 9
+# Later in the fight: the moves that are spent, in a line over the chips.
+shot 19-yard-spent-light -replay yard.seat-wire.jsonl -to 92
 # The road: words out of a fight, then a road card with the table's votes.
 shot 06-road-input-light -replay the-way-back-ru.seat-wire.jsonl -to 12
 shot 07-road-card-light -replay the-way-back-ru.seat-wire.jsonl -to 17

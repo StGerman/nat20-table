@@ -159,14 +159,12 @@ struct Chips: View {
         if let dock = shell.chrome?.dock, !dock.chips.isEmpty || dock.endTurn != nil || dock.refusal != nil || shell.notice != nil {
             VStack(alignment: .leading, spacing: 6) {
                 if let words = shell.notice ?? dock.refusal {
-                    Text(words)
-                        .font(.footnote)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
+                    note(words)
                 }
+                // Which moves are spent and why. The line is long: three rows of it, and the list's
+                // own sheet names each move with its reason.
                 ForEach(dock.spent, id: \.self) { line in
-                    Text(line).font(.caption).foregroundStyle(.secondary)
+                    note(line).lineLimit(3)
                 }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -193,6 +191,17 @@ struct Chips: View {
             }
             .padding(.bottom, 8)
         }
+    }
+
+    /// A line of the shell's over the story stands on glass and inside the screen's edges: bare, the
+    /// story's own lines show through it and the two cannot be read.
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 16)
     }
 
     private func chip(_ move: Chrome.Move) -> some View {
