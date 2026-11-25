@@ -61,20 +61,22 @@ struct DockBar: View {
                         ProgressView().accessibilityHidden(true)
                     }
                 } else {
-                    // The keyboard would cover a line typed here, so a touch opens the line over the
-                    // keyboard (TypeLine) and this one only shows what it holds.
-                    Button {
-                        shell.screen = .story
-                        shell.typing = true
-                    } label: {
-                        Text(shell.draft.isEmpty ? dock.placeholder : shell.draft)
-                            .foregroundStyle(shell.draft.isEmpty ? Color.secondary : Color.primary)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
+                    #if os(macOS)
+                    // A window has no keyboard to cover the dock: the line is typed where it
+                    // stands, and no second line opens over it (Stas, 2026-11-25).
+                    if shell.typing {
+                        TypeField(shell: shell, placeholder: dock.placeholder)
+                            .textFieldStyle(.plain)
+                    } else {
+                        line(dock, shown: true)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("dock-line")
+                    #else
+                    // The keyboard would cover a line typed here, so a touch opens the line over the
+                    // keyboard (TypeLine) and this one only shows what it holds. While that line is
+                    // up this one says nothing: with no keyboard on the screen (a keyboard of keys,
+                    // a simulator) both are seen, and they read as two lines to type in.
+                    line(dock, shown: !shell.typing)
+                    #endif
                     if shell.listed {
                         Button {
                             shell.opened = .moves
@@ -94,42 +96,75 @@ struct DockBar: View {
             ProgressView()
         }
     }
+
+    /// The dock's own line: what the human has typed so far or what to type, and a touch opens it
+    /// for typing. Not shown, it is still there to be touched.
+    private func line(_ dock: Chrome.Dock, shown: Bool) -> some View {
+        Button {
+            shell.screen = .story
+            shell.typing = true
+        } label: {
+            Text(shell.draft.isEmpty ? dock.placeholder : shell.draft)
+                .foregroundStyle(shell.draft.isEmpty ? Color.secondary : Color.primary)
+                .lineLimit(1)
+                .opacity(shown ? 1 : 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("dock-line")
+    }
 }
 
 /// The line the human types in, over the keyboard: the dock sits under the keyboard, so its own
-/// line could not be read while typing.
+/// line could not be read while typing. The phone's; the Mac types in the dock itself.
 struct TypeLine: View {
     @Bindable var shell: Shell
+
+    var body: some View {
+        // A table that does not answer, or a seat another window took, takes no line.
+        if shell.typing, shell.link == .up, let dock = shell.chrome?.dock, dock.open {
+            TypeField(shell: shell, placeholder: dock.placeholder)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .glassEffect(.regular, in: Capsule())
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+        }
+    }
+}
+
+/// The field the human types in and its button: it takes the keyboard when it comes, and goes
+/// when the line is sent or the keyboard leaves.
+struct TypeField: View {
+    @Bindable var shell: Shell
+    let placeholder: String
     @FocusState private var focused: Bool
 
     var body: some View {
-        if shell.typing, let dock = shell.chrome?.dock, dock.open {
-            HStack(spacing: 8) {
-                TextField(dock.placeholder, text: $shell.draft)
-                    .accessibilityIdentifier("type-line")
-                    .focused($focused)
-                    .submitLabel(.send)
-                    .onSubmit(submit)
-                Button(action: submit) {
-                    Image(systemName: "arrow.up.circle.fill").font(.title2)
-                }
-                .disabled(shell.draft.isEmpty)
-                .accessibilityLabel(shell.words.send)
+        HStack(spacing: 8) {
+            TextField(placeholder, text: $shell.draft)
+                .accessibilityIdentifier("type-line")
+                .focused($focused)
+                .submitLabel(.send)
+                .onSubmit(submit)
+            Button(action: submit) {
+                Image(systemName: "arrow.up.circle.fill").font(.title2)
             }
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
-            .glassEffect(.regular, in: Capsule())
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-            .task { focused = true }
-            .onChange(of: focused) { _, now in
-                // The keyboard went: the line goes with it, and the dock shows what is left unsent.
-                if !now { shell.typing = false }
-            }
-            // The dock closed under the line (the answer was taken, the table moved on) before the
-            // lost focus was seen: the line must not come back, keyboard and all, at the next ask.
-            .onDisappear { shell.typing = false }
+            #if os(macOS)
+            .buttonStyle(.plain)
+            #endif
+            .disabled(shell.draft.isEmpty)
+            .accessibilityLabel(shell.words.send)
         }
+        .task { focused = true }
+        .onChange(of: focused) { _, now in
+            // The keyboard went: the line goes with it, and the dock shows what is left unsent.
+            if !now { shell.typing = false }
+        }
+        // The dock closed under the line (the answer was taken, the table moved on) before the
+        // lost focus was seen: the line must not come back, keyboard and all, at the next ask.
+        .onDisappear { shell.typing = false }
     }
 
     private func submit() {

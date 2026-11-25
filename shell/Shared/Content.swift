@@ -92,6 +92,19 @@ final class Content {
         pump()
     }
 
+    /// Something of the shell's came to stand over the story's last lines (the line the human
+    /// types in, and the keyboard under it): the story is shown from its end again. The page was
+    /// at its end for a shorter screen, and nothing tells it the screen grew shorter. Asked for
+    /// more than once: the keyboard takes its time to come up.
+    func toEnd() {
+        Task {
+            for wait in [150, 300, 500] {
+                try? await Task.sleep(for: .milliseconds(wait))
+                _ = try? await page.callJavaScript("scrollTo({ top: document.documentElement.scrollHeight })")
+            }
+        }
+    }
+
     /// The shell's sheet stands over the lower half of the page, or no longer does.
     func under(_ on: Bool) {
         Task {
