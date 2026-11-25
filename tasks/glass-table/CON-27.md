@@ -24,4 +24,4 @@ Check: the row is added once per place, above the narration that told it, and a 
 
 ## Status
 
-partial. Built: all of the above. Open: Stas's look at it on his phone; the face on the shell's own card has been compiled and never looked at.
+partial. Built: all of the above. Open: Stas's look at it on his phone; the face on the shell's own card has been compiled and never looked at; a campaign's scene held behind a road card (AGT-100) is already the place the seat names while the card is played, so its picture would come before its opening is told, here and on the Mac's right page (no pack with pictures is a campaign yet: to mend in the seat before one is).

@@ -540,9 +540,9 @@ export interface UiWords {
     /** «Где все»: the human's own token, and the ring of where they can walk this turn. */
     you: string;
     walk: string;
-    /** What is not drawn yet, before its own name (CON-26): the place's plan, the portraits of those here. */
     /** In the story, where a new place opens with its picture and the picture is not drawn yet (CON-27): over the file's name. The shell's own line says the same (shell/Shared/Words.swift). */
     noPlate: string;
+    /** What is not drawn yet, before its own name (CON-26): the place's plan, the portraits of those here. */
     noPlan: string;
     noFaces: string;
     /** «Лист» before the seat has shown a sheet, or since the character changed: when a fresh one comes. */
