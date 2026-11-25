@@ -734,8 +734,8 @@
             "target": "blades",
             "chained": true,
             "once": true,
-            "text": "The silent pilgrim stops the Blades with a raised hand and draws in the mud with her staff: a bridge, a man in a helmet too big for him holding a notched stick, a second man with a cudgel, and a coin passing from a man in a very good coat to both of them.",
-            "text_ru": "Молчаливая паломница поднимает руку, останавливая наёмников, и чертит посохом в грязи: мост, человек в шлеме не по размеру с биркой с зарубками, второй с дубиной, и монета, которая переходит к обоим от человека в очень хорошем сюртуке.",
+            "text": "The silent pilgrim stops the Blades with a raised hand and draws in the mud with her staff: a bridge, a man in a knitted hat holding a notched stick, a second man with a cudgel, and a coin passing from a man in a very good coat to both of them.",
+            "text_ru": "Молчаливая паломница поднимает руку, останавливая наёмников, и чертит посохом в грязи: мост, человек в вязаной шапке и с биркой, второй с дубиной, и монета, которая переходит к обоим от человека в очень хорошем сюртуке.",
             "note": "Sister Agna, who cannot say it. If asked, the DM says what the drawing shows and nothing more: the notched stick is Col's tally, the coat is Rufus's. Read well, the Blades know who set the toll men on the bridge, and Rufus wants his due and Odda's mark can use it. The silent witness and the loud one, Tobin, reach the same truth by different roads. If Odda is dead (odda_vell_dead), the drawing is for the Blades alone; the mark is hers still.",
             "choices": [
                 {

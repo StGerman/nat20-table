@@ -27,8 +27,8 @@
                     "cp": 14
                 }
             },
-            "look": "A weather-worn shepherd who has a name for every one of her sheep.",
-            "look_ru": "Обветренная пастушка; у каждой её овцы есть имя.",
+            "look": "A weather-worn shepherd in a quilted work jacket, who has a name for every one of her sheep.",
+            "look_ru": "Обветренная пастушка в ватнике; у каждой её овцы есть имя.",
             "heard": "They say she knows every flock on the ridges, and every rumour with it.",
             "heard_ru": "Говорят, она знает на склонах каждую отару, а заодно и каждый слух.",
             "remembers": [
@@ -94,8 +94,8 @@
                     "gp": 2
                 }
             },
-            "look": "A reeve in a neatly patched coat, the common chest's tally sticks always under his arm.",
-            "look_ru": "Староста в аккуратно залатанной куртке; под мышкой у него вечно бирки общинной казны.",
+            "look": "A reeve in a good brown coat and a mohair scarf, the common chest's tally sticks always under his arm.",
+            "look_ru": "Староста в хорошей коричневой куртке и мохеровом шарфе; под мышкой у него вечно бирки общинной казны.",
             "heard": "They say he counts the common chest twice and still does not trust it.",
             "heard_ru": "Говорят, он пересчитывает общинную казну дважды и всё равно ей не верит.",
             "remembers": [
@@ -221,8 +221,8 @@
                     "sp": 5
                 }
             },
-            "look": "A tired warden with a staff and a stub of chalk behind his ear.",
-            "look_ru": "Усталый смотритель с посохом и огрызком мела за ухом.",
+            "look": "A tired warden with a staff, a faded red armband and a stub of chalk behind his ear.",
+            "look_ru": "Усталый смотритель с посохом и выцветшей красной повязкой на рукаве, за ухом огрызок мела.",
             "heard": "They say that in fair week he puts anyone who draws a blade outside the gate.",
             "heard_ru": "Говорят, в ярмарочную неделю он выставляет за ворота любого, кто достанет клинок.",
             "remembers": [
@@ -301,8 +301,8 @@
             ],
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A broad, weathered woman in a man's oilskin coat, who talks to her horses more than to people.",
-            "look_ru": "Крепкая женщина в мужском промасленном плаще; с лошадьми она говорит охотнее, чем с людьми.",
+            "look": "A broad, weathered woman in a man's oilskin coat, with a halter rope of plaited baler twine, who talks to her horses more than to people.",
+            "look_ru": "Крепкая женщина в мужском промасленном плаще, с недоуздком из капроновой верёвки; с лошадьми она говорит охотнее, чем с людьми.",
             "heard": "They say she has brought the hill wheat to the fair first for twenty autumns running.",
             "heard_ru": "Говорят, она двадцать осеней подряд первой привозит на ярмарку пшеницу с холмов.",
             "remembers": [
@@ -367,8 +367,8 @@
             ],
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A thin, careful man in a grey coat mended at the elbows, with a clipboard and a pencil on a string.",
-            "look_ru": "Худой аккуратный человек в сером сюртуке, заштопанном на локтях, с дощечкой для записей и карандашом на верёвочке.",
+            "look": "A thin, careful man in a grey corduroy jacket mended at the elbows.",
+            "look_ru": "Худой аккуратный человек в сером вельветовом пиджаке, заштопанном на локтях.",
             "heard": "They say every sack and every debt in the valley is written on his clipboard.",
             "heard_ru": "Говорят, у него на дощечке записан каждый мешок и каждый долг в долине.",
             "remembers": [
@@ -409,8 +409,8 @@
             "people": "roadfolk",
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A small roadfolk woman who mends pots by the fire of a painted cart.",
-            "look_ru": "Маленькая женщина из корринов; латает котлы у костра расписной повозки.",
+            "look": "A small roadfolk woman in a work smock, who mends pots by the fire of a painted cart.",
+            "look_ru": "Маленькая женщина из корринов в рабочем халате; латает котлы у костра расписной повозки.",
             "heard": "They say a seat at her fire costs no coin, only a story.",
             "heard_ru": "Говорят, место у её костра стоит не монету, а историю.",
             "remembers": [
@@ -504,8 +504,8 @@
             "people": "roadfolk",
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A barefoot boy with a satchel, who cannot take his eyes off other people's swords.",
-            "look_ru": "Босой мальчишка с котомкой; глаз не сводит с чужих мечей.",
+            "look": "A barefoot boy with a satchel and an empty sword belt of cracked leatherette, who cannot take his eyes off other people's swords.",
+            "look_ru": "Босой мальчишка с котомкой и пустой перевязью из потрескавшегося кожзама; глаз не сводит с чужих мечей.",
             "heard": "They say the roadfolk boy talks of nothing but swords.",
             "heard_ru": "Говорят, мальчишка корринов только и говорит, что о мечах.",
             "remembers": [
@@ -587,8 +587,8 @@
             ],
             "monster": "commoner",
             "attitude": "indifferent",
-            "look": "An old woman with a crow on her shoulder and a basket of knotted charms.",
-            "look_ru": "Старуха с вороной на плече и корзиной узелковых оберегов.",
+            "look": "An old woman in a black crocheted shawl, with a crow on her shoulder and a basket of knotted charms.",
+            "look_ru": "Старуха в чёрной ажурной шали, с вороной на плече и корзиной узелковых оберегов.",
             "heard": "They say nobody in the hills knows horses better.",
             "heard_ru": "Говорят, в холмах никто не понимает в лошадях лучше неё.",
             "remembers": [
@@ -653,8 +653,8 @@
             ],
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A barefoot pilgrim in grey, a round loaf wrapped under her arm.",
-            "look_ru": "Босая паломница в сером, под мышкой завёрнутый круглый хлеб.",
+            "look": "A barefoot pilgrim in grey under a nylon rain hood, a round loaf wrapped under her arm.",
+            "look_ru": "Босая паломница в сером, в капюшоне из болоньи; под мышкой завёрнутый круглый хлеб.",
             "heard": "They say the pilgrim has vowed not to speak until she reaches the sea.",
             "heard_ru": "Говорят, эта паломница дала обет молчать до самого моря.",
             "remembers": [
@@ -717,8 +717,8 @@
             ],
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A peddler with a handcart and a charm against goblins for sale.",
-            "look_ru": "Коробейник с ручной тележкой и оберегом от гоблинов на продажу.",
+            "look": "A peddler in a felt hat with a burn hole, with a handcart and a charm against goblins for sale.",
+            "look_ru": "Коробейник в фетровой шляпе с прожжённой дырой, с ручной тележкой и оберегом от гоблинов на продажу.",
             "heard": "They say whatever is done in front of him, the whole valley knows by fair day.",
             "heard_ru": "Говорят, что при нём ни сделай, к ярмарке об этом знает вся долина.",
             "remembers": [
@@ -802,8 +802,8 @@
             ],
             "monster": "commoner",
             "attitude": "indifferent",
-            "look": "A young man in a very good coat, who hands out printed calling cards.",
-            "look_ru": "Молодой человек в очень хорошем сюртуке; раздаёт печатные визитные карточки.",
+            "look": "A young man in a very good coat over a thin roll-neck.",
+            "look_ru": "Молодой человек в очень хорошем сюртуке поверх тонкой водолазки.",
             "heard": "They say he buys the harvest on paper before it reaches the fair.",
             "heard_ru": "Говорят, он скупает урожай на бумаге ещё до ярмарки.",
             "remembers": [
@@ -880,8 +880,8 @@
             ],
             "monster": "bandit",
             "attitude": "indifferent",
-            "look": "A man in a torn sheepskin coat and a helmet too big for him, with a notched tally stick.",
-            "look_ru": "Мужчина в рваном тулупе и шлеме не по размеру, в руке бирка с зарубками.",
+            "look": "A man in a torn sheepskin coat and a striped knitted hat, with a notched tally stick.",
+            "look_ru": "Мужчина в рваном тулупе и полосатой вязаной шапке, в руке бирка с зарубками.",
             "heard": "They say the goblins took the whole flock from the brothers on Bald Hill this autumn.",
             "heard_ru": "Говорят, этой осенью гоблины угнали у братьев с Лысой горы всю отару.",
             "remembers": [
@@ -914,7 +914,7 @@
                     "company_ru": "Ваш отряд оставил его в колодках."
                 }
             ],
-            "notes": "Of the two brothers from the farm on Bald Hill, the one who holds out the cap; counts every coin on a tally stick he cut himself. Sat on the bridge to pay Rufus a farm debt."
+            "notes": "Of the two brothers from the farm on Bald Hill, the one who does the talking; counts every coin on a tally stick he cut himself. Sat on the bridge to pay Rufus a farm debt."
         },
         {
             "id": "dunn",
@@ -930,8 +930,8 @@
             ],
             "monster": "bandit",
             "attitude": "indifferent",
-            "look": "A big man with a cudgel, who leaves the talking to his brother.",
-            "look_ru": "Здоровяк с дубиной; разговоры он оставляет брату.",
+            "look": "A big man with a cudgel, in mittens of the same striped yarn as Col's hat, who leaves the talking to his brother.",
+            "look_ru": "Здоровяк с дубиной, в варежках из той же полосатой пряжи, что шапка Кола; разговоры он оставляет брату.",
             "heard": "They say wherever his brother goes, he goes.",
             "heard_ru": "Говорят, куда брат, туда и он.",
             "remembers": [],
@@ -949,8 +949,8 @@
             ],
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A small girl with a slate, who does sums out loud.",
-            "look_ru": "Девочка с грифельной доской; считает вслух.",
+            "look": "A small girl in a brown school dress with a lace collar, with a slate, who does sums out loud.",
+            "look_ru": "Девочка в коричневом школьном платье с кружевным воротничком, с грифельной доской; считает вслух.",
             "heard": "They say the reeve's niece does sums faster than anyone on the green, when she wants to.",
             "heard_ru": "Говорят, племянница старосты считает быстрее всех на лугу, когда захочет.",
             "remembers": [
@@ -1001,8 +1001,8 @@
             ],
             "monster": "commoner",
             "attitude": "friendly",
-            "look": "A quick-tongued girl, floured to the elbows.",
-            "look_ru": "Бойкая девушка, по локоть в муке.",
+            "look": "A quick-tongued girl in a faded denim apron, floured to the elbows.",
+            "look_ru": "Бойкая девушка в застиранном джинсовом фартуке, по локоть в муке.",
             "heard": "They say it was she who dropped the sluice gate and stopped the mill wheel.",
             "heard_ru": "Говорят, это она опустила затвор и остановила мельничное колесо.",
             "remembers": [
