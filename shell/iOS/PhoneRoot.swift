@@ -60,6 +60,10 @@ struct Tabs: View {
         .onChange(of: shell.opened) { _, now in
             table.story.under(now == .moves)
         }
+        // The line the human types in comes up over the story's end, and the keyboard under it.
+        .onChange(of: shell.typing) { _, now in
+            if now { table.story.toEnd() }
+        }
         .onChange(of: shell.screen) { _, now in
             if now == .sheet { shell.freshSheet() }
             // An ask that is its own sheet waited while another tab was read.

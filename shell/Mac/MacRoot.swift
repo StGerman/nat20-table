@@ -198,7 +198,6 @@ struct MacTable: View {
         VStack(spacing: 0) {
             Answers(shell: shell)
             Chips(shell: shell)
-            TypeLine(shell: shell)
             DockBar(shell: shell)
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .glassEffect(.regular, in: Capsule())
