@@ -265,8 +265,9 @@ test("«Лист» in English splits the seat's first line into the name and who
 });
 
 // Out of a fight the pill says whether foes are in sight (Stas, 2026-11-21): «Без боя» with none,
-// «Враги рядом» with one; a foe with no portrait is a red dot on «Где все», not a letter (Vera).
-test("out of a fight the pill says «Без боя», or «Враги рядом» with a foe in sight drawn as a red dot", async ({ page }) => {
+// «Враги рядом» with one; a foe with no portrait is a red dot on «Где все», not a letter (Vera), and a
+// wolf has its face (Stas's pick, 2026-11-25).
+test("out of a fight the pill says «Без боя», or «Враги рядом» with foes in sight: a wolf by its face, a foe with no portrait as a red dot", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const all = readFileSync(path.join(FIXTURES, "the-way-back-ru.seat-wire.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as Rec & { event?: { kind: string; situation?: { mode: string; creatures: unknown[] }; positions?: { creatures: Record<string, unknown> } } });
   const at = all.findIndex((r) => r.event?.kind === "situation" && r.event.situation?.mode === "explore" && r.event.positions);
@@ -274,9 +275,12 @@ test("out of a fight the pill says «Без боя», or «Враги рядом
   const ask = all.findIndex((r, i) => i > at && (r as { message?: { type: string } }).message?.type === "ask");
   const calm = all.slice(0, ask + 1);
   const wolf = { handle: "wolf_1", name: "Волк 1", side: "hostile", health: "unhurt", conditions: [], distance_ft: 20, in_reach: false, kind: "Wolf" };
+  // Placed on the road by the Narrator: its handle is his, so the face comes from the engine's kind.
+  const grey = { handle: "grey_1", name: "Серый волк", side: "hostile", health: "unhurt", conditions: [], distance_ft: 25, in_reach: false, kind: "Grey wolf" };
+  const rat = { handle: "giant_rat_1", name: "Крыса 1", side: "hostile", health: "unhurt", conditions: [], distance_ft: 30, in_reach: false, kind: "Giant Rat" };
   // Off the road, so «Где все» is the yard.
   const last = calm[at]!;
-  const foes = calm.map((r, i) => (i === at ? { ...last, event: { ...last.event!, situation: { ...last.event!.situation!, road: undefined, creatures: [...last.event!.situation!.creatures, wolf] }, positions: { ...last.event!.positions!, creatures: { ...last.event!.positions!.creatures, wolf_1: { x_ft: 20, y_ft: 0, z_ft: 0 } } } } } : r));
+  const foes = calm.map((r, i) => (i === at ? { ...last, event: { ...last.event!, situation: { ...last.event!.situation!, road: undefined, creatures: [...last.event!.situation!.creatures, wolf, grey, rat] }, positions: { ...last.event!.positions!, creatures: { ...last.event!.positions!.creatures, wolf_1: { x_ft: 20, y_ft: 0, z_ft: 0 }, grey_1: { x_ft: 25, y_ft: -10, z_ft: 0 }, giant_rat_1: { x_ft: 30, y_ft: 10, z_ft: 0 } } } } } : r));
   const names = Object.entries(NAMES_RU).map(([k, v]) => `${k}:${v}`).join(",");
   for (const [wire, pill] of [[calm, "Без боя"], [foes, "Враги рядом"]] as const) {
     const body = wire.map((r) => JSON.stringify(r)).join("\n") + "\n";
@@ -287,8 +291,13 @@ test("out of a fight the pill says «Без боя», or «Враги рядом
     await page.unroute("**/fixtures/explore.jsonl");
   }
   await page.locator('[data-test="where"]').click();
-  const token = page.locator('[data-test="lens"] .who[data-handle="wolf_1"]');
+  const wolfToken = page.locator('[data-test="lens"] .who[data-handle="wolf_1"]');
+  await expect(wolfToken.locator("image")).toHaveCount(1);
+  await expect(wolfToken.locator(".dot")).toHaveCount(0);
+  await expect(wolfToken.locator(".label")).toHaveText("Волк 1");
+  await expect(page.locator('[data-test="lens"] .who[data-handle="grey_1"] image')).toHaveCount(1);
+  const token = page.locator('[data-test="lens"] .who[data-handle="giant_rat_1"]');
   await expect(token.locator(".dot")).toHaveCount(1);
   await expect(token.locator(".ini")).toHaveCount(0);
-  await expect(token.locator(".label")).toHaveText("Волк 1");
+  await expect(token.locator(".label")).toHaveText("Крыса 1");
 });

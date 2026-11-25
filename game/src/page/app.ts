@@ -178,7 +178,7 @@ function Top({ view, panel, lens, canLens, setLens, openSheet, togglePeople }: {
           { className: `turnpill pill glass${mine ? " mine" : " calm"}`, role: "status", "data-test": "turn" },
           h("i", { className: "mark", "aria-hidden": true }),
           h("span", null, pill),
-          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle), foe: s?.creatures.some((c) => c.handle === handle && c.side === "hostile") }))) : null,
+          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, kind: s?.creatures.find((c) => c.handle === handle)?.kind, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle), foe: s?.creatures.some((c) => c.handle === handle && c.side === "hostile") }))) : null,
         )
       : h("span"),
     h(
@@ -210,8 +210,8 @@ function initial(name: string): string {
 }
 
 /** A round face: the portrait when the page has one for the handle, else the initial. */
-function Medal({ handle, name, className, title, foe }: { handle?: string; name: string; className?: string; title?: string; foe?: boolean }): ReactNode {
-  const face = faceOf(handle);
+function Medal({ handle, kind, name, className, title, foe }: { handle?: string; kind?: string; name: string; className?: string; title?: string; foe?: boolean }): ReactNode {
+  const face = faceOf(handle, kind);
   // A foe with no portrait is a plain red dot: its initial read as a word («В» as «враг», Vera, 2026-11-21).
   const inside = face ? h("img", { src: face, alt: "", draggable: false }) : foe ? h("i", { className: "dot" }) : initial(name);
   return h("span", { className: ["medal", className, face ? "face" : undefined, foe && !face ? "foe" : undefined].filter(Boolean).join(" "), "aria-hidden": true, ...(title ? { title } : {}) }, inside);
@@ -243,14 +243,14 @@ function Rail({ view, openSheet, lens }: { view: PageView; openSheet(): void; le
       h("button", { type: "button", className: `face-btn ${mine}${now(me)}`.trim(), "data-handle": me, title: myLabel, "aria-label": myLabel, onClick: openSheet }, h(Medal, { handle: me, name: myName })),
       party.map((c) => {
         const label = `${c.name} · ${words.panel.health[c.health]}`;
-        return h("span", { key: c.handle, className: `face-btn ${ring(c.health)}${now(c.handle)}`.trim(), "data-handle": c.handle, "data-health": c.health, title: label, role: "img", "aria-label": label }, h(Medal, { handle: c.handle, name: c.name }));
+        return h("span", { key: c.handle, className: `face-btn ${ring(c.health)}${now(c.handle)}`.trim(), "data-handle": c.handle, "data-health": c.health, title: label, role: "img", "aria-label": label }, h(Medal, { handle: c.handle, kind: c.kind, name: c.name }));
       }),
     ),
     near.length > 0
       ? h(
           "button",
           { type: "button", className: "near glass", "data-test": "near", title: `${words.page.near}: ${near.map((c) => shownName(view, s, c.handle)).join(", ")}`, "aria-label": `${words.page.near}: ${near.length}`, onClick: lens },
-          h(Medal, { handle: near[0].handle, name: shownName(view, s, near[0].handle), foe: true }),
+          h(Medal, { handle: near[0].handle, kind: near[0].kind, name: shownName(view, s, near[0].handle), foe: true }),
           near.length > 1 ? h("b", { className: "count" }, near.length) : null,
         )
       : null,
@@ -305,8 +305,8 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
     // A style, so the lens CSS's `text-anchor: middle` gives way.
     return { x: l.x - x, y: l.y - y, style: { textAnchor: l.anchor } };
   };
-  const token = (handle: string, name: string, at: { x_ft: number; y_ft: number }, cls: string, title: string, label: string) => {
-    const face = faceOf(handle);
+  const token = (handle: string, name: string, at: { x_ft: number; y_ft: number }, cls: string, title: string, label: string, kind?: string) => {
+    const face = faceOf(handle, kind);
     const id = `clip-${handle}`;
     return h(
       "g",
@@ -347,7 +347,7 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
       who.map(({ handle, at, c }, i) => {
         const name = names[i]!.name;
         // One the panel no longer lists has left the fight: drawn faded where it was last.
-        return token(handle, name, at, `${c?.side ?? "gone"}${!c || c.health === "down" ? " down" : ""}`, [name, c ? ui(view).panel.health[c.health] : undefined].filter(Boolean).join(" · "), name);
+        return token(handle, name, at, `${c?.side ?? "gone"}${!c || c.health === "down" ? " down" : ""}`, [name, c ? ui(view).panel.health[c.health] : undefined].filter(Boolean).join(" · "), name, c?.kind);
       }),
       token(me, named(view, me), p.me, "me", named(view, me), words.you),
     ),
