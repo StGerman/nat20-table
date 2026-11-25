@@ -12,7 +12,7 @@
 // is in it (`-widen`): the app must go on, as an open book.
 //
 // `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
-// as it opens, the three pages as tabs, then wide (`-wide 1`), where it must be an open book
+// as it opens, one page at a time, then wide (`-wide 1`), where it must be an open book
 // (CON-25): the story beside «Где все» or «Лист», and no tabs.
 import XCTest
 
