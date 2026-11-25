@@ -219,6 +219,10 @@ test("«Где все» says what is not drawn yet by its own name: the place's 
   expect(files.length).toBeGreaterThan(0);
   for (const file of files) expect(file).toMatch(/^[a-z_]+\.jpg$/);
   expect(await page.locator(".lens .who.noface").count()).toBeGreaterThanOrEqual(files.length);
+  // A foe with no portrait is still ringed as a foe: the dashes do not take the ring's colour.
+  const ring = (selector: string) => page.locator(selector).first().evaluate((disc) => getComputedStyle(disc).stroke);
+  expect(await page.locator(".lens .who.hostile.noface").count()).toBeGreaterThan(0);
+  expect(await ring(".lens .who.hostile.noface .disc")).toBe(await ring(".lens .who.hostile:not(.noface) .disc"));
   // The chip lies inside the page and off the people it names.
   const chip = (await page.locator('[data-test="missing"]').boundingBox())!;
   expect(chip.x).toBeGreaterThanOrEqual(0);

@@ -262,11 +262,12 @@ span.face-btn { cursor: default; }
 .lens .anchor rect { fill: var(--fill-2); stroke: var(--ink-3); stroke-width: 0.15; }
 .lens .anchor text { font: 500 1.3px var(--sans); fill: var(--ink-2); text-anchor: middle; }
 .lens .who .disc { fill: var(--glass-solid); stroke: var(--glass-line); stroke-width: 0.2; }
+/* No portrait is drawn for this one yet (CON-26): a dashed ring; its file is in the list below.
+   Before the rings of a foe and of the human, which keep their colour over it. */
+.lens .who.noface .disc { stroke: var(--ink-3); stroke-dasharray: 0.45 0.35; }
 .lens .who.hostile .disc { stroke: var(--harm); stroke-width: 0.3; }
 .lens .who.me .disc { stroke: var(--accent); stroke-width: 0.4; }
 .lens .who.down { opacity: 0.35; }
-/* No portrait is drawn for this one yet (CON-26): a dashed ring; its file is in the list below. */
-.lens .who.noface .disc { stroke: var(--ink-3); stroke-dasharray: 0.45 0.35; }
 .missing { position: absolute; left: 16px; bottom: calc(var(--dock-h) + 16px); z-index: 2; max-width: calc(100% - 32px); padding: 6px 10px; border: 1px dashed var(--ink-3); border-radius: 10px; background: color-mix(in srgb, var(--ground) 72%, transparent); font: 12px/1.45 var(--sans); color: var(--ink-2); }
 .missing p { margin: 0; overflow-wrap: anywhere; }
 .missing b { font-weight: 600; color: var(--ink); }

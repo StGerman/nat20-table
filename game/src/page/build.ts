@@ -1,6 +1,6 @@
 // Builds the page (AGT-142) into game/dist/page with Bun: `npm run page:build`. The wire's version
 // and hash go in as a constant, so the page refuses a host built from another wire (design §4.1).
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WIRE_HASH, WIRE_VERSION } from "../seat-wire/schema.ts";
@@ -33,6 +33,8 @@ if (!built.success) {
 for (const file of ["index.html", "page.css"]) copyFileSync(path.join(here, file), path.join(out, file));
 // The pictures of the places (CON-26), as files beside the page: `plates/<pack>/<name>.jpg`, the
 // name a pack's `plates/index.json` gives the seat. A shell draws them from its own copy of the page.
+// Laid out anew each time: a picture taken out of a pack is not left for a shell to draw.
+rmSync(path.join(out, "plates"), { recursive: true, force: true });
 const scenarios = path.resolve(here, "../../../scenarios");
 for (const pack of readdirSync(scenarios)) {
   const from = path.join(scenarios, pack, "plates");
