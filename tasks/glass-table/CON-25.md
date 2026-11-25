@@ -16,10 +16,10 @@ The page's half: the right page is taller than it is wide and not a phone, so «
 
 Not in this row, and not built before the picture-book milestone (Stas's order of 2026-11-24): the picture of the place and a person's portrait on the right page, the painted plan in place of the yard's lens, and the right page turning by itself (to the map when a fight starts, to a portrait when a name is pressed). Until then the human turns it.
 
-Depends on: CON-23 (table #498 for the yard's scale and the dock's width).
+Depends on: CON-23 (table #498 for the yard's scale and the dock's width; this row's PR is stacked on it).
 
 Check: a UI test on the hosted macOS runner opens the window wide and finds the right page, and finds none in the window as it opens: test, no model (`shell/MacTour/MacTour.swift` `testPictures`). The yard's scale on a page shaped like the right page: test, no model (`game/e2e/shell.spec.ts`).
 
 ## Status
 
-done (this PR). `shell/Mac/MacRoot.swift` draws the book or the tabs by the window's width; `-wide 1` opens the window at least 1000 points wide for the test, whose runner's screen is 1024 by 768, so the pictures show the book near its narrowest. Not checked: a window dragged across 860 points with a table open (the three web views move between the tabs and the pages; no test resizes a window), the sheet on the right page while a fight goes on (it is asked for when the page is turned to it, as a tab is, and not again when something happens, so it can show an older sheet until turned back), full screen on a large display, VoiceOver on the switch (CON-24), and Stas's own Mac.
+done (table #499). `shell/Mac/MacRoot.swift` draws the book or the tabs by the window's width; `-wide 1` opens the window at least 1000 points wide for the test, whose runner's screen is 1024 by 768, so the pictures show the book near its narrowest. Not checked: a window dragged across 860 points with a table open (the three web views move between the tabs and the pages; no test resizes a window), the sheet on the right page while a fight goes on (it is asked for when the page is turned to it, as a tab is, and not again when something happens, so it can show an older sheet until turned back), full screen on a large display, VoiceOver on the switch (CON-24), and Stas's own Mac.
