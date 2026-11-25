@@ -18,10 +18,10 @@ A person's card, opened from a name in the story, opens with their face where th
 
 Not in this row: a picture that comes with a meeting or a road card inside a place, the drop cap and the picture moving at half speed (all in the picture-book design), the map as a second page of the story, larger portraits (the card's face is the 128 px one of «Где все»), the human's own face in the dock, and the pictures of the road and the yard, which are CON-26's open items. The placeholder is for us, while pictures are being made: it goes behind a switch or goes away with CON-26's corner line before a stranger plays.
 
-Depends on: CON-26 (table #501; this row's PR is stacked on table #505).
+Depends on: CON-26 (table #501, merged).
 
 Check: the row is added once per place, above the narration that told it, and a wire with no places has none: test, no model (`game/test/page-reduce.test.ts`). The picture from edge to edge of a phone's page and over the place's words, the placeholder with the file's name inside the page, the name alone in an open book, and the card handed to the shell with a face: test, no model (`game/e2e/shell.spec.ts`). The phone's own pictures of it, light and dark: read by eye (`shell/ci/shots.sh`, shots 20 to 22). The face on the shell's card, on the phone and the Mac: a person (no test opens a person's card in the shell). How it reads at a live table on his phone: a person (Stas).
 
 ## Status
 
-partial (table #505's stack). Built: all of the above. Open: Stas's look at it on his phone; the face on the shell's own card has been compiled and never looked at.
+partial. Built: all of the above. Open: Stas's look at it on his phone; the face on the shell's own card has been compiled and never looked at.
