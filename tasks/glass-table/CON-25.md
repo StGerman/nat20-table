@@ -26,4 +26,6 @@ done (table #499). `shell/Mac/MacRoot.swift` lays the window out by its width: t
 
 The first build stopped at launch on Stas's Mac (2026-11-25, `EXC_BREAKPOINT`): it drew the pages anew on the other branch of the layout when the width crossed 860 points, so a page stood in two web views for a moment, and no test changed a window's width with a table in it. `testPictures` does now (`-widen`), between its narrow pictures and its wide ones, and the web views no longer change hands.
 
+Also in this PR, at Stas's word (2026-11-25, a blocker on his Mac): the Mac's way out of a table that does not answer, recorded in CON-23.
+
 Not checked: a window made narrow again with a table open (the test only grows it), the sheet on the right page while a fight goes on (it is asked for when the page is turned to it, as a tab is, and not again when something happens, so it can show an older sheet until turned back), full screen on a large display, VoiceOver on the switches (CON-24), and Stas's own Mac on the second build.

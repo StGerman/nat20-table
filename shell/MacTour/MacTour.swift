@@ -11,8 +11,9 @@
 // `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
 // as it opens, one page at a time; then it makes an open window wide while the table is in it
 // (`-widen`), and the app must go on as an open book (CON-25); then wide from the start
-// (`-wide 1`): the story beside «Где все» or «Лист». The tour above runs before it, in the window
-// as it opens.
+// (`-wide 1`): the story beside «Где все» or «Лист». Between them it leaves a table that does not
+// answer, by the line's button and by the menu. The tour above runs before it, in the window as it
+// opens.
 import XCTest
 
 final class MacTour: XCTestCase {
@@ -22,6 +23,7 @@ final class MacTour: XCTestCase {
     private let russian = ["-AppleLanguages", "(ru)"]
     private let pauseTitle = "Пауза"
     private let playHereTitle = "Играть здесь"
+    private let leaveTitle = "Встать из-за стола"
 
     override func setUp() {
         continueAfterFailure = true
@@ -111,6 +113,7 @@ final class MacTour: XCTestCase {
             ("10-no-connection-ru-light", ["-table", "ws://127.0.0.1:9/?token=none"]),
         ]
         shoot(narrow)
+        leave()
         grow()
         // The wide window comes last: the system keeps a window's size for the next launch.
         let book: [(String, [String])] = [
@@ -157,6 +160,31 @@ final class MacTour: XCTestCase {
             picture(name)
             app.terminate()
         }
+    }
+
+    /// A table that does not answer is left from the line that says so, and from the menu: the Mac
+    /// has no other way out of it, and it keeps the link for the next launch (Stas's Mac,
+    /// 2026-11-25: a table that had ended held the app). The link screen comes back with the link
+    /// in its field, so the same table is one press away.
+    @MainActor
+    private func leave() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-table", "ws://127.0.0.1:9/?token=none"] + russian
+        app.launch()
+        let out = app.buttons["offline-leave"].firstMatch
+        XCTAssertTrue(out.waitForExistence(timeout: 30), "a table that does not answer shows the way out")
+        out.click()
+        let sit = app.buttons["sit"].firstMatch
+        XCTAssertTrue(sit.waitForExistence(timeout: 10), "the way out leads to the link screen")
+        XCTAssertFalse(out.exists, "the table is left")
+        XCTAssertTrue(sit.isEnabled, "the link stays in its field")
+        picture("42-left-a-table-that-is-gone")
+        // The same link again, and out by the menu's command.
+        sit.click()
+        XCTAssertTrue(out.waitForExistence(timeout: 30), "the same link sits down again")
+        XCTAssertTrue(command(app, { $0.menuItems[self.leaveTitle].firstMatch }), "the menu leaves a table that does not answer")
+        XCTAssertTrue(sit.waitForExistence(timeout: 10), "the menu's command leads to the link screen")
+        app.terminate()
     }
 
     /// A window that shows a table one page at a time grows wide and becomes the open book, with

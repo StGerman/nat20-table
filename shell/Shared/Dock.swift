@@ -18,6 +18,16 @@ struct DockBar: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("offline")
                 Spacer(minLength: 0)
+                #if os(macOS)
+                // The Mac's way out of a table that does not answer: back to the link, which stays
+                // in its field. The phone has it in its menu; the Mac's window had none, and a
+                // table that had ended held the app at every launch (Stas's Mac, 2026-11-25).
+                Button(words.leave) { shell.leave() }
+                    .font(.footnote.weight(.semibold))
+                    .fixedSize()
+                    .layoutPriority(1)
+                    .accessibilityIdentifier("offline-leave")
+                #endif
                 ProgressView()
             }
             .padding(.horizontal, 14)
