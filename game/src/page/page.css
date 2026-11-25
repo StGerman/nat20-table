@@ -311,8 +311,8 @@ html.native body { overflow-x: hidden; }
 html.native.under-sheet .win.native .story { padding-bottom: 46vh; }
 /* «Где все» on a phone: the yard near twice the screen's width, so a face and its name can be read;
    the page scrolls both ways under a finger. A page wider than it is tall (a Mac's window, a phone on
-   its side) shows the whole yard in its middle, a foot drawn between 10 px, about the phone's scale, and 18 px;
-   a yard too tall for that scrolls down, as the story does. */
+   its side) draws a foot between 10 px, about the phone's scale, and 18 px: the whole yard in its
+   middle where it fits at that, and where it does not the page scrolls, as on the phone. */
 html.native:has(.win.show-where .lens.yard) body { overflow-x: auto; }
 .win.native .lens.yard { position: relative; inset: auto; display: flex; justify-content: center; box-sizing: border-box; width: max-content; min-width: 100%; padding: 12px; }
 .win.native .lens.yard svg { display: block; flex: none; width: 185vw; max-width: none; height: auto; }
