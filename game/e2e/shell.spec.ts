@@ -210,8 +210,11 @@ test("«Где все» says what is not drawn yet by its own name: the place's 
   await expect(page.locator('[data-missing="faces"]')).toHaveCount(0);
   await expect(page.locator(".lens .who.noface")).toHaveCount(0);
   await expect(page.locator('.lens .who[data-handle="osric_hale"] image')).toHaveCount(1);
-  // The yard, recorded before places were told: no plan is named, and the wolf and the boss have no portrait.
-  await open("yard.seat-wire.jsonl", 74);
+  // The yard, recorded before places were told: no plan is named. The wolves have a face now (Stas's pick,
+  // 2026-11-25), so the yard's wolves are turned into Giant Rats, which have none.
+  const rats = readFileSync(path.join(FIXTURES, "yard.seat-wire.jsonl"), "utf8").replaceAll("wolf_", "giant_rat_").replaceAll('"name":"Wolf"', '"name":"Giant Rat"');
+  await page.route("**/fixtures/yard-rats.jsonl", (route) => route.fulfill({ body: rats, contentType: "application/x-ndjson" }));
+  await open("yard-rats.jsonl", 74);
   await expect(page.locator('[data-missing="plan"]')).toHaveCount(0);
   const faces = (await page.locator('[data-missing="faces"]').textContent()) ?? "";
   expect(faces.startsWith("Нет портретов: ")).toBe(true);
