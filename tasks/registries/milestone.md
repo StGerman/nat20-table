@@ -34,6 +34,10 @@ Not written yet. It comes with the scope and the system design, each row naming 
 
 MAP-31, the Mill NPCs' deaths. The other rows come after the scope and design are accepted (regulate first).
 
+# Art references
+
+The look for the NPC portraits starts from a private moodboard Stas asked for on 2026-11-23: works by Aleksandra Zheleznova («Самый тёмный час»), Disco Elysium concept art, and stills from Aleksei German's «Трудно быть богом» (2013), with a short note on what they share. It lives in the project files only, `/mnt/project-files/assets/moodboard/` (page `moodboard-2026-11-23.html`, sources in `SOURCES.md`), and never enters a repo or the product (Rule 7). The 70/25/5 palette rule of the October moodboard is retired (Stas, 2026-11-23). Portraits leave the flat Paper ground too (Stas, 2026-11-23; project wiki decision 0023); what replaces it is for this milestone's design.
+
 # Status
 
 open, no number. Opened 2026-11-21 at Stas's ask («Давай объединим NPC registry and Places registry в один milestone»). Order (Stas, 2026-11-23 20:12Z): Glass Table → Sign in with ChatGPT → People and places registries, so it comes before «Камень A».
