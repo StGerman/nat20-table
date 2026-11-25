@@ -414,3 +414,16 @@ test("a new place opens the story with its picture, above the narration that tol
   // A wire recorded before places were told opens with none.
   assert.equal(story("yard.seat-wire.jsonl").some((line) => line.beat === "plate"), false);
 });
+
+test("a place reached by an answer that leaves no row opens under the words of the place before it, not over them (CON-27)", () => {
+  // The green wire with the human's words replaced by a pick by number: nothing then lies between the green's narration and the road's.
+  const records = readFileSync(path.join(FIXTURES, "green.seat-wire.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seat: string; seq?: number; event?: TableEvent; message?: HostMessage });
+  let v = reduce(EMPTY, HostMessageSchema.parse({ type: "hello", wire: 1, hash: "", run: "", language: "ru", handle: records[0].seat, title: "" }));
+  for (const r of records) {
+    const event = r.event?.kind === "said" ? ({ kind: "said", intent: { kind: "option", number: 1 }, text: "1" } as TableEvent) : r.event;
+    v = settle(reduce(v, HostMessageSchema.parse(event ? { type: "event", seq: r.seq, event } : r.message)));
+  }
+  assert.equal(v.story.some((line) => line.beat === "words"), false);
+  const beats = v.story.map((line) => (line.beat === "plate" ? line.title : line.beat));
+  assert.deepEqual(beats.slice(0, 4), ["the_silent_mill/green.jpg", "narration", "the_silent_mill/mill-road.jpg", "narration"]);
+});

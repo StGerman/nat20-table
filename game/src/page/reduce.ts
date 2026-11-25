@@ -510,17 +510,20 @@ function situation(v: PageView, event: Situation): PageView {
   }
   const next: PageView = { ...v, situation: event.situation ? event : (v.situation ?? event), looked: v.story.length, told, untold, alive, sawPeople: v.sawPeople || first, ...(endsTurn(v, event) ? { options: undefined } : {}) };
   const out = { ...next, people: peopleNow(next) };
-  return event.place && event.place.plate !== v.plate ? opened(out, event.place) : out;
+  return event.place && event.place.plate !== v.plate ? opened(out, event.place, v.looked) : out;
 }
 
 /**
  * A new place opens with its picture (CON-27; Stas, 2026-11-24: a chapter opener). The seat shows
  * the place only once its opening is told, so the row goes above the narration that told it: the
- * picture stands over the words that describe it, as in a book.
+ * picture stands over the words that describe it, as in a book. Only the narration that came
+ * since the window was last told where things stand (`since`) and since the human last answered
+ * is the new place's: an answer by number leaves no row, and the words of the place before it
+ * then lie right above, with nothing between (Copilot on table #506).
  */
-function opened(v: PageView, place: NonNullable<Situation["place"]>): PageView {
+function opened(v: PageView, place: NonNullable<Situation["place"]>, since: number): PageView {
   let at = v.story.length;
-  while (at > 0 && v.story[at - 1].beat === "narration") at--;
+  while (at > since && v.story[at - 1].beat === "narration" && v.story[at - 1].id >= v.fresh) at--;
   const row: StoryLine = { id: v.next, beat: "plate", text: place.name, title: place.plate, rolls: [] };
   return { ...v, story: [...v.story.slice(0, at), row, ...v.story.slice(at)], next: v.next + 1, looked: v.story.length + 1, plate: place.plate };
 }
