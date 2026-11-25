@@ -8,7 +8,12 @@
 // (Tour/Tour.swift); then the window is closed, which must tell the host `quit`. What the host
 // heard is read by the job (ci/heard.ts, ci/mac-tour.sh).
 //
-// `testPictures` opens the window on recorded runs and keeps what it shows, light and dark.
+// `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
+// as it opens, one page at a time; then it makes an open window wide while the table is in it
+// (`-widen`), and the app must go on as an open book (CON-25); then wide from the start
+// (`-wide 1`): the story beside «Где все» or «Лист». Between them it leaves a table that does not
+// answer, by the line's button and by the menu. The tour above runs before it, in the window as it
+// opens.
 import XCTest
 
 final class MacTour: XCTestCase {
@@ -18,6 +23,7 @@ final class MacTour: XCTestCase {
     private let russian = ["-AppleLanguages", "(ru)"]
     private let pauseTitle = "Пауза"
     private let playHereTitle = "Играть здесь"
+    private let leaveTitle = "Встать из-за стола"
 
     override func setUp() {
         continueAfterFailure = true
@@ -93,7 +99,8 @@ final class MacTour: XCTestCase {
     @MainActor
     func testPictures() {
         let yard = ["-replay", "yard.seat-wire.jsonl", "-to", "74"]
-        let shots: [(String, [String])] = [
+        let wide = ["-wide", "1"]
+        let narrow: [(String, [String])] = [
             ("01-yard-turn-light", yard),
             ("02-yard-turn-dark", yard + ["-dark", "1"]),
             ("03-yard-list-light", yard + ["-open", "moves"]),
@@ -105,11 +112,40 @@ final class MacTour: XCTestCase {
             ("09-connect-ru-light", []),
             ("10-no-connection-ru-light", ["-table", "ws://127.0.0.1:9/?token=none"]),
         ]
+        shoot(narrow)
+        leave()
+        grow()
+        // The wide window comes last: the system keeps a window's size for the next launch.
+        let book: [(String, [String])] = [
+            ("11-book-yard-turn-light", yard + wide),
+            ("12-book-yard-turn-dark", yard + wide + ["-dark", "1"]),
+            ("13-book-yard-sheet-light", yard + wide + ["-screen", "sheet"]),
+            ("14-book-yard-list-light", yard + wide + ["-open", "moves"]),
+            ("15-book-road-card-light", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17"] + wide),
+            ("16-book-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-dark", "1"] + wide),
+        ]
+        shoot(book)
+    }
+
+    /// Opens the window once for each picture and keeps what it shows.
+    @MainActor
+    private func shoot(_ shots: [(String, [String])]) {
         for (name, arguments) in shots {
             let app = XCUIApplication()
             app.launchArguments = arguments + russian
             app.launch()
             pause(12)
+            // The window is an open book from 860 points and shows one page at a time under that
+            // (`MacTable.book`): the right page stands only in the book. Read against the width the
+            // window has, not the one asked for: the system opens it at the size it last had.
+            if arguments.contains("-replay") {
+                let width = app.windows.firstMatch.frame.width
+                if arguments.contains("-wide") {
+                    XCTAssertGreaterThanOrEqual(width, 860, "\(name): `-wide 1` opens a wide window")
+                }
+                let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+                XCTAssertEqual(right.exists, width >= 860, "\(name): a window \(width) points wide")
+            }
             if name.hasPrefix("01") {
                 // The game's menu, open over the turn: each move with its key.
                 let menu = app.menuBars.menuBarItems[game].firstMatch
@@ -124,6 +160,61 @@ final class MacTour: XCTestCase {
             picture(name)
             app.terminate()
         }
+    }
+
+    /// A table that does not answer is left from the line that says so, and from the menu: the Mac
+    /// has no other way out of it, and it keeps the link for the next launch (Stas's Mac,
+    /// 2026-11-25: a table that had ended held the app). The link screen comes back with the link
+    /// in its field, so the same table is one press away.
+    @MainActor
+    private func leave() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-table", "ws://127.0.0.1:9/?token=none"] + russian
+        app.launch()
+        let out = app.buttons["offline-leave"].firstMatch
+        XCTAssertTrue(out.waitForExistence(timeout: 30), "a table that does not answer shows the way out")
+        out.click()
+        let sit = app.buttons["sit"].firstMatch
+        XCTAssertTrue(sit.waitForExistence(timeout: 10), "the way out leads to the link screen")
+        XCTAssertFalse(out.exists, "the table is left")
+        XCTAssertTrue(sit.isEnabled, "the link stays in its field")
+        picture("42-left-a-table-that-is-gone")
+        // The same link again, and out by the menu's command.
+        sit.click()
+        XCTAssertTrue(out.waitForExistence(timeout: 30), "the same link sits down again")
+        XCTAssertTrue(command(app, { $0.menuItems[self.leaveTitle].firstMatch }), "the menu leaves a table that does not answer")
+        XCTAssertTrue(sit.waitForExistence(timeout: 10), "the menu's command leads to the link screen")
+        app.terminate()
+    }
+
+    /// A window that shows a table one page at a time grows wide and becomes the open book, with
+    /// the table in it: the same three pages go on to the book's two (CON-25). Stas's Mac,
+    /// 2026-11-25: the app stopped there. Between the narrow pictures and the wide ones: the system
+    /// opens a window at the size it last had, so after this it stays wide.
+    @MainActor
+    private func grow() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-replay", "yard.seat-wire.jsonl", "-to", "74", "-widen", "14"] + russian
+        app.launch()
+        pause(8)
+        let window = app.windows.firstMatch
+        guard window.frame.width < 860 else {
+            // A second run on the same Mac: the window was left wide, and has no width to cross.
+            print("nat20-tour the window opened wide: growing it into a book was not checked")
+            app.terminate()
+            return
+        }
+        let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+        XCTAssertFalse(right.exists, "a narrow window shows one page at a time")
+        picture("40-before-it-grows")
+        let end = Date().addingTimeInterval(30)
+        while Date() < end, app.state == .runningForeground, window.frame.width < 860 { pause(1) }
+        pause(4)
+        XCTAssertEqual(app.state, .runningForeground, "the app is still running after its window grew")
+        XCTAssertGreaterThanOrEqual(window.frame.width, 860, "`-widen` made the window wide")
+        XCTAssertTrue(right.waitForExistence(timeout: 10), "the grown window is an open book")
+        picture("41-grown-into-a-book")
+        app.terminate()
     }
 
     /// What the shell says stands now (`Shell.mark`, drawn with `-tour 1`).

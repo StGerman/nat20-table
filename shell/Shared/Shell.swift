@@ -298,7 +298,8 @@ final class Shell {
         var no: String?
         var list: String?
         var line: String?
-        /// A recorded run is left from the menu; a live table ends when the window is closed.
+        /// A recorded run is left from the menu, and so is a live table that does not answer;
+        /// a live table that does ends when the window is closed.
         var leave: String?
         /// Another window took the seat: the menu takes it back, as the dock's button does.
         var playHere: String?
@@ -307,7 +308,7 @@ final class Shell {
     var menu: MenuState {
         let words = self.words
         var menu = MenuState(pause: chrome?.dock.form == "paused" ? words.goOn : words.pause)
-        if table != nil, !live { menu.leave = words.leave }
+        if table != nil, !live || link == .down { menu.leave = words.leave }
         if live, link == .replaced { menu.playHere = words.playHere }
         guard let dock = chrome?.dock, link == .up else { return menu }
         menu.table = true
