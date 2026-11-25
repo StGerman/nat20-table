@@ -8,7 +8,9 @@
 // (Tour/Tour.swift); then the window is closed, which must tell the host `quit`. What the host
 // heard is read by the job (ci/heard.ts, ci/mac-tour.sh).
 //
-// `testPictures` opens the window on recorded runs and keeps what it shows, light and dark.
+// `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
+// as it opens, the three pages as tabs, then wide (`-wide 1`), where it must be an open book
+// (CON-25): the story beside «Где все» or «Лист», and no tabs.
 import XCTest
 
 final class MacTour: XCTestCase {
@@ -93,6 +95,7 @@ final class MacTour: XCTestCase {
     @MainActor
     func testPictures() {
         let yard = ["-replay", "yard.seat-wire.jsonl", "-to", "74"]
+        let wide = ["-wide", "1"]
         let shots: [(String, [String])] = [
             ("01-yard-turn-light", yard),
             ("02-yard-turn-dark", yard + ["-dark", "1"]),
@@ -104,12 +107,26 @@ final class MacTour: XCTestCase {
             ("08-yard-sheet-light", yard + ["-screen", "sheet"]),
             ("09-connect-ru-light", []),
             ("10-no-connection-ru-light", ["-table", "ws://127.0.0.1:9/?token=none"]),
+            // The wide window comes last: the system keeps a window's size for the next launch.
+            ("11-book-yard-turn-light", yard + wide),
+            ("12-book-yard-turn-dark", yard + wide + ["-dark", "1"]),
+            ("13-book-yard-sheet-light", yard + wide + ["-screen", "sheet"]),
+            ("14-book-yard-list-light", yard + wide + ["-open", "moves"]),
+            ("15-book-road-card-light", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17"] + wide),
+            ("16-book-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-dark", "1"] + wide),
         ]
         for (name, arguments) in shots {
             let app = XCUIApplication()
             app.launchArguments = arguments + russian
             app.launch()
             pause(12)
+            // The right page stands only in an open book, which the window draws in place of its tabs.
+            let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+            if arguments.contains("-wide") {
+                XCTAssertTrue(right.waitForExistence(timeout: 10), "\(name): a wide window is an open book")
+            } else if arguments.contains("-replay") {
+                XCTAssertFalse(right.exists, "\(name): the window as it opens holds its pages as tabs")
+            }
             if name.hasPrefix("01") {
                 // The game's menu, open over the turn: each move with its key.
                 let menu = app.menuBars.menuBarItems[game].firstMatch

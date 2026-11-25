@@ -132,7 +132,7 @@ test("inside a native shell, «Где все» and «Лист» play a recorded 
   }
 });
 
-test("inside a native shell, «Где все» draws the yard for the page it is given: a phone's scale on a phone, the whole yard in a wide window, never under 10 px a foot, and «Лист» keeps to a column", async ({ page }) => {
+test("inside a native shell, «Где все» draws the yard for the page it is given: a phone's scale on a phone, the whole yard in a wide window or on the right page of the Mac's open book, never under 10 px a foot, and «Лист» keeps to a column", async ({ page }) => {
   // Stas's Mac, 2026-11-25: full screen drew the yard at the phone's 185% of the page's width, and the sheet across it.
   const yard = () => page.evaluate(() => {
     const svg = document.querySelector(".lens.yard svg")!;
@@ -157,6 +157,17 @@ test("inside a native shell, «Где все» draws the yard for the page it is
   const small = await yard();
   expect(small.width / small.feet).toBeCloseTo(10, 1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeGreaterThan(700);
+  // The right page of the Mac's open book (CON-25) is taller than wide and no phone: full screen it
+  // takes the window's scale, and in the narrowest book it is a phone's width and keeps the phone's.
+  await page.setViewportSize({ width: 795, height: 950 });
+  await open("where");
+  const right = await yard();
+  expect(right.width / right.feet).toBeGreaterThanOrEqual(10);
+  expect(right.width / right.feet).toBeLessThanOrEqual(18);
+  expect(right.width).toBeLessThan(795 * 1.85);
+  await page.setViewportSize({ width: 396, height: 560 });
+  await open("where");
+  expect(Math.round((await yard()).width)).toBe(Math.round(396 * 1.85));
   await page.setViewportSize({ width: 1728, height: 880 });
   await open("sheet");
   expect((await page.locator(".inspector").boundingBox())!.width).toBeLessThanOrEqual(42 * 16);
