@@ -8,6 +8,9 @@
 // (Tour/Tour.swift); then the window is closed, which must tell the host `quit`. What the host
 // heard is read by the job (ci/heard.ts, ci/mac-tour.sh).
 //
+// `testAWindowGrowsIntoABook` opens the window on a recorded run and makes it wide while the table
+// is in it (`-widen`): the app must go on, as an open book.
+//
 // `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
 // as it opens, the three pages as tabs, then wide (`-wide 1`), where it must be an open book
 // (CON-25): the story beside «Где все» or «Лист», and no tabs.
@@ -23,6 +26,31 @@ final class MacTour: XCTestCase {
 
     override func setUp() {
         continueAfterFailure = true
+    }
+
+    /// A window that holds a table as tabs grows wide and becomes the open book, with the table in
+    /// it: the same three pages go from the tabs to the book's two pages (CON-25). Stas's Mac,
+    /// 2026-11-25: the app stopped there. First of the tests by its name: the system opens a window
+    /// at the size it last had, and the pictures' last launches leave it wide.
+    @MainActor
+    func testAWindowGrowsIntoABook() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-replay", "yard.seat-wire.jsonl", "-to", "74", "-widen", "14"] + russian
+        app.launch()
+        pause(8)
+        let window = app.windows.firstMatch
+        try XCTSkipIf(window.frame.width >= 860, "the window opened wide: it has no width to cross")
+        let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+        XCTAssertFalse(right.exists, "the window as it opens holds its pages as tabs")
+        picture("40-before-it-grows")
+        let end = Date().addingTimeInterval(30)
+        while Date() < end, app.state == .runningForeground, window.frame.width < 860 { pause(1) }
+        pause(4)
+        XCTAssertEqual(app.state, .runningForeground, "the app is still running after its window grew")
+        XCTAssertGreaterThanOrEqual(window.frame.width, 860, "`-widen` made the window wide")
+        XCTAssertTrue(right.waitForExistence(timeout: 10), "the grown window is an open book")
+        picture("41-grown-into-a-book")
+        app.terminate()
     }
 
     @MainActor

@@ -10,8 +10,11 @@ struct MacRoot: View {
     @Environment(\.scenePhase) private var phase
     /// The UI test's dark pictures (`-dark 1`): a Mac's look is the system's, which a test cannot set.
     private let dark = UserDefaults.standard.bool(forKey: "dark")
-    /// The UI test's wide window (`-wide 1`): a test cannot drag a window's edge to a size.
-    private let wide = UserDefaults.standard.bool(forKey: "wide")
+    /// The UI test's wide window: a test cannot drag a window's edge to a size. `-wide 1` opens it
+    /// at least 1000 points wide; `-widen <seconds>` opens it as it would be and makes it that wide
+    /// after the seconds, with the table open in it.
+    @State private var wide = UserDefaults.standard.bool(forKey: "wide")
+    private let widen = UserDefaults.standard.integer(forKey: "widen")
 
     var body: some View {
         Group {
@@ -23,6 +26,11 @@ struct MacRoot: View {
         }
         .frame(minWidth: wide ? 1000 : 440, minHeight: 600)
         .preferredColorScheme(dark ? .dark : nil)
+        .task {
+            guard widen > 0 else { return }
+            try? await Task.sleep(for: .seconds(widen))
+            wide = true
+        }
         .onChange(of: phase) { _, now in
             if now == .active { shell.woke() }
         }
