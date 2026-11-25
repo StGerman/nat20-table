@@ -272,3 +272,30 @@ test("inside a native shell the story opens a new place with its picture from ed
   // The green's picture stays above, over its own words.
   await expect(page.locator("figure.plate")).toHaveCount(2);
 });
+
+test("inside a native shell the story ends above what the shell says stands over its foot: a reader at the end stays at it, one who scrolled back is left there (CON-22)", async ({ page }) => {
+  // A screen short enough for the yard's story to scroll.
+  await page.setViewportSize({ width: 393, height: 260 });
+  await page.goto("/index.html?shell=native&show=story&replay=/fixtures/yard.seat-wire.jsonl&to=74&language=ru&handle=bren");
+  await page.waitForFunction(() => window.__nat20?.done === true, undefined, { timeout: 20_000 });
+  const foot = () => page.evaluate(() => Number.parseFloat(getComputedStyle(document.querySelector(".story")!).paddingBottom));
+  const end = () => page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY);
+  const last = () => page.evaluate(() => innerHeight - [...document.querySelectorAll(".story > *")].at(-1)!.getBoundingClientRect().bottom);
+  await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight }));
+  expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+  expect(await foot()).toBe(24);
+  // The moves and the typing line come up, 110 points of them: the last line stands clear of them.
+  await page.evaluate(() => window.__nat20Shell!.covered(110));
+  expect(await foot()).toBe(134);
+  expect(await end()).toBeLessThanOrEqual(1);
+  expect(await last()).toBeGreaterThanOrEqual(134);
+  // They go: the page is at its end again, with no hole under the story.
+  await page.evaluate(() => window.__nat20Shell!.covered(0));
+  expect(await foot()).toBe(24);
+  expect(await end()).toBeLessThanOrEqual(1);
+  // A reader who scrolled back is not thrown to the end.
+  await page.evaluate(() => scrollTo({ top: 0 }));
+  await page.evaluate(() => window.__nat20Shell!.covered(110));
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+  expect(await foot()).toBe(134);
+});

@@ -27,6 +27,9 @@ final class Content {
     private var recovering = false
     /// The window is an open book (`book`): said again to a page that was loaded again.
     private var asBook = false
+    /// How much of the page's foot the shell's own controls stand over (`covered`): said again to
+    /// a page that was loaded again.
+    private var cover = 0.0
     private var recovered: Date?
 
     /// `main` is the story's page: the one whose word on the controls the shell draws.
@@ -114,6 +117,22 @@ final class Content {
         }
     }
 
+    /// The shell's moves and the line the human types in stand over this many points of the page's
+    /// foot. The web view does not count them as its own inset, so the page is told and ends its
+    /// story above them.
+    func covered(_ height: Double) {
+        guard height != cover else { return }
+        cover = height
+        sayCover()
+    }
+
+    private func sayCover() {
+        let px = cover
+        Task {
+            _ = try? await page.callJavaScript("if (window.__nat20Shell && window.__nat20Shell.covered) window.__nat20Shell.covered(px)", arguments: ["px": px])
+        }
+    }
+
     /// The window is an open book, with the picture of the place on its right page, or is not:
     /// in a book the story keeps the place's name and does not draw the picture a second time.
     func book(_ on: Bool) {
@@ -130,6 +149,7 @@ final class Content {
         ready = true
         recovering = false
         if asBook { book(true) }
+        if cover > 0 { sayCover() }
         if again {
             seq = 0
             waiting.removeAll()

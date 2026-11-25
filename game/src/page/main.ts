@@ -25,7 +25,7 @@ type ShellAct = { kind: "option"; n: number } | { kind: "typed"; text: string } 
 declare global {
   interface Window {
     /** The native shell's way in: a host message as it came off the socket, and what the human did on a control. */
-    __nat20Shell?: { host(line: string): void; act(a: ShellAct): { ok: boolean; notice?: string }; under(on: boolean): void; book(on: boolean): void };
+    __nat20Shell?: { host(line: string): void; act(a: ShellAct): { ok: boolean; notice?: string }; under(on: boolean): void; book(on: boolean): void; covered(px: number): void };
     /** What the page told the shell, kept where there is no shell to tell (the page's tests). */
     __nat20Posted?: unknown[];
     webkit?: { messageHandlers?: { shell?: { postMessage(message: unknown): void } } };
@@ -206,6 +206,17 @@ function Page(): ReturnType<typeof h> {
       under(on) {
         document.documentElement.classList.toggle("under-sheet", on);
         if (on) scrollTo({ top: document.documentElement.scrollHeight });
+      },
+      // The shell's own controls (its moves, the line the human types in) stand over this much
+      // of the page's foot, which nothing else tells the page: the story ends above them. A
+      // reader at the story's end stays at it; one who scrolled back is left where they read.
+      covered(px) {
+        const root = document.documentElement;
+        const was = scrollY;
+        scrollTo({ top: root.scrollHeight });
+        const atEnd = scrollY - was < 40;
+        root.style.setProperty("--covered", `${Math.max(0, Math.round(px))}px`);
+        scrollTo({ top: atEnd ? root.scrollHeight : was });
       },
       // The window is an open book with the picture of the place on its right page: the story
       // keeps the place's name and does not draw the picture a second time (CON-27).

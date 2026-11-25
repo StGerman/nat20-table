@@ -42,6 +42,10 @@ struct Tabs: View {
                             Chips(shell: shell)
                             TypeLine(shell: shell)
                         }
+                        // The page is told how tall they stand: its story ends above them.
+                        .onGeometryChange(for: Double.self) { Double($0.size.height) } action: { height in
+                            table.story.covered(height)
+                        }
                     }
             }
             Tab(tabs?.`where` ?? words.place, systemImage: "map", value: Screen.place) {
