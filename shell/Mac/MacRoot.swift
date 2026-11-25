@@ -41,23 +41,22 @@ struct MacTable: View {
     var body: some View {
         GeometryReader { window in
             let open = window.size.width >= Self.book
-            Group {
-                if open {
-                    HStack(spacing: 0) {
-                        VStack(spacing: 0) {
-                            WebView(table.story.page)
-                            dock
-                        }
-                        .frame(maxWidth: .infinity)
-                        Divider()
-                        rightPage
-                            .frame(width: (window.size.width * 0.46).rounded())
-                    }
-                } else {
-                    VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                // The dock keeps its place when the window crosses the width: a line being typed
+                // stays open (it closes when it leaves the window, Shared/Dock.swift).
+                VStack(spacing: 0) {
+                    if open {
+                        WebView(table.story.page)
+                    } else {
                         pages
-                        dock
                     }
+                    dock
+                }
+                .frame(maxWidth: .infinity)
+                if open {
+                    Divider()
+                    rightPage
+                        .frame(width: (window.size.width * 0.46).rounded())
                 }
             }
             .onChange(of: open, initial: true) { _, now in

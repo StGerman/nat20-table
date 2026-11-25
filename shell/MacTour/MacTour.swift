@@ -120,12 +120,16 @@ final class MacTour: XCTestCase {
             app.launchArguments = arguments + russian
             app.launch()
             pause(12)
-            // The right page stands only in an open book, which the window draws in place of its tabs.
-            let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
-            if arguments.contains("-wide") {
-                XCTAssertTrue(right.waitForExistence(timeout: 10), "\(name): a wide window is an open book")
-            } else if arguments.contains("-replay") {
-                XCTAssertFalse(right.exists, "\(name): the window as it opens holds its pages as tabs")
+            // The window is an open book from 860 points and holds its pages as tabs under that
+            // (`MacTable.book`): the right page stands only in the book. Read against the width the
+            // window has, not the one asked for: the system opens it at the size it last had.
+            if arguments.contains("-replay") {
+                let width = app.windows.firstMatch.frame.width
+                if arguments.contains("-wide") {
+                    XCTAssertGreaterThanOrEqual(width, 860, "\(name): `-wide 1` opens a wide window")
+                }
+                let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+                XCTAssertEqual(right.exists, width >= 860, "\(name): a window \(width) points wide")
             }
             if name.hasPrefix("01") {
                 // The game's menu, open over the turn: each move with its key.
