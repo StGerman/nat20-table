@@ -89,8 +89,8 @@ who has seen a lot of roads. It has four devices:
 For its shape only. Never reuse its people or places:
 
 > At a little bridge a man in a torn sheepskin coat and a striped knitted hat holds out his palm:
-> the reeve's toll, he says, and he asks for it mostly looking at his boots. His brother leans on a cudgel by a willow hut. Beside it are a
-> cold fire and a heap of sheep bones, gnawed very clean. The brother looks at your wagon the way
+> the reeve's toll, he says, and he asks for it mostly looking at his boots. His brother leans on
+> a cudgel by a willow hut. Beside it are a cold fire and a heap of sheep bones, gnawed very clean. The brother looks at your wagon the way
 > people look at supper. Upstream, where the bank is low, the water runs shallow over stones.
 > The man taps his palm with one finger.
 >
