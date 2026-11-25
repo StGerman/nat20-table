@@ -36,6 +36,8 @@ final class Shell {
     /// The line typed in the dock, and whether it is open over the keyboard.
     var draft = ""
     var typing = false
+    /// The face on the person's card that is open, as the page handed it over (a data URL); none on any other sheet.
+    var face: String?
     /// Why the page would not take what was typed.
     var notice: String?
     /// How many messages the pages have handed over for the host.
@@ -399,14 +401,17 @@ final class Shell {
         if what == "rolls", let rolls = body["rolls"] as? [[String: Any]] {
             let rows = rolls.compactMap { $0["text"] as? String }
             let title = (rolls.first?["roller"] as? String) ?? ""
+            face = nil
             opened = .lines(title: title, rows: rows)
             answered = false
         } else if what == "person", let name = body["name"] as? String {
+            face = body["face"] as? String
             opened = .lines(title: name, rows: (body["rows"] as? [String]) ?? [])
             answered = false
         } else if what == "lines", let title = body["title"] as? String {
             // A forced sheet is the ask itself: what a command answered with does not cover it.
             if opened == .moves, chrome?.dock.sheet?.forced == true || chrome?.dock.card?.asked == true { return }
+            face = nil
             opened = .lines(title: title, rows: (body["rows"] as? [String]) ?? [])
             answered = true
         } else if what == "none" {

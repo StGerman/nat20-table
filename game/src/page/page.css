@@ -80,6 +80,21 @@ button { cursor: pointer; }
 .say.act .say-text { font-style: italic; }
 .say.mine .medal { background: var(--accent); color: var(--on-accent); box-shadow: none; }
 .beat.place, .info .place { align-self: center; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin: 0; padding: 4px 0; }
+/* A new place opens with its picture (CON-27): from edge to edge of a phone's page, the place's
+   name under it. Taller than the window it is cut, top and bottom alike. A picture not drawn yet
+   is a dashed frame that says so over the file's name. */
+.beat.plate { margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 8px; }
+.beat.plate img { display: block; width: 100%; aspect-ratio: 3 / 4; max-height: 64vh; object-fit: cover; border-radius: 14px; background: var(--fill-2); }
+/* A browser's page has its bar over the story's top: the picture stops under it. */
+.win:not(.native) .beat.plate { scroll-margin-top: 84px; }
+.beat.plate figcaption { text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); padding: 4px 0; }
+.plate-none { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; aspect-ratio: 3 / 2; padding: 16px; border: 1px dashed var(--ink-3); border-radius: 14px; text-align: center; font: 13px/1.45 var(--sans); color: var(--ink-2); overflow-wrap: anywhere; }
+.plate-none b { font-weight: 600; color: var(--ink); }
+@media (max-width: 499px) {
+  .win.native .beat.plate { margin-inline: -20px; }
+  .win.native .beat.plate img { border-radius: 0; }
+  .win.native .beat.plate .plate-none { margin-inline: 20px; }
+}
 .beat.info { display: flex; flex-direction: column; gap: 0.4rem; }
 .beat.info p:not(.place) { margin: 0; font-family: var(--serif); font-size: 1.12rem; line-height: 1.55; color: var(--ink-2); }
 .beat.info.now p:not(.place) { color: var(--ink); }
@@ -231,6 +246,8 @@ button { cursor: pointer; }
 .inspector h3 { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); margin: 14px 0 6px; }
 .inspector .person { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; padding: 4px 0; background: none; text-align: left; font-size: 15px; }
 .inspector .person .medal, .person-card header .medal { width: 36px; height: 36px; font-size: 16px; }
+/* Their face on the card is large enough to know them by (CON-27). */
+.person-card header .medal.face { width: 56px; height: 56px; }
 .inspector .person:hover { color: var(--accent); }
 .person-card p { margin: 8px 0 0; font-size: 14px; }
 .person-card .remembers { color: var(--ink); }
@@ -315,6 +332,8 @@ html.native body { overflow-x: hidden; }
 .win.native.show-story { min-height: 0; }
 /* The shell's sheet stands over the lower half: the story ends above it. */
 html.native.under-sheet .win.native .story { padding-bottom: 46vh; }
+/* An open book has the picture of the place on its right page: the story keeps the name only. */
+html.native.book .beat.plate img, html.native.book .beat.plate .plate-none { display: none; }
 /* «Где все» on a phone: the yard near twice the screen's width, so a face and its name can be read;
    the page scrolls both ways under a finger. A page wider than a phone (a Mac's window, or the
    right page of its open book) or wider than it is tall draws a foot between 8 px, a little under

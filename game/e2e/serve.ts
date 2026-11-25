@@ -10,7 +10,7 @@ const roots: Array<[string, string]> = [
   ["/fixtures/", path.resolve(here, "../test/fixtures")],
   ["/", path.resolve(here, "../dist/page")],
 ];
-const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".jsonl": "application/x-ndjson" };
+const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".jsonl": "application/x-ndjson", ".jpg": "image/jpeg" };
 
 createServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://127.0.0.1");

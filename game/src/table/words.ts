@@ -541,6 +541,8 @@ export interface UiWords {
     you: string;
     walk: string;
     /** What is not drawn yet, before its own name (CON-26): the place's plan, the portraits of those here. */
+    /** In the story, where a new place opens with its picture and the picture is not drawn yet (CON-27): over the file's name. The shell's own line says the same (shell/Shared/Words.swift). */
+    noPlate: string;
     noPlan: string;
     noFaces: string;
     /** «Лист» before the seat has shown a sheet, or since the character changed: when a fresh one comes. */
@@ -701,6 +703,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       near: "Near",
       you: "you",
       walk: "You can get here this turn",
+      noPlate: "The picture of the place is not drawn yet",
       noPlan: "No plan of the place:",
       noFaces: "No portraits:",
       sheetLater: "A fresh sheet comes when the table comes to you.",
@@ -855,6 +858,7 @@ export const UI_WORDS: Record<Language, UiWords> = {
       near: "Рядом",
       you: "вы",
       walk: "Сюда дойдёте за этот ход",
+      noPlate: "Картина места не нарисована",
       noPlan: "Нет плана места:",
       noFaces: "Нет портретов:",
       sheetLater: "Свежий лист придёт, когда очередь дойдёт до вас.",

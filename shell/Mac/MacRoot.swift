@@ -116,6 +116,8 @@ struct MacTable: View {
                 }
             }
             .onChange(of: open, initial: true) { _, now in
+                // A book has the picture of the place on its right page: the story does not draw it too.
+                table.story.book(now)
                 guard now else { return }
                 // The page that was being read goes to the right page: the story is always on the left.
                 if shell.screen != .story {
@@ -208,7 +210,7 @@ struct MacTable: View {
                     case .moves:
                         MovesSheet(shell: shell).frame(width: 420, height: 480)
                     case .lines(let title, let rows):
-                        LinesSheet(title: title, rows: rows).frame(width: 420, height: 360)
+                        LinesSheet(title: title, rows: rows, face: shell.face).frame(width: 420, height: 360)
                     }
                 }
         }

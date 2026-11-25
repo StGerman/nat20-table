@@ -8,7 +8,7 @@ import path from "node:path";
 import { REPO } from "../engine.ts";
 
 export const PAGE_DIR = path.join(REPO, "game/dist/page");
-const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css" };
+const TYPES: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".jpg": "image/jpeg" };
 
 export interface PageHost {
   /** `http://127.0.0.1:<port>`: the one origin the seat wire lets in. */

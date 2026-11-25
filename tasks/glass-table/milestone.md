@@ -23,13 +23,13 @@ Scope `docs/scope/glass-table-scope.md` §4, each row with its lowest layer (dec
 
 Done: AGT-140, AGT-142, API-63, AGT-146. In order from here, SwiftUI shell design §4 (decision 0093, table #482):
 
-1. AGT-155 half 1 (ten minutes on Stas's iPhone over Wi-Fi) on the spike branch, table #480, first: it needs nothing from main, and its result decides whether the next three land.
+1. AGT-155 half 1 (ten minutes on Stas's iPhone over Wi-Fi). Planned on the spike branch, table #480, before the next three; they landed first, so it runs on the shell in `shell/`.
 2. AGT-153 (page native mode) and AGT-154 (seat on the home network), side by side.
 3. CON-22 (the iPhone shell and its CI job), on both.
 4. AGT-155 half 2 (*The Silent Mill* on the iPhone, exit row 9), on CON-22.
 5. CON-23 (the Mac shell), on CON-22; then CON-20 (the Mac app starts the table, Stas's report); then CON-21 (the DMG); then AGT-145 (the exit pair).
 
-Beside the stack: CON-25 (the Mac's wide window as an open book; Stas's pick, 2026-11-25), CON-26 (the picture of the place on its right page, pulled forward from the picture-book milestone by Stas's pick of 2026-11-25, and placeholders that name what is not drawn), AGT-141's two open items (the lobby requests with AGT-144; the bench fight fixture), AGT-143 (the moments, the road lens), AGT-144 (the lobby). Not in this exit: AGT-147 (the lobby on ChatGPT, which replaces this milestone's Claude lobby), in the Sign in with ChatGPT milestone (`tasks/sign-in-with-chatgpt/`). Scope and design: table #459 (merged 2026-11-21 08:31Z), `docs/design/glass-table-system-design.md` (§11 the PR order), decision 0090; the shell: `docs/design/swiftui-shell-design.md`, decision 0093.
+Beside the stack: CON-25 (the Mac's wide window as an open book; Stas's pick, 2026-11-25), CON-26 (the picture of the place on its right page, pulled forward from the picture-book milestone by Stas's pick of 2026-11-25, and placeholders that name what is not drawn), CON-27 (the same picture in the story, where a phone and a narrow window have no right page, and a person's face on their card; Stas's pick, 2026-11-25), AGT-141's two open items (the lobby requests with AGT-144; the bench fight fixture), AGT-143 (the moments, the road lens), AGT-144 (the lobby). Not in this exit: AGT-147 (the lobby on ChatGPT, which replaces this milestone's Claude lobby), in the Sign in with ChatGPT milestone (`tasks/sign-in-with-chatgpt/`). Scope and design: table #459 (merged 2026-11-21 08:31Z), `docs/design/glass-table-system-design.md` (§11 the PR order), decision 0090; the shell: `docs/design/swiftui-shell-design.md`, decision 0093.
 
 # Status
 

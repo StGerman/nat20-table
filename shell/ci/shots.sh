@@ -48,7 +48,12 @@ shot 08-road-end-light -replay the-way-back-ru.seat-wire.jsonl
 # The other two tabs.
 shot 12-yard-where-light -replay yard.seat-wire.jsonl -to 74 -screen where
 shot 13-yard-sheet-tab-light -replay yard.seat-wire.jsonl -to 74 -screen sheet
+# A new place opens the story with its picture (CON-27): the green, drawn, and the road, which is
+# not and says which file is missing.
+shot 20-green-picture-light -replay green.seat-wire.jsonl -to 2
+shot 21-road-no-picture-light -replay green.seat-wire.jsonl -to 5
 xcrun simctl ui "$DEVICE" appearance dark
+shot 22-green-picture-dark -replay green.seat-wire.jsonl -to 2
 shot 09-yard-turn-dark -replay yard.seat-wire.jsonl -to 74
 shot 10-yard-sheet-dark -replay yard.seat-wire.jsonl -to 74 -open moves
 shot 11-road-card-dark -replay the-way-back-ru.seat-wire.jsonl -to 17

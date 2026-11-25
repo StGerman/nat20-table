@@ -48,6 +48,8 @@ export type Beat =
   | "fact"
   /** A heading in the story: a round, a scene, where the road is. */
   | "place"
+  /** The picture a new place opens with (CON-27): `text` is the place's name, `title` the picture, `<pack>/<file>`. */
+  | "plate"
   /** Words the table shows as they are: a road card's, the road's. */
   | "info"
   /** The run is over. */
@@ -165,6 +167,8 @@ export interface PageView {
   sawPeople: boolean;
   /** How many story rows there were when the panel was last refreshed. */
   looked: number;
+  /** The picture of the place the story last opened with, `<pack>/<file>`: the same place opens once. */
+  plate?: string;
   /** The speaker of the message the last row belongs to. */
   speaker?: string;
   /** The first row since the human last answered: the rows before it are read (the story dims them). */
@@ -505,7 +509,20 @@ function situation(v: PageView, event: Situation): PageView {
     else if (!untold.includes(p.id)) untold.push(p.id);
   }
   const next: PageView = { ...v, situation: event.situation ? event : (v.situation ?? event), looked: v.story.length, told, untold, alive, sawPeople: v.sawPeople || first, ...(endsTurn(v, event) ? { options: undefined } : {}) };
-  return { ...next, people: peopleNow(next) };
+  const out = { ...next, people: peopleNow(next) };
+  return event.place && event.place.plate !== v.plate ? opened(out, event.place) : out;
+}
+
+/**
+ * A new place opens with its picture (CON-27; Stas, 2026-11-24: a chapter opener). The seat shows
+ * the place only once its opening is told, so the row goes above the narration that told it: the
+ * picture stands over the words that describe it, as in a book.
+ */
+function opened(v: PageView, place: NonNullable<Situation["place"]>): PageView {
+  let at = v.story.length;
+  while (at > 0 && v.story[at - 1].beat === "narration") at--;
+  const row: StoryLine = { id: v.next, beat: "plate", text: place.name, title: place.plate, rolls: [] };
+  return { ...v, story: [...v.story.slice(0, at), row, ...v.story.slice(at)], next: v.next + 1, looked: v.story.length + 1, plate: place.plate };
 }
 
 /** A fresh frame shows the human's fight turn over while its turn block stands (panel.ts `endsTurn`, kept here: panel.ts reads the palette file). */
