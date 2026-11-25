@@ -215,7 +215,7 @@ function Page(): ReturnType<typeof h> {
         const was = scrollY;
         scrollTo({ top: root.scrollHeight });
         const atEnd = scrollY - was < 40;
-        root.style.setProperty("--covered", `${Math.max(0, Math.round(px))}px`);
+        root.style.setProperty("--covered", `${Number.isFinite(px) ? Math.max(0, Math.round(px)) : 0}px`);
         scrollTo({ top: atEnd ? root.scrollHeight : was });
       },
       // The window is an open book with the picture of the place on its right page: the story
