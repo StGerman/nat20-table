@@ -13,6 +13,7 @@ import { nameSpans, PEOPLE_WORDS, personCard, type Person, type PersonState } fr
 import { FINISHES, mount, type Die, type Finish } from "./d20.ts";
 import { faceFile, faceOf } from "./portraits.ts";
 import { chipsOf, costOf, named, placeholder, shownName, ui } from "./chrome.ts";
+import { ME_SPOTS, PLACE_SPOTS, placeLabels, TOKEN_SPOTS } from "./labels.ts";
 import { meOf, placed, type CardView, type Dock, type PageView, type RollToken, type StoryLine } from "./reduce.ts";
 
 export interface AppProps {
@@ -164,7 +165,7 @@ function Top({ view, panel, lens, canLens, setLens, openSheet, togglePeople }: {
   const s = view.situation?.situation;
   const words = ui(view).panel;
   const mine = s?.mode === "combat" && s.turn === view.hello?.handle;
-  const pill = s?.mode === "combat" ? [s.round !== undefined ? words.round(s.round) : undefined, mine ? words.yourTurn : s.turn ? words.turnOf(shownName(view, s, s.turn)) : undefined].filter(Boolean).join(" · ") : s ? words.explore : undefined;
+  const pill = s?.mode === "combat" ? [s.round !== undefined ? words.round(s.round) : undefined, mine ? words.yourTurn : s.turn ? words.turnOf(shownName(view, s, s.turn)) : undefined].filter(Boolean).join(" · ") : s ? (s.creatures.some((c) => c.side === "hostile" && c.health !== "down") ? words.foes : words.explore) : undefined;
   // Who acts now and next, in initiative order.
   const order = s?.mode === "combat" ? [s.turn, ...s.next].filter((x): x is string => x !== undefined).slice(0, 5) : [];
   // The road's place line already leads with the day.
@@ -179,7 +180,7 @@ function Top({ view, panel, lens, canLens, setLens, openSheet, togglePeople }: {
           { className: `turnpill pill glass${mine ? " mine" : " calm"}`, role: "status", "data-test": "turn" },
           h("i", { className: "mark", "aria-hidden": true }),
           h("span", null, pill),
-          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle) }))) : null,
+          order.length > 0 ? h("span", { className: "stack", "aria-hidden": true }, order.map((handle) => h(Medal, { key: handle, handle, name: shownName(view, s, handle), className: `small${handle === view.hello?.handle ? " me" : ""}`, title: shownName(view, s, handle), foe: s?.creatures.some((c) => c.handle === handle && c.side === "hostile") }))) : null,
         )
       : h("span"),
     h(
@@ -211,9 +212,11 @@ function initial(name: string): string {
 }
 
 /** A round face: the portrait when the page has one for the handle, else the initial. */
-function Medal({ handle, name, className, title }: { handle?: string; name: string; className?: string; title?: string }): ReactNode {
+function Medal({ handle, name, className, title, foe }: { handle?: string; name: string; className?: string; title?: string; foe?: boolean }): ReactNode {
   const face = faceOf(handle);
-  return h("span", { className: ["medal", className, face ? "face" : undefined].filter(Boolean).join(" "), "aria-hidden": true, ...(title ? { title } : {}) }, face ? h("img", { src: face, alt: "", draggable: false }) : initial(name));
+  // A foe with no portrait is a plain red dot: its initial read as a word («В» as «враг», Vera, 2026-11-21).
+  const inside = face ? h("img", { src: face, alt: "", draggable: false }) : foe ? h("i", { className: "dot" }) : initial(name);
+  return h("span", { className: ["medal", className, face ? "face" : undefined, foe && !face ? "foe" : undefined].filter(Boolean).join(" "), "aria-hidden": true, ...(title ? { title } : {}) }, inside);
 }
 
 /** The portrait rail (design §5.2, the control layer's side): the human, then the party, each ringed
@@ -249,7 +252,7 @@ function Rail({ view, openSheet, lens }: { view: PageView; openSheet(): void; le
       ? h(
           "button",
           { type: "button", className: "near glass", "data-test": "near", title: `${words.page.near}: ${near.map((c) => shownName(view, s, c.handle)).join(", ")}`, "aria-label": `${words.page.near}: ${near.length}`, onClick: lens },
-          h(Medal, { handle: near[0].handle, name: shownName(view, s, near[0].handle) }),
+          h(Medal, { handle: near[0].handle, name: shownName(view, s, near[0].handle), foe: true }),
           near.length > 1 ? h("b", { className: "count" }, near.length) : null,
         )
       : null,
@@ -286,6 +289,24 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
   // North is up: the engine's y grows away from the viewer, the screen's grows down.
   const X = (x: number) => x - x0;
   const Y = (y: number) => y1 - y;
+  // Every name takes the first place around its mark that no other name or mark covers: creatures
+  // stand five feet apart and a name is wider than that (Stas, 2026-11-21).
+  const names = who.map(({ handle }) => ({ handle, name: shownName(view, s, handle) }));
+  const placed = new Map(
+    placeLabels(
+      [
+        { key: `who:${me}`, text: words.you, size: 1.3, x: X(p.me.x_ft), y: Y(p.me.y_ft), spots: ME_SPOTS },
+        ...who.map(({ handle, at }, i) => ({ key: `who:${handle}`, text: names[i]!.name, size: 1.3, x: X(at.x_ft), y: Y(at.y_ft), spots: TOKEN_SPOTS })),
+        ...p.anchors.map((a) => ({ key: `place:${a.id}`, text: a.name, size: 1.3, x: X(a.position_ft.x_ft), y: Y(a.position_ft.y_ft), spots: PLACE_SPOTS })),
+      ],
+      [{ x: X(p.me.x_ft), y: Y(p.me.y_ft), r: 1.9 }, ...who.map(({ at }) => ({ x: X(at.x_ft), y: Y(at.y_ft), r: 1.9 })), ...p.anchors.map((a) => ({ x: X(a.position_ft.x_ft), y: Y(a.position_ft.y_ft), r: 0.75 }))],
+    ).map((l) => [l.key, l]),
+  );
+  const labelAt = (key: string, x: number, y: number) => {
+    const l = placed.get(key)!;
+    // A style, so the lens CSS's `text-anchor: middle` gives way.
+    return { x: l.x - x, y: l.y - y, style: { textAnchor: l.anchor } };
+  };
   const token = (handle: string, name: string, at: { x_ft: number; y_ft: number }, cls: string, title: string, label: string) => {
     const face = faceOf(handle);
     const id = `clip-${handle}`;
@@ -294,8 +315,13 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
       { key: handle, className: `who ${cls}${face ? "" : " noface"}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
       h("title", null, title),
       h("circle", { r: 1.9, className: "disc" }),
-      face ? [h("clipPath", { key: "c", id }, h("circle", { r: 1.65 })), h("image", { key: "i", href: face, x: -1.65, y: -1.65, width: 3.3, height: 3.3, clipPath: `url(#${id})` })] : h("text", { className: "ini", dy: "0.35em" }, initial(name)),
-      h("text", { className: "label", y: cls === "me" ? -2.6 : 3.6 }, label),
+      face
+        ? [h("clipPath", { key: "c", id }, h("circle", { r: 1.65 })), h("image", { key: "i", href: face, x: -1.65, y: -1.65, width: 3.3, height: 3.3, clipPath: `url(#${id})` })]
+        : // A foe with no portrait is a plain red dot, its name below: an initial read as a word («В», Vera).
+          cls.startsWith("hostile")
+          ? h("circle", { r: 0.8, className: "dot" })
+          : h("text", { className: "ini", dy: "0.35em" }, initial(name)),
+      h("text", { className: "label", ...labelAt(`who:${handle}`, X(at.x_ft), Y(at.y_ft)) }, label),
     );
   };
   return h(
@@ -313,14 +339,16 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
             h("text", { x: X(p.me.x_ft), y: Y(p.me.y_ft) - walk - 1.2 }, words.walk),
           )
         : null,
-      p.anchors.map((a) => {
-        // A place someone stands on keeps its name above them, clear of theirs below (and of «вы» above the human).
-        const near = (at: { x_ft: number; y_ft: number }) => Math.hypot(at.x_ft - a.position_ft.x_ft, at.y_ft - a.position_ft.y_ft) < 4;
-        const y = near(p.me) ? -4.3 : who.some((w) => near(w.at)) ? -2.6 : 2.6;
-        return h("g", { key: a.id, className: "anchor", transform: `translate(${X(a.position_ft.x_ft)} ${Y(a.position_ft.y_ft)})` }, h("rect", { x: -0.75, y: -0.75, width: 1.5, height: 1.5, rx: 0.3 }), h("text", { y }, a.name));
-      }),
-      who.map(({ handle, at, c }) => {
-        const name = shownName(view, s, handle);
+      p.anchors.map((a) =>
+        h(
+          "g",
+          { key: a.id, className: "anchor", "data-anchor": a.id, transform: `translate(${X(a.position_ft.x_ft)} ${Y(a.position_ft.y_ft)})` },
+          h("rect", { x: -0.75, y: -0.75, width: 1.5, height: 1.5, rx: 0.3 }),
+          h("text", labelAt(`place:${a.id}`, X(a.position_ft.x_ft), Y(a.position_ft.y_ft)), a.name),
+        ),
+      ),
+      who.map(({ handle, at, c }, i) => {
+        const name = names[i]!.name;
         // One the panel no longer lists has left the fight: drawn faded where it was last.
         return token(handle, name, at, `${c?.side ?? "gone"}${!c || c.health === "down" ? " down" : ""}`, [name, c ? ui(view).panel.health[c.health] : undefined].filter(Boolean).join(" · "), name);
       }),
