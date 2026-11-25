@@ -4,7 +4,7 @@
 // and tool-call events, so a later web client can replace the terminal UI behind this boundary.
 import type { Event, Handle, TurnBudget } from "@nat20-table/engine-client";
 import type { Choice } from "./choices.ts";
-import type { SeatCard, SeatPositions, SeatRoad, SeatSheet, SeatUnavailable, SeatUse } from "./seat-data.ts";
+import type { SeatCard, SeatPlace, SeatPositions, SeatRoad, SeatSheet, SeatUnavailable, SeatUse } from "./seat-data.ts";
 import type { Situation } from "./situation.ts";
 import type { DmTools, PlayerTools } from "./tools.ts";
 
@@ -95,6 +95,8 @@ export type TableEvent =
       road?: SeatRoad;
       /** The human's death saves while they are down, from their own sheet (AGT-140). */
       death_saves?: { successes: number; failures: number };
+      /** The place of the scene, for a window's picture of it (CON-26); none where the pack names none. */
+      place?: SeatPlace;
     }
   /** Whose turn it is, the round, the scene. */
   | { kind: "status"; text: string }

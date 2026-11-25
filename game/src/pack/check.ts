@@ -8,6 +8,7 @@ import { GameEngine, REPO } from "../engine.ts";
 import { Adventure, CARD_SECTIONS, FORMAT_VERSIONS, STAT_BLOCKS_SINCE } from "./adventure.ts";
 import { goodsWithoutRu, readCampaign, rosterProblems, seatCards, worldDir } from "./campaign.ts";
 import { skeletonFile } from "./read.ts";
+import { checkPlaces } from "./places.ts";
 
 /** Every pack in the repository: each folder of `scenarios/`. */
 export function repoPacks(): string[] {
@@ -211,6 +212,10 @@ export async function checkPack(dir: string, options: { binary?: string; pregens
   ] as const) {
     for (const id of duplicates([...list])) problem(`${what} ${id} is listed twice`);
   }
+  // What a window shows of each scene's place (CON-26); a picture named and not drawn yet is no fault.
+  const places = checkPlaces(dir, sceneIdList);
+  for (const text of places.problems) problem(text);
+  report.warnings.push(...places.missing);
   let sceneFiles: string[] = [];
   try {
     if (existsSync(path.join(dir, "scenes"))) {

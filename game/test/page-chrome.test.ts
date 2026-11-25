@@ -106,3 +106,23 @@ test("a reaction names its one answer under yes, and shows each of several as it
   assert.deepEqual(at(["Opportunity Attack"]), { yes: "yes", no: "no", what: "Opportunity Attack" });
   assert.deepEqual(at(["Opportunity Attack", "Shield Bash"]), { yes: "yes", no: "no", answers: [{ n: 1, label: "Opportunity Attack" }, { n: 2, label: "Shield Bash" }] });
 });
+
+test("the chrome state tells a shell the place of the scene and whether a fight is on (CON-26)", () => {
+  const green = chromes("green.seat-wire.jsonl");
+  // Before the table has said where anyone is, neither is said: a shell turns its page on a change, not on the first word.
+  assert.equal(green[0].place, undefined);
+  assert.equal(green[0].fight, undefined);
+  const places = green.flatMap((c) => (c.place ? [c.place] : []));
+  assert.deepEqual(places[0], { name: "Луг в Вендфорде", plate: "the_silent_mill/green.jpg", plan: "the_silent_mill/green" });
+  // The road after it is a place whose picture is not drawn: the shell draws a placeholder with this name on it.
+  const road = { name: "Дорога к мельнице", plate: "the_silent_mill/mill-road.jpg", plan: "the_silent_mill/mill-road" };
+  assert.ok(green.some((c) => c.fight === false && JSON.stringify(c.place) === JSON.stringify(road)), "the road before the fight");
+  // The run ends in a fight on that road: the place stands, and the shell turns its page to «Где все».
+  assert.deepEqual(green.at(-1)!.place, road);
+  assert.equal(green.at(-1)!.fight, true);
+  assert.equal(places.filter((p) => p.plate === places[0].plate).every((p) => p.name === "Луг в Вендфорде"), true);
+  // A wire recorded before places were told carries none, and its fight is still told.
+  const yard = chromes("yard.seat-wire.jsonl");
+  assert.ok(yard.every((c) => c.place === undefined));
+  assert.ok(yard.some((c) => c.fight === true));
+});

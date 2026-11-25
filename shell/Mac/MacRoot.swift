@@ -1,7 +1,8 @@
 // The Mac's window. A wide one is an open book (CON-25): the story on the left page with an ask's
-// answers, the chips and the dock under it, and «Где все» or «Лист» on the right page. A narrow one
-// shows one of the three pages at a time over the same dock, turned by the switch in its title bar.
-// The list of a turn's moves opens as a popover over the dock, where the phone opens a sheet.
+// answers, the chips and the dock under it, and on the right page the picture of the place
+// (CON-26), «Где все» or «Лист». A narrow one shows one of the three pages at a time over the same
+// dock, turned by the switch in its title bar. The list of a turn's moves opens as a popover over
+// the dock, where the phone opens a sheet.
 import SwiftUI
 import WebKit
 
@@ -40,8 +41,14 @@ struct MacRoot: View {
 struct MacTable: View {
     @Bindable var shell: Shell
     let table: Table
-    /// What the right page of the open book shows: «Где все» or «Лист».
-    @State private var right = Screen.place
+    /// The pages the right page of the open book turns between.
+    enum Right: Hashable {
+        case picture, place, sheet
+    }
+
+    /// The right page the human turned to. None until they do, and none again when the place
+    /// changes or a fight starts or ends: then the page turns by itself (`right`).
+    @State private var chosen: Right?
     /// How tall the stack under the story stands now: the story ends above it.
     @State private var under: CGFloat = 0
 
@@ -49,6 +56,15 @@ struct MacTable: View {
     private static let book: CGFloat = 860
     /// The row over the right page that holds its switch.
     private static let bar: CGFloat = 44
+
+    /// What the right page shows: what the human turned it to, else «Где все» in a fight and the
+    /// picture of the place out of one, where the table names a place (CON-26).
+    private var right: Right {
+        let place = shell.chrome?.place != nil
+        if let chosen, chosen != .picture || place { return chosen }
+        if shell.chrome?.fight == true { return .place }
+        return place ? .picture : .place
+    }
 
     var body: some View {
         GeometryReader { window in
@@ -67,6 +83,13 @@ struct MacTable: View {
                 page(table.story.page, at: story, shown: open || shell.screen == .story)
                 page(table.place.page, at: other, shown: open ? right == .place : shell.screen == .place)
                 page(table.sheet.page, at: other, shown: open ? right == .sheet : shell.screen == .sheet)
+                // The picture is the shell's own view, not a page: it comes and goes with the turn of
+                // the right page, and no web view is made or moved for it.
+                if open, right == .picture, let place = shell.chrome?.place {
+                    Plate(place: place, words: shell.words)
+                        .frame(width: other.width, height: other.height)
+                        .offset(x: other.minX, y: other.minY)
+                }
                 if open {
                     Rectangle()
                         .fill(.separator)
@@ -96,7 +119,7 @@ struct MacTable: View {
                 guard now else { return }
                 // The page that was being read goes to the right page: the story is always on the left.
                 if shell.screen != .story {
-                    right = shell.screen
+                    chosen = shell.screen == .sheet ? .sheet : .place
                     shell.screen = .story
                 }
                 if right == .sheet { shell.freshSheet() }
@@ -111,6 +134,14 @@ struct MacTable: View {
         }
         .onChange(of: right) { _, now in
             if now == .sheet { shell.freshSheet() }
+        }
+        // A fight starts or ends, or the table moves to another place: the right page turns by
+        // itself again. The first word of either, when a table is sat down at, turns nothing.
+        .onChange(of: shell.chrome?.fight) { was, now in
+            if was != nil, now != nil { chosen = nil }
+        }
+        .onChange(of: shell.chrome?.place?.plate) { was, _ in
+            if was != nil { chosen = nil }
         }
         .overlay(alignment: .topLeading) { StateMark(shell: shell) }
     }
@@ -140,14 +171,18 @@ struct MacTable: View {
         .fixedSize()
     }
 
-    /// The switch over the book's right page. The human turns it; nothing turns it for them.
+    /// The switch over the book's right page: the picture of the place where the table names
+    /// one, «Где все» and «Лист».
     private var turn: some View {
         let names = shell.chrome?.tabs
         let words = shell.words
         return HStack {
-            Picker("", selection: $right) {
-                Text(names?.`where` ?? words.place).tag(Screen.place)
-                Text(names?.sheet ?? words.sheet).tag(Screen.sheet)
+            Picker("", selection: Binding(get: { right }, set: { chosen = $0 })) {
+                if shell.chrome?.place != nil {
+                    Text(words.picture).tag(Right.picture)
+                }
+                Text(names?.`where` ?? words.place).tag(Right.place)
+                Text(names?.sheet ?? words.sheet).tag(Right.sheet)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
