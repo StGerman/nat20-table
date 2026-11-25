@@ -64,6 +64,8 @@ struct MacTable: View {
                     }
             }
             .padding(.top, 8)
+            // In a wide window the dock keeps to the story column's width, not the screen's.
+            .frame(maxWidth: 672)
         }
         .navigationTitle(title)
         .navigationSubtitle(shell.chrome?.pill?.text ?? "")
