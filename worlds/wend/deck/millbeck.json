@@ -10,8 +10,8 @@
             "zone": "millbeck",
             "target": "caravan",
             "once": true,
-            "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a borrowed helmet holds out his cap, a notched tally stick in his other hand: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
-            "text_ru": "У мостика через Миллбек человек в рваном тулупе и чужом шлеме протягивает шапку, в другой руке у него бирка с зарубками. Пошлина старосты, говорит он, по два серебряных с головы. Его брат опирается на дубину у шалаша из ивняка, рядом холодное кострище и куча обглоданных овечьих костей.",
+            "text": "At the little bridge over the Millbeck a man in a torn sheepskin coat and a striped knitted hat holds out an open palm, a notched tally stick in the other hand: the reeve's toll, he says, two silver a head. His brother leans on a cudgel by a willow hut, beside a cold fire and a heap of gnawed sheep bones.",
+            "text_ru": "У мостика через Миллбек человек в рваном тулупе и полосатой вязаной шапке протягивает ладонь, в другой руке у него бирка с зарубками. Пошлина старосты, говорит он, по два серебряных с головы. Его брат опирается на дубину у шалаша из ивняка, рядом холодное кострище и куча обглоданных овечьих костей.",
             "owner_pick": "pay",
             "choices": [
                 {
