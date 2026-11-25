@@ -4,7 +4,7 @@
 // the capsule with health and the turn's budget), the roll stage over all. It
 // draws from the wire's data, not from the terminal's lines (Stas, 2026-11-21); every word it shows
 // is the host's or one of the page's labels in UI_WORDS. It talks to nothing but the seat wire.
-import { createElement as h, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createElement as h, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { COMMAND_HELP, readLine } from "../ui/input.ts";
 import { UI_WORDS, type UiWords } from "../table/words.ts";
 import type { HumanPrompt, PlayerIntent, TableEvent } from "../table/types.ts";
@@ -303,7 +303,8 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
     { className: "lens yard", "data-test": "lens" },
     h(
       "svg",
-      { viewBox: `0 0 ${x1 - x0} ${y1 - y0}`, role: "img", "aria-label": words.where },
+      // The yard's size in feet, for the native shell's scale (page.css).
+      { viewBox: `0 0 ${x1 - x0} ${y1 - y0}`, role: "img", "aria-label": words.where, style: { "--ft": x1 - x0, "--ft-h": y1 - y0 } as CSSProperties },
       walk > 0
         ? h(
             "g",
