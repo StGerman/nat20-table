@@ -24,7 +24,7 @@ Check: the places file and its mistakes, and that nothing told of a place names 
 
 ## Status
 
-partial (table #499's stack). Built: all of the above. The Mill names six places; four have pictures (`green.jpg`, `storeroom.jpg`, `cellar.jpg`, `green-after.jpg`; the storeroom's and the second green's are not Stas's final picks) and two do not (`mill-road.jpg`, `mill-yard.jpg`), which `npm run pack:check` lists as warnings. Gritch has a portrait and no face on the page: his creature's handle is `boss`, which names no one, so the page would give that face to any pack's boss; Snitt is no creature of the pack and has no token.
+partial (table #499's stack). Built: all of the above. The Mill names six places; four have pictures (`green.jpg`, `storeroom.jpg`, `cellar.jpg`, `green-after.jpg`, all Stas's picks of 2026-11-25; a second storeroom with the goblin who yielded is picked and not shown, since no window is told what happened in the yard) and two do not (`mill-road.jpg`, `mill-yard.jpg`), which `npm run pack:check` lists as warnings. Gritch has a portrait and no face on the page: his creature's handle is `boss`, which names no one, so the page would give that face to any pack's boss; Snitt is no creature of the pack and has no token.
 
 Open: the pictures of the road and the yard; the wolf's portrait; a face for Gritch (a handle or a kind that names him); the corner line behind a switch before Friends and Family.
 
