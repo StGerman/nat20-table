@@ -164,8 +164,20 @@ export function positionsOf(state: Extract<State, { view: "player" }>, names: Se
   };
 }
 
+/**
+ * The place of the scene as a window shows it (CON-26), from the pack's `plates/index.json`: the
+ * name the human may read, the picture of the place and the key of its drawn plan, each
+ * `<pack>/<name>`. A window that holds no such picture draws a placeholder with the name on it.
+ * Never the scene id (Rule 3).
+ */
+export interface SeatPlace {
+  name: string;
+  plate: string;
+  plan: string;
+}
+
 /** The data fields an event carries beside its text (AGT-140), which the human's input record leaves out. */
-const DATA_KEYS = ["event", "names", "rolls", "unavailable", "uses", "card", "sheet", "positions", "road", "death_saves"] as const;
+const DATA_KEYS = ["event", "names", "rolls", "unavailable", "uses", "card", "sheet", "positions", "road", "death_saves", "place"] as const;
 
 /** The event as a terminal reads it: its text, with no data beside it. */
 export function textOnly(event: TableEvent): TableEvent {

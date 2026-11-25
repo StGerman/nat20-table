@@ -263,9 +263,15 @@ span.face-btn { cursor: default; }
 .lens .anchor rect { fill: var(--fill-2); stroke: var(--ink-3); stroke-width: 0.15; }
 .lens .anchor text { font: 500 1.3px var(--sans); fill: var(--ink-2); text-anchor: middle; }
 .lens .who .disc { fill: var(--glass-solid); stroke: var(--glass-line); stroke-width: 0.2; }
+/* No portrait is drawn for this one yet (CON-26): a dashed ring; its file is in the list below.
+   Before the rings of a foe and of the human, which keep their colour over it. */
+.lens .who.noface .disc { stroke: var(--ink-3); stroke-dasharray: 0.45 0.35; }
 .lens .who.hostile .disc { stroke: var(--harm); stroke-width: 0.3; }
 .lens .who.me .disc { stroke: var(--accent); stroke-width: 0.4; }
 .lens .who.down { opacity: 0.35; }
+.missing { position: absolute; left: 16px; bottom: calc(var(--dock-h) + 16px); z-index: 2; max-width: calc(100% - 32px); padding: 6px 10px; border: 1px dashed var(--ink-3); border-radius: 10px; background: color-mix(in srgb, var(--ground) 72%, transparent); font: 12px/1.45 var(--sans); color: var(--ink-2); }
+.missing p { margin: 0; overflow-wrap: anywhere; }
+.missing b { font-weight: 600; color: var(--ink); }
 .lens .who .label { font: 600 1.3px var(--sans); fill: var(--ink); text-anchor: middle; }
 .lens .who .dot { fill: var(--harm); }
 .lens .who .ini { font: 600 2.2px var(--serif); fill: var(--ink); text-anchor: middle; }
@@ -312,11 +318,23 @@ html.native body { overflow-x: hidden; }
 /* The shell's sheet stands over the lower half: the story ends above it. */
 html.native.under-sheet .win.native .story { padding-bottom: 46vh; }
 /* «Где все» on a phone: the yard near twice the screen's width, so a face and its name can be read;
-   the page scrolls both ways under a finger. */
+   the page scrolls both ways under a finger. A page wider than a phone (a Mac's window, or the
+   right page of its open book) or wider than it is tall draws a foot between 8 px, a little under
+   the phone's scale so that a village green fits the book's right page, and 18 px: the whole yard
+   in its middle where it fits at that, and where it does not the page scrolls, as on the phone. */
 html.native:has(.win.show-where .lens.yard) body { overflow-x: auto; }
-.win.native .lens.yard { position: relative; inset: auto; display: block; width: max-content; padding: 12px; }
-.win.native .lens.yard svg { display: block; width: 185vw; max-width: none; height: auto; }
+.win.native .lens.yard { position: relative; inset: auto; display: flex; justify-content: center; box-sizing: border-box; width: max-content; min-width: 100%; padding: 12px; }
+.win.native .lens.yard svg { display: block; flex: none; width: 185vw; max-width: none; height: auto; }
+@media (min-aspect-ratio: 1/1), (min-width: 500px) {
+  .win.native .lens.yard { align-items: center; min-height: 100vh; }
+  .win.native .lens.yard svg { width: clamp(var(--ft) * 8px, min(100vw - 24px, (100vh - 24px) * var(--ft) / var(--ft-h)), var(--ft) * 18px); }
+}
+/* The list of what is not drawn stays in a corner of the page while the yard scrolls under it. */
+.win.native .missing { position: fixed; left: 12px; bottom: 12px; max-width: calc(100vw - 24px); }
 .win.native .ambient { position: fixed; }
 .win.native .story { position: relative; inset: auto; overflow: visible; padding: 12px 20px 24px; }
-.win.native .inspector { position: relative; inset: auto; width: auto; max-height: none; margin: 12px 16px 24px; }
+/* A page as wide as a Mac's: the first line stands clear of the window's top, which in full screen has no title bar over it. */
+@media (min-width: 500px) { .win.native .story { padding-top: 36px; } }
+/* «Лист» keeps to a column a line can be read across, however wide the window. */
+.win.native .inspector { position: relative; inset: auto; width: auto; max-width: min(42rem, calc(100% - 32px)); max-height: none; margin: 12px auto 24px; }
 .win.native .inspector .close { display: none; }

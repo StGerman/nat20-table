@@ -12,7 +12,7 @@ import { mapLinesRu, sheetRu, stateRu } from "./seat-views.ts";
 import { isFallen, lifts, liftsOn, turnOutcome, type Lift, type LiftChance } from "./fallen.ts";
 import { handAnswer, handOff, namedIn, speakingOrder, type Address, type Hand, type HandedOff } from "./floor.ts";
 import { doerAfter, mayReact, triggerIn, type TriggerKind } from "./reactions.ts";
-import { cardData, positionsOf, roadData, sheetData, unavailableOf, usesOf, type SeatUnavailable, type SeatUse } from "./seat-data.ts";
+import { cardData, positionsOf, roadData, sheetData, unavailableOf, usesOf, type SeatPlace, type SeatUnavailable, type SeatUse } from "./seat-data.ts";
 import { situationOf } from "./situation.ts";
 import type { TableState } from "./state.ts";
 import type { Person } from "../ui/people.ts";
@@ -51,6 +51,8 @@ export interface LoopOptions {
   statBlocks?: readonly StatBlockEntry[];
   /** The run's language (decision 0067): the words the table itself shows the human's seat. Default `en`. */
   language?: Language;
+  /** Each scene's place as a window shows it (CON-26), by scene id: sent with the human's `situation`. None by default. */
+  places?: ReadonlyMap<string, SeatPlace>;
   /** Loop steps before the run is stopped: a safety net for scripted runs. Default 5000. */
   maxSteps?: number;
   /**
@@ -347,6 +349,7 @@ export class TableLoop {
   private readonly onScene: (sceneId: string, played: readonly string[]) => SceneChoice;
   private readonly maxSteps: number;
   private readonly situation: boolean;
+  private readonly places: ReadonlyMap<string, SeatPlace> | undefined;
   /** `/pause`: AI players aren't woken until `/pause` again (spec §3.4). */
   private paused = false;
   /** The model wakes in flight, oldest first, for the seat's loading indicator. */
@@ -473,6 +476,7 @@ export class TableLoop {
     this.onScene = options.onScene ?? (() => "continue");
     this.maxSteps = options.maxSteps ?? 5000;
     this.situation = options.situation ?? false;
+    this.places = options.places;
     this.stallRounds = options.stallRounds ?? 0;
     this.onProgress = options.onProgress ?? (() => undefined);
     this.usage = options.usage;
@@ -2432,12 +2436,14 @@ export class TableLoop {
     // The data a window draws its lenses from (AGT-140), from the same player-view state.
     const player = seen?.view === "player" ? seen : undefined;
     const down = player && player.me.life_state !== "conscious" ? await this.humanSheet() : undefined;
+    const place = this.places?.get(this.scenes.at(-1) ?? "");
     this.table.show({
       kind: "situation",
       ...(situation ? { situation } : {}),
       ...(player ? { positions: positionsOf(player, this.table.names) } : {}),
       ...(player?.world ? { road: roadData(player.world, this.table.names) } : {}),
       ...(down ? { death_saves: down.death_saves } : {}),
+      ...(place ? { place } : {}),
     });
   }
 

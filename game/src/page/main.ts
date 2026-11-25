@@ -84,6 +84,11 @@ function Page(): ReturnType<typeof h> {
   const now = useRef(view);
   now.current = view;
   const told = useRef("");
+  // Only the story's page shows a roll on its stage. The other pages of a native shell have none
+  // to wait for, so theirs is settled at once: a recorded run's replay waits for the stage to clear.
+  useEffect(() => {
+    if (native && show !== "story" && view.stage) dispatch({ type: "settled" });
+  }, [view.stage]);
   useEffect(() => {
     if (!native || !view.hello) return;
     const chrome = JSON.stringify(chromeOf(view));

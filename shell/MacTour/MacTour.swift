@@ -1,0 +1,373 @@
+// The Mac shell's UI test (CON-23), at a table with no engine and no model: the replay host
+// (ci/replay-host.ts) behind the real seat wire, over the wire that holds every kind of ask.
+//
+// `testEveryAskByMenuAndKey` answers each ask from the menu bar: by a command of the game's menu
+// or by that command's key, turn about, so an answer by number, the human's own words and the
+// pause are each given both ways. The socket is lost between a press and its send, the story's
+// page is loaded again, and the host's second window takes the seat, as on the phone
+// (Tour/Tour.swift); then the window is closed, which must tell the host `quit`. What the host
+// heard is read by the job (ci/heard.ts, ci/mac-tour.sh).
+//
+// `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
+// as it opens, one page at a time; then it makes an open window wide while the table is in it
+// (`-widen`), and the app must go on as an open book (CON-25); then wide from the start
+// (`-wide 1`): the story beside «Где все» or «Лист», and beside the picture of the place where the
+// table names one (CON-26). Between them it leaves a table that does not answer, by the line's
+// button and by the menu. The tour above runs before it, in the window as it opens.
+import XCTest
+
+final class MacTour: XCTestCase {
+    /// The game's menu, as the Mac's language names it (`Words.game`). Every launch is a Russian Mac's,
+    /// whatever the runner speaks, so the bar and the table's commands read in one language.
+    private let game = "Игра"
+    private let russian = ["-AppleLanguages", "(ru)"]
+    private let pauseTitle = "Пауза"
+    private let playHereTitle = "Играть здесь"
+    private let leaveTitle = "Встать из-за стола"
+
+    override func setUp() {
+        continueAfterFailure = true
+    }
+
+    @MainActor
+    func testEveryAskByMenuAndKey() throws {
+        let link = ProcessInfo.processInfo.environment["ASKS_LINK"] ?? ""
+        try XCTSkipIf(link.isEmpty, "no table to sit at: TEST_RUNNER_ASKS_LINK is not set")
+        let app = XCUIApplication()
+        // The second message the pages hand over is lost with the socket; after the fourth the
+        // story's page is loaded again.
+        app.launchArguments = ["-table", link, "-tour", "1", "-keepSent", "1", "-dropBeforeSend", "2", "-reloadAfter", "4"] + russian
+        app.launch()
+
+        // The ask and the count of messages at the last answer: the same ask offered again after a
+        // lost socket has another count, and is answered again.
+        var pressed = ""
+        var pictured = Set<String>()
+        var missed = 0
+        var ended = false
+        for _ in 0..<60 {
+            guard let now = until(app, 90, { $0.form == "ended" || ($0.link == "up" && $0.control != "none" && $0.key != pressed) }) else {
+                XCTFail("the table stopped: \(mark(app)?.text ?? "no state"), last answered \(pressed)")
+                break
+            }
+            if now.form == "ended" {
+                ended = true
+                break
+            }
+            if answer(app, now) {
+                pressed = now.key
+                missed = 0
+                if pictured.insert(now.control).inserted {
+                    picture("2\(pictured.count)-after-\(now.control)")
+                }
+            } else {
+                missed += 1
+                picture("20-no-command-for-\(now.control)-\(missed)")
+                if missed >= 3 {
+                    XCTFail("no command answered \(now.text)")
+                    break
+                }
+            }
+        }
+        XCTAssertTrue(ended, "the run was played to its end: \(mark(app)?.text ?? "no state")")
+        picture("30-the-end")
+        for command in ["number", "words", "pause"] {
+            XCTAssertTrue(byMenu.contains(command), "an ask was answered by the menu command: \(command)")
+            XCTAssertTrue(byKey.contains(command), "an ask was answered by the command's key: \(command)")
+        }
+
+        // The host's own second window takes the seat (ci/replay-host.ts `take-seat`): the shell
+        // says so and does not take it back until asked.
+        let here = app.buttons["play-here"].firstMatch
+        XCTAssertTrue(here.waitForExistence(timeout: 60), "the shell said the game is open elsewhere")
+        pause(4)
+        XCTAssertEqual(mark(app)?.link, "replaced", "a replaced shell does not ask for the seat again by itself")
+        picture("31-open-elsewhere")
+        // The seat is taken back from the menu: the dock's button has its command too.
+        XCTAssertTrue(command(app, { $0.menuItems[self.playHereTitle].firstMatch }), "the menu takes the seat back")
+        XCTAssertNotNil(until(app, 30) { $0.link == "up" }, "«Играть здесь» took the seat back")
+        picture("32-back-here")
+
+        // Closing the window, by its red button, ends the app and tells the host `quit` (the job
+        // reads that it came): the page is asked for it after its window has gone.
+        let close = app.windows.firstMatch.buttons[XCUIIdentifierCloseWindow].firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 10), "the window has its close button")
+        close.click()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 30), "the app ended when it was closed")
+    }
+
+    @MainActor
+    func testPictures() {
+        let yard = ["-replay", "yard.seat-wire.jsonl", "-to", "74"]
+        let green = ["-replay", "green.seat-wire.jsonl", "-to", "2"]
+        let road = ["-replay", "green.seat-wire.jsonl", "-to", "5"]
+        let wide = ["-wide", "1"]
+        let narrow: [(String, [String])] = [
+            ("01-yard-turn-light", yard),
+            ("02-yard-turn-dark", yard + ["-dark", "1"]),
+            ("03-yard-list-light", yard + ["-open", "moves"]),
+            ("04-yard-spent-light", ["-replay", "yard.seat-wire.jsonl", "-to", "92"]),
+            ("05-road-card-light", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17"]),
+            ("06-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-dark", "1"]),
+            ("07-yard-where-light", yard + ["-screen", "where"]),
+            ("08-yard-sheet-light", yard + ["-screen", "sheet"]),
+            ("09-connect-ru-light", []),
+            ("10-no-connection-ru-light", ["-table", "ws://127.0.0.1:9/?token=none"]),
+        ]
+        shoot(narrow)
+        leave()
+        grow()
+        // The wide window comes last: the system keeps a window's size for the next launch.
+        let book: [(String, [String])] = [
+            ("11-book-yard-turn-light", yard + wide),
+            ("12-book-yard-turn-dark", yard + wide + ["-dark", "1"]),
+            ("13-book-yard-sheet-light", yard + wide + ["-screen", "sheet"]),
+            ("14-book-yard-list-light", yard + wide + ["-open", "moves"]),
+            ("15-book-road-card-light", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17"] + wide),
+            ("16-book-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-dark", "1"] + wide),
+            // The green (CON-26): the picture of the place on the right page, and «Где все» with the
+            // faces of those standing there when the page is turned to it. The road after it, whose
+            // picture is not drawn: the placeholder that names it. A fight on that road: the page
+            // turns to «Где все» by itself, where the wolf has no portrait and the place no plan.
+            ("51-book-green-plate-light", green + wide),
+            ("52-book-green-plate-dark", green + wide + ["-dark", "1"]),
+            ("53-book-green-where-light", green + wide + ["-screen", "where"]),
+            ("54-book-green-where-dark", green + wide + ["-screen", "where", "-dark", "1"]),
+            ("55-book-road-unpainted-light", road + wide),
+            ("56-book-road-unpainted-dark", road + wide + ["-dark", "1"]),
+            ("57-book-road-fight-light", ["-replay", "green.seat-wire.jsonl"] + wide),
+            ("58-book-road-fight-dark", ["-replay", "green.seat-wire.jsonl", "-dark", "1"] + wide),
+        ]
+        shoot(book)
+    }
+
+    /// Opens the window once for each picture and keeps what it shows.
+    @MainActor
+    private func shoot(_ shots: [(String, [String])]) {
+        for (name, arguments) in shots {
+            let app = XCUIApplication()
+            app.launchArguments = arguments + russian
+            app.launch()
+            pause(12)
+            // The window is an open book from 860 points and shows one page at a time under that
+            // (`MacTable.book`): the right page stands only in the book. Read against the width the
+            // window has, not the one asked for: the system opens it at the size it last had.
+            if arguments.contains("-replay") {
+                let width = app.windows.firstMatch.frame.width
+                if arguments.contains("-wide") {
+                    XCTAssertGreaterThanOrEqual(width, 860, "\(name): `-wide 1` opens a wide window")
+                }
+                let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+                XCTAssertEqual(right.exists, width >= 860, "\(name): a window \(width) points wide")
+            }
+            // The right page of a place the table names: its picture, or the placeholder that says
+            // which picture is not drawn, and neither in a fight or once the page is turned to «Где все».
+            let plate = app.descendants(matching: .any).matching(identifier: "plate").firstMatch
+            let unpainted = app.descendants(matching: .any).matching(identifier: "plate-missing").firstMatch
+            if name.contains("-plate-") {
+                XCTAssertTrue(plate.waitForExistence(timeout: 10), "\(name): the right page shows the picture of the place")
+            } else if name.contains("-unpainted-") {
+                XCTAssertTrue(unpainted.waitForExistence(timeout: 10), "\(name): the right page says which picture is not drawn")
+                XCTAssertFalse(plate.exists, "\(name): no picture stands for one that is not drawn")
+            } else {
+                XCTAssertFalse(plate.exists || unpainted.exists, "\(name): no picture where the table names no place, in a fight, or with the page turned")
+            }
+            if name.hasPrefix("01") {
+                // The game's menu, open over the turn: each move with its key.
+                let menu = app.menuBars.menuBarItems[game].firstMatch
+                if menu.waitForExistence(timeout: 10) {
+                    menu.click()
+                    pause(1)
+                    picture("00-the-menu")
+                    app.typeKey(.escape, modifierFlags: [])
+                    pause(1)
+                }
+            }
+            picture(name)
+            app.terminate()
+        }
+    }
+
+    /// A table that does not answer is left from the line that says so, and from the menu: the Mac
+    /// has no other way out of it, and it keeps the link for the next launch (Stas's Mac,
+    /// 2026-11-25: a table that had ended held the app). The link screen comes back with the link
+    /// in its field, so the same table is one press away.
+    @MainActor
+    private func leave() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-table", "ws://127.0.0.1:9/?token=none"] + russian
+        app.launch()
+        let out = app.buttons["offline-leave"].firstMatch
+        XCTAssertTrue(out.waitForExistence(timeout: 30), "a table that does not answer shows the way out")
+        out.click()
+        let sit = app.buttons["sit"].firstMatch
+        XCTAssertTrue(sit.waitForExistence(timeout: 10), "the way out leads to the link screen")
+        XCTAssertFalse(out.exists, "the table is left")
+        XCTAssertTrue(sit.isEnabled, "the link stays in its field")
+        picture("42-left-a-table-that-is-gone")
+        // The same link again, and out by the menu's command.
+        sit.click()
+        XCTAssertTrue(out.waitForExistence(timeout: 30), "the same link sits down again")
+        XCTAssertTrue(command(app, { $0.menuItems[self.leaveTitle].firstMatch }), "the menu leaves a table that does not answer")
+        XCTAssertTrue(sit.waitForExistence(timeout: 10), "the menu's command leads to the link screen")
+        app.terminate()
+    }
+
+    /// A window that shows a table one page at a time grows wide and becomes the open book, with
+    /// the table in it: the same three pages go on to the book's two (CON-25). Stas's Mac,
+    /// 2026-11-25: the app stopped there. Between the narrow pictures and the wide ones: the system
+    /// opens a window at the size it last had, so after this it stays wide.
+    @MainActor
+    private func grow() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-replay", "yard.seat-wire.jsonl", "-to", "74", "-widen", "14"] + russian
+        app.launch()
+        pause(8)
+        let window = app.windows.firstMatch
+        guard window.frame.width < 860 else {
+            // A second run on the same Mac: the window was left wide, and has no width to cross.
+            print("nat20-tour the window opened wide: growing it into a book was not checked")
+            app.terminate()
+            return
+        }
+        let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
+        XCTAssertFalse(right.exists, "a narrow window shows one page at a time")
+        picture("40-before-it-grows")
+        let end = Date().addingTimeInterval(30)
+        while Date() < end, app.state == .runningForeground, window.frame.width < 860 { pause(1) }
+        pause(4)
+        XCTAssertEqual(app.state, .runningForeground, "the app is still running after its window grew")
+        XCTAssertGreaterThanOrEqual(window.frame.width, 860, "`-widen` made the window wide")
+        XCTAssertTrue(right.waitForExistence(timeout: 10), "the grown window is an open book")
+        picture("41-grown-into-a-book")
+        app.terminate()
+    }
+
+    /// What the shell says stands now (`Shell.mark`, drawn with `-tour 1`).
+    private struct Mark {
+        let text: String
+        let link: String
+        let form: String
+        let ask: String
+        let control: String
+        let count: String
+        var key: String { "\(ask)#\(count)" }
+    }
+
+    private var byMenu = Set<String>()
+    private var byKey = Set<String>()
+    private var numbers = 0
+    private var lines = 0
+
+    @MainActor
+    private func mark(_ app: XCUIApplication) -> Mark? {
+        let element = app.staticTexts.matching(identifier: "shell-state").firstMatch
+        guard element.exists else { return nil }
+        // A static text's words are its value on the Mac and its label on the phone.
+        let text = (element.value as? String).flatMap { $0.isEmpty ? nil : $0 } ?? element.label
+        let parts = text.components(separatedBy: "|")
+        guard parts.count == 5 else { return nil }
+        return Mark(text: text, link: parts[0], form: parts[1], ask: parts[2], control: parts[3], count: parts[4])
+    }
+
+    @MainActor
+    private func until(_ app: XCUIApplication, _ seconds: TimeInterval, _ holds: (Mark) -> Bool) -> Mark? {
+        let end = Date().addingTimeInterval(seconds)
+        while Date() < end {
+            if let now = mark(app), holds(now) { return now }
+            pause(0.5)
+        }
+        return nil
+    }
+
+    /// Answers the open ask from the menu bar: a command of the game's menu, or its key.
+    @MainActor
+    private func answer(_ app: XCUIApplication, _ now: Mark) -> Bool {
+        switch now.control {
+        case "chips", "rows", "card", "answers":
+            // An ask that is its own list stands in the window, under the story, row by row.
+            if now.control != "chips" {
+                let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'choice-' OR identifier BEGINSWITH 'row-' OR identifier BEGINSWITH 'react-answer-'"))
+                XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10), "the \(now.control) ask's answers stand in the window")
+            }
+            // The first turn with chips is answered with the pause, from the menu: at an open ask
+            // the pause is that ask's answer.
+            if now.control == "chips", !byMenu.contains("pause") {
+                guard command(app, { $0.menuItems[self.pauseTitle].firstMatch }) else { return false }
+                byMenu.insert("pause")
+                return true
+            }
+            numbers += 1
+            // Where several answers are on offer, the second: each has a command of its own.
+            let at = now.control == "answers" ? 1 : 0
+            if numbers % 2 == 1 {
+                guard command(app, { $0.menuItems.element(boundBy: at) }) else { return false }
+                byMenu.insert("number")
+            } else {
+                app.typeKey(String(at + 1), modifierFlags: .command)
+                byKey.insert("number")
+            }
+            return true
+        case "reaction":
+            app.typeKey("y", modifierFlags: .command)
+            byKey.insert("yes")
+            return true
+        case "paused":
+            // The pause is lifted by its key.
+            app.typeKey("p", modifierFlags: .command)
+            byKey.insert("pause")
+            return true
+        default:
+            // The human's own words: the command opens the line, named as the dock names it.
+            lines += 1
+            if now.control == "line", lines % 2 == 1 {
+                let dock = app.buttons["dock-line"].firstMatch
+                guard dock.waitForExistence(timeout: 10) else { return false }
+                let named = dock.label.isEmpty ? dock.title : dock.label
+                guard command(app, { $0.menuItems[named].firstMatch }) else { return false }
+                byMenu.insert("words")
+            } else {
+                app.typeKey("k", modifierFlags: .command)
+                byKey.insert("words")
+            }
+            return write(app, now.control == "question" ? "Tie its hands and ask who sent it" : "I look around")
+        }
+    }
+
+    /// Opens the game's menu and chooses the command `pick` finds in it.
+    @MainActor
+    private func command(_ app: XCUIApplication, _ pick: (XCUIElement) -> XCUIElement) -> Bool {
+        let menu = app.menuBars.menuBarItems[game].firstMatch
+        guard menu.waitForExistence(timeout: 15) else { return false }
+        menu.click()
+        let item = pick(menu)
+        guard item.waitForExistence(timeout: 5), item.isEnabled else {
+            app.typeKey(.escape, modifierFlags: [])
+            return false
+        }
+        item.click()
+        return true
+    }
+
+    @MainActor
+    private func write(_ app: XCUIApplication, _ text: String) -> Bool {
+        let field = app.textFields["type-line"].firstMatch
+        guard field.waitForExistence(timeout: 15) else { return false }
+        pause(1)
+        field.click()
+        field.typeText(text + "\n")
+        return true
+    }
+
+    private func pause(_ seconds: TimeInterval) {
+        Thread.sleep(forTimeInterval: seconds)
+    }
+
+    @MainActor
+    private func picture(_ name: String) {
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+}

@@ -45,6 +45,7 @@ import { sessionOptions } from "../agents/sdk-session.ts";
 import { GameEngine, REPO, SESSION_LOG } from "../engine.ts";
 import { readCampaign, seatCards } from "../pack/campaign.ts";
 import { readPack } from "../pack/read.ts";
+import { readPlaces } from "../pack/places.ts";
 import { TableLoop, type Progress, type RunReport } from "../table/loop.ts";
 import { benchDm, chainDm, chainScenes, roadDm, ScriptedPlayer, ScriptedSeat, walkOnDm, type ScriptedPlayerPolicy, type SeatPolicy } from "../table/scripted.ts";
 import { TableState } from "../table/state.ts";
@@ -469,6 +470,8 @@ Ctrl+C here stops the run after the decision in flight.`);
     maxSteps: flags["max-steps"],
     // The situation panel (AGT-36) is drawn at the terminal and in the window.
     situation: ink !== undefined || web !== undefined,
+    // The window's picture of each scene's place (CON-26).
+    ...(web ? { places: readPlaces(flags.pack, language) } : {}),
     names: party.names,
     stallRounds: flags["stall-rounds"],
     onProgress: progress,

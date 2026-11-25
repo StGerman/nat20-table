@@ -41,8 +41,9 @@ test("every pack in scenarios/ passes the pack check and loads every scene", asy
     assert.deepEqual(report.problems, [], pack);
     const skeleton = readJson(skeletonFile(pack)) as Adventure;
     assert.deepEqual(report.loaded, skeleton.scenes.map((s) => s.id));
-    // The deck's warnings are listed and never fail the check (MAP-11): The Silent Mill has no deck.
-    if (pack === MILL) assert.deepEqual(report.warnings, []);
+    // The deck's warnings are listed and never fail the check (MAP-11): The Silent Mill has no deck,
+    // and names two pictures of places that are not drawn yet (CON-26).
+    if (pack === MILL) assert.deepEqual(report.warnings, ["plates/mill-road.jpg (The mill road) is not drawn yet", "plates/mill-yard.jpg (The mill yard) is not drawn yet"]);
     else assert.ok(report.warnings.every((w) => /two or more are recommended$|names no custom it keeps or breaks$/.test(w)), report.warnings.join("\n"));
   }
 });

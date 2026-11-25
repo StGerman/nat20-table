@@ -7,7 +7,7 @@ import { UI_WORDS, type UiWords } from "../table/words.ts";
 import type { TableEvent } from "../table/types.ts";
 import type { Choice } from "../table/choices.ts";
 import { PEOPLE_WORDS } from "../ui/people.ts";
-import type { PageView } from "./reduce.ts";
+import { happened, meOf, type PageView } from "./reduce.ts";
 
 type Situation = NonNullable<Extract<TableEvent, { kind: "situation" }>["situation"]>;
 
@@ -149,6 +149,17 @@ export interface Chrome {
   tabs: { story: string; where: string; sheet: string; people: string; canWhere: boolean };
   /** The human's own roll holds the screen. */
   stage: boolean;
+  /** A fight is on, or is not; unsaid until the seat has shown where things stand. A shell that shows the picture of the place turns to «Где все» in a fight (CON-26). */
+  fight?: boolean;
+  /**
+   * The place of the scene (CON-26): its name, the picture of it and the key of its drawn plan,
+   * each `<pack>/<name>`. A shell draws the picture from the files it holds, and a placeholder
+   * with the name on it when it holds none.
+   */
+  place?: { name: string; plate: string; plan: string };
+  /** «Лист» has no sheet to show, or one from before the character last changed or anything last
+   *  happened at the table: a shell asks the seat for a fresh one only then. */
+  sheetStale: boolean;
 }
 
 export function chromeOf(view: PageView): Chrome {
@@ -248,5 +259,8 @@ export function chromeOf(view: PageView): Chrome {
     },
     tabs: { story: words.page.story, where: words.page.where, sheet: words.page.sheet, people: PEOPLE_WORDS[view.hello?.language ?? "en"].title, canWhere: view.situation?.positions !== undefined || (view.situation?.situation?.road?.map?.length ?? 0) > 0 },
     stage: view.stage !== undefined,
+    ...(s ? { fight: s.mode === "combat" } : {}),
+    ...(view.situation?.place ? { place: view.situation.place } : {}),
+    sheetStale: view.sheet === undefined || view.sheet.me !== meOf(view) || view.sheet.at !== happened(view),
   };
 }

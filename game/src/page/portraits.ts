@@ -1,5 +1,6 @@
-// The faces the page draws for the party, the goblins and the wolves (portraits/README.md);
-// anyone else is an initial (scope §9 question 5). build.ts puts each file in as a data URL.
+// The faces the page draws for the party, the goblins, the wolves and the Mill's people (portraits/README.md);
+// anyone else is an initial in a dashed ring, which says a portrait is not drawn yet (CON-26).
+// build.ts puts each file in as a data URL.
 
 /** The portraits by file name, from build.ts. */
 declare const __FACES__: Record<string, string>;
@@ -17,4 +18,10 @@ export function faceOf(handle: string | undefined, kind?: string): string | unde
   const byHandle = handle.replace(/_\d+$/, "");
   const byKind = kind?.toLowerCase().replace(/\s+/g, "_") ?? "";
   return FACES[handle] ?? FACES[byHandle] ?? FACES[SAME[byHandle] ?? ""] ?? FACES[byKind] ?? FACES[SAME[byKind] ?? ""];
+}
+
+/** The file that would give this handle a face (CON-26): `wolf_2` wants `wolf.jpg`. For the list of portraits not drawn yet. */
+export function faceFile(handle: string): string {
+  const kind = handle.replace(/_\d+$/, "");
+  return `${SAME[kind] ?? kind}.jpg`;
 }

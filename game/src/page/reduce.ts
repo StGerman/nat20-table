@@ -143,8 +143,9 @@ export interface PageView {
   /** A command's answer laid over the story (/sheet, /where, /log, /usage). */
   overlay?: { title: string; text: string; data?: Extract<TableEvent, { kind: "info" }>; n: number };
   /** The character sheet the seat showed last (/sheet): «Лист» draws it, and `n` counts each new one.
-   *  `me` is the panel's line on the character when it came: once that changes, the sheet is old. */
-  sheet?: { title: string; text: string; n: number; me: string };
+   *  `me` is the panel's line on the character when it came: once that changes, the sheet is old.
+   *  `at` is how much had happened by then (`happened`), for what that line does not hold. */
+  sheet?: { title: string; text: string; n: number; me: string; at: number };
   /** What the human's character perceives: the panel, positions, the road. */
   situation?: Situation;
   /** The newest panel frame, waiting for the narration of the step before it or for the next decision. */
@@ -344,7 +345,7 @@ function shown(v: PageView, event: TableEvent): PageView {
     }
     case "info":
       // A sheet is a command's answer too: it takes the place of the one laid over the story.
-      if (SHEETS.has(event.title)) return { ...v, overlay: undefined, sheet: { title: event.title, text: event.text, n: (v.sheet?.n ?? 0) + 1, me: meOf(v) } };
+      if (SHEETS.has(event.title)) return { ...v, overlay: undefined, sheet: { title: event.title, text: event.text, n: (v.sheet?.n ?? 0) + 1, me: meOf(v), at: happened(v) } };
       if (OVERLAYS.has(event.title)) return { ...v, overlay: { title: event.title, text: event.text, data: event, n: (v.overlay?.n ?? 0) + 1 } };
       if (REFUSED.has(event.title)) return { ...v, refusal: event.text };
       if (event.card) v = { ...v, card: cardOf(v.card, event.card) };
@@ -516,6 +517,13 @@ function endsTurn(v: PageView, event: Situation): boolean {
 /** The panel's line on the human's character, to tell whether a sheet still holds. */
 export function meOf(v: PageView): string {
   return JSON.stringify((v.frame ?? v.situation)?.situation?.me ?? null);
+}
+
+/** How much has happened at the table: the story's lines, shown or held for their narration. A
+ *  sheet also holds what the panel's line does not (the purse, experience, uses left), and each
+ *  change to those comes with a line; the lists and frames the host sends again with an ask add none. */
+export function happened(v: PageView): number {
+  return v.story.length + v.held.length;
 }
 
 function peopleNow(v: PageView): Person[] {

@@ -1,0 +1,4 @@
+/* The app's name under its icon, and why it asks for the local network. */
+"CFBundleDisplayName" = "Fine Print";
+"CFBundleName" = "Fine Print";
+"NSLocalNetworkUsageDescription" = "Fine Print connects to the table running on your Mac.";
