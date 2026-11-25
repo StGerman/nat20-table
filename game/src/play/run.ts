@@ -24,7 +24,7 @@ import type { RunRecord } from "./record.ts";
 export const TARGET_P95_MS = { player: 10_000, dm: 6_000 };
 
 /** Talk-round targets (party talk §2, goals 2 and 5): the silent share of AI player slots, the first line's p50, the round's p95. */
-export const TALK_TARGETS = { silentShare: 0.3, firstLineP50Ms: 7_000, roundP95Ms: 20_000, fightLinesPerRound: 0.5 };
+export const TALK_TARGETS = { silentShare: 0.3, firstLineP50Ms: 7_000, roundP95Ms: 20_000 };
 
 export interface PackParty {
   /** The human's character; absent for a table with no human (`--seat ai`, AGT-40). */
@@ -298,15 +298,16 @@ export function talkLines(rounds: TalkRound[], scenes: readonly SceneTime[] = []
 }
 
 /**
- * The report's lines on talk in fights (party talk goal 4, §5): the AI players' lines per combat
- * round, on their own turns and between them, and how the reactions between turns went (R1).
+ * The report's lines on talk in fights (party talk §5): the AI players' lines per combat round, on
+ * their own turns and between them, counted with no target (goal 4 dropped, Stas 2026-11-24), and
+ * how the reactions between turns went (R1).
  */
 export function fightLines(run: Pick<RunReport, "reactions" | "fight">, usage: UsageRecord[]): string[] {
   if (run.fight.rounds === 0) return [];
   const count = (pick: (r: FightReaction) => number) => run.reactions.reduce((n, r) => n + pick(r), 0);
   const barks = usage.filter((u) => u.purpose === "bark").map((u) => u.wall_ms);
   return [
-    `- Fight talk: ${run.fight.lines} AI lines in ${run.fight.rounds} combat rounds, ${(run.fight.lines / run.fight.rounds).toFixed(2)} a round (target about ${TALK_TARGETS.fightLinesPerRound})`,
+    `- Fight talk: ${run.fight.lines} AI lines in ${run.fight.rounds} combat rounds, ${(run.fight.lines / run.fight.rounds).toFixed(2)} a round`,
     ...(run.reactions.length > 0
       ? [
           `- Fight reactions: triggers ${run.reactions.length}; bark wakes ${count((r) => r.woke.length)}; lines shown ${count((r) => (r.spoke ? 1 : 0))}, passed ${count((r) => r.passed.length)}, beaten by another's line ${count((r) => r.beaten.length)}, cancelled or timed out ${count((r) => r.cut.length)}; bark wake p50 ${percentile(barks, 50) || "n/a"} ms, p95 ${percentile(barks, 95) || "n/a"} ms`,

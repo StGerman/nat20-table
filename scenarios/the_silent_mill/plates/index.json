@@ -1,0 +1,11 @@
+{
+  "_comment": "What the human's window shows of each scene's place (CON-26): the name it may show, the picture in this folder and the key of the place's drawn plan. A picture named here and not drawn yet is shown as a placeholder with its name on it. Pictures: README.md.",
+  "scenes": {
+    "s1_village_green": { "name": "The village green", "name_ru": "Луг в Вендфорде", "plate": "green.jpg", "plan": "green" },
+    "s2_mill_road": { "name": "The mill road", "name_ru": "Дорога к мельнице", "plate": "mill-road.jpg", "plan": "mill-road" },
+    "s3_mill_yard": { "name": "The mill yard", "name_ru": "Двор мельницы", "plate": "mill-yard.jpg", "plan": "mill-yard" },
+    "s4_captured_goblin": { "name": "The mill's storeroom", "name_ru": "Кладовая мельницы", "plate": "storeroom.jpg", "plan": "storeroom" },
+    "s5_mill_cellar": { "name": "The mill cellar", "name_ru": "Подвал мельницы", "plate": "cellar.jpg", "plan": "cellar" },
+    "s6_wrap_up": { "name": "Back on the green", "name_ru": "Снова на лугу", "plate": "green-after.jpg", "plan": "green" }
+  }
+}

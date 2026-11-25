@@ -4,14 +4,14 @@
 // the capsule with health and the turn's budget), the roll stage over all. It
 // draws from the wire's data, not from the terminal's lines (Stas, 2026-11-21); every word it shows
 // is the host's or one of the page's labels in UI_WORDS. It talks to nothing but the seat wire.
-import { createElement as h, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createElement as h, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { COMMAND_HELP, readLine } from "../ui/input.ts";
 import { UI_WORDS, type UiWords } from "../table/words.ts";
 import type { HumanPrompt, PlayerIntent, TableEvent } from "../table/types.ts";
 import type { Choice } from "../table/choices.ts";
 import { nameSpans, PEOPLE_WORDS, personCard, type Person, type PersonState } from "../ui/people.ts";
 import { FINISHES, mount, type Die, type Finish } from "./d20.ts";
-import { faceOf } from "./portraits.ts";
+import { faceFile, faceOf } from "./portraits.ts";
 import { chipsOf, costOf, named, placeholder, shownName, ui } from "./chrome.ts";
 import { ME_SPOTS, PLACE_SPOTS, placeLabels, TOKEN_SPOTS } from "./labels.ts";
 import { meOf, placed, type CardView, type Dock, type PageView, type RollToken, type StoryLine } from "./reduce.ts";
@@ -134,7 +134,9 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
       { className: `win native show-${shell.show} ${s?.mode === "combat" ? "scene-fight" : "scene-road"}`, lang: view.hello.language },
       h("div", { className: "ambient", "aria-hidden": true }),
       content,
-      view.stage && shell.show === "story" ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish, settled }) : null,
+      // The finish is chosen on «Лист», which is another page in a native shell: the story's page
+      // reads the choice as each roll takes the stage, not once when it was loaded.
+      view.stage && shell.show === "story" ? h(Stage, { key: view.stage, roll: view.rolls[view.stage], finish: savedFinish(), settled }) : null,
     );
   }
   return h(
@@ -310,7 +312,7 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
     const id = `clip-${handle}`;
     return h(
       "g",
-      { key: handle, className: `who ${cls}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
+      { key: handle, className: `who ${cls}${face ? "" : " noface"}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
       h("title", null, title),
       h("circle", { r: 1.9, className: "disc" }),
       face
@@ -327,7 +329,8 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
     { className: "lens yard", "data-test": "lens" },
     h(
       "svg",
-      { viewBox: `0 0 ${x1 - x0} ${y1 - y0}`, role: "img", "aria-label": words.where },
+      // The yard's size in feet, for the native shell's scale (page.css).
+      { viewBox: `0 0 ${x1 - x0} ${y1 - y0}`, role: "img", "aria-label": words.where, style: { "--ft": x1 - x0, "--ft-h": y1 - y0 } as CSSProperties },
       walk > 0
         ? h(
             "g",
@@ -351,6 +354,25 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
       }),
       token(me, named(view, me), p.me, "me", named(view, me), words.you),
     ),
+    h(Missing, { view, handles: [me, ...who.map((w) => w.handle)] }),
+  );
+}
+
+/**
+ * What is not drawn yet, by its type and its own name (CON-26, Stas 2026-11-25): the place's plan
+ * under «Где все», and the portraits of those standing here. Read off a picture of the window, it
+ * says which file to draw.
+ */
+function Missing({ view, handles }: { view: PageView; handles: string[] }): ReactNode {
+  const words = ui(view).page;
+  const plan = view.situation?.place?.plan;
+  const faces = [...new Set(handles.filter((handle) => !faceOf(handle)).map(faceFile))].sort();
+  if (!plan && faces.length === 0) return null;
+  return h(
+    "div",
+    { className: "missing", "data-test": "missing" },
+    plan ? h("p", { "data-missing": "plan" }, h("b", null, words.noPlan), " ", plan) : null,
+    faces.length > 0 ? h("p", { "data-missing": "faces" }, h("b", null, words.noFaces), " ", faces.join(", ")) : null,
   );
 }
 

@@ -39,6 +39,8 @@ export interface WebSeatOptions {
   record?: (drawn: { kind: string; text: string }) => void;
   /** The window asked to stop (a `quit` with no ask open): the run command ends the table between decisions. */
   onQuit?: () => void;
+  /** Each frame the window sent, as it came and before it is read: for a test that checks what a client writes (the shell's, CON-22). */
+  heard?: (frame: string) => void;
   /** The port to listen on; 0 (default) takes a free one. */
   port?: number;
   /** Origins allowed besides none; default the shell's. */
@@ -222,6 +224,7 @@ export class WebSeat implements Seat {
   }
 
   private received(text: string): void {
+    this.options.heard?.(text);
     let parsed: unknown;
     try {
       parsed = JSON.parse(text);
