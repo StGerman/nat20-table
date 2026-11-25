@@ -39,6 +39,8 @@ targets:
         buildPhase: resources
       - path: ../game/test/fixtures/the-way-back-ru.seat-wire.jsonl
         buildPhase: resources
+      - path: ../game/test/fixtures/green.seat-wire.jsonl
+        buildPhase: resources
     info:
       path: iOS/Info.plist
       properties:
@@ -84,6 +86,8 @@ targets:
       - path: ../game/test/fixtures/yard.seat-wire.jsonl
         buildPhase: resources
       - path: ../game/test/fixtures/the-way-back-ru.seat-wire.jsonl
+        buildPhase: resources
+      - path: ../game/test/fixtures/green.seat-wire.jsonl
         buildPhase: resources
     info:
       path: Mac/Info.plist

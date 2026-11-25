@@ -148,6 +148,18 @@ test("the human, scripted, plays the Milestone 3 trail across five scenes, and t
   matchesFixture("m3_trail", t.runDir);
 });
 
+test("the human's window is told the place of the scene it is in, from the pack's places, and nothing where the pack names none (CON-26)", async () => {
+  const green = { name: "The green", plate: "pack/green.jpg", plan: "pack/green" };
+  const yard = { name: "The yard", plate: "pack/yard.jpg", plan: "pack/yard" };
+  const { seat } = await play({ seed: 5, scene: "m3_s1_green", players: {}, dm: trailDm(), situation: true, loop: { places: new Map([["m3_s1_green", green], ["m3_s3_yard", yard]]) } });
+  const told = seat.shown.flatMap((e) => (e.kind === "situation" ? [e.place] : []));
+  // In the order played: the green, the road with no place, the yard, and none after it.
+  const order = told.filter((place, i) => i === 0 || place !== told[i - 1]);
+  assert.deepEqual(order, [green, undefined, yard, undefined]);
+  const plain = await play({ seed: 5, scene: "m3_s1_green", players: {}, dm: trailDm(), situation: true });
+  assert.ok(plain.seat.shown.filter((e) => e.kind === "situation").every((e) => !("place" in e)), "a table with no places tells none");
+});
+
 test("the scripted table plays The Silent Mill from Scene 1 to 6, and the transcript replays exactly (AGT-39)", async () => {
   // The real pack, chained scene to scene by the scripted DM; the AI players heal a downed ally
   // first. Seed 350 is one where the party gets through the cellar (most seeds don't: MON-10).

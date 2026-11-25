@@ -116,6 +116,14 @@ struct Chrome: Codable, Equatable {
         var canWhere: Bool
     }
 
+    /// The place of the scene (CON-26): its name, the picture of it and the key of its drawn plan,
+    /// each `<pack>/<name>`. The shell draws the picture from the files it holds beside the page.
+    struct Place: Codable, Equatable {
+        var name: String
+        var plate: String
+        var plan: String
+    }
+
     var seq: Int
     var language: String
     var title: String
@@ -126,4 +134,7 @@ struct Chrome: Codable, Equatable {
     var tabs: Tabs
     var stage: Bool
     var sheetStale: Bool
+    /// A fight is on: the picture of the place gives way to «Где все».
+    var fight: Bool?
+    var place: Place?
 }

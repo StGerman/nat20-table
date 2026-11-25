@@ -11,7 +11,7 @@ import type { HumanPrompt, PlayerIntent, TableEvent } from "../table/types.ts";
 import type { Choice } from "../table/choices.ts";
 import { nameSpans, PEOPLE_WORDS, personCard, type Person, type PersonState } from "../ui/people.ts";
 import { FINISHES, mount, type Die, type Finish } from "./d20.ts";
-import { faceOf } from "./portraits.ts";
+import { faceFile, faceOf } from "./portraits.ts";
 import { chipsOf, costOf, named, placeholder, shownName, ui } from "./chrome.ts";
 import { meOf, placed, type CardView, type Dock, type PageView, type RollToken, type StoryLine } from "./reduce.ts";
 
@@ -291,7 +291,7 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
     const id = `clip-${handle}`;
     return h(
       "g",
-      { key: handle, className: `who ${cls}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
+      { key: handle, className: `who ${cls}${face ? "" : " noface"}`, "data-handle": handle, transform: `translate(${X(at.x_ft)} ${Y(at.y_ft)})` },
       h("title", null, title),
       h("circle", { r: 1.9, className: "disc" }),
       face ? [h("clipPath", { key: "c", id }, h("circle", { r: 1.65 })), h("image", { key: "i", href: face, x: -1.65, y: -1.65, width: 3.3, height: 3.3, clipPath: `url(#${id})` })] : h("text", { className: "ini", dy: "0.35em" }, initial(name)),
@@ -326,6 +326,25 @@ function Lens({ view, looks }: { view: PageView; looks: Looks }): ReactNode {
       }),
       token(me, named(view, me), p.me, "me", named(view, me), words.you),
     ),
+    h(Missing, { view, handles: [me, ...who.map((w) => w.handle)] }),
+  );
+}
+
+/**
+ * What is not drawn yet, by its type and its own name (CON-26, Stas 2026-11-25): the place's plan
+ * under «Где все», and the portraits of those standing here. Read off a picture of the window, it
+ * says which file to draw.
+ */
+function Missing({ view, handles }: { view: PageView; handles: string[] }): ReactNode {
+  const words = ui(view).page;
+  const plan = view.situation?.place?.plan;
+  const faces = [...new Set(handles.filter((handle) => !faceOf(handle)).map(faceFile))].sort();
+  if (!plan && faces.length === 0) return null;
+  return h(
+    "div",
+    { className: "missing", "data-test": "missing" },
+    plan ? h("p", { "data-missing": "plan" }, h("b", null, words.noPlan), " ", plan) : null,
+    faces.length > 0 ? h("p", { "data-missing": "faces" }, h("b", null, words.noFaces), " ", faces.join(", ")) : null,
   );
 }
 

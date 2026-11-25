@@ -132,7 +132,7 @@ test("inside a native shell, «Где все» and «Лист» play a recorded 
   }
 });
 
-test("inside a native shell, «Где все» draws the yard for the page it is given: a phone's scale on a phone, the whole yard in a wide window or on the right page of the Mac's open book, never under 10 px a foot, and «Лист» keeps to a column", async ({ page }) => {
+test("inside a native shell, «Где все» draws the yard for the page it is given: a phone's scale on a phone, the whole yard in a wide window or on the right page of the Mac's open book, never under 8 px a foot, and «Лист» keeps to a column", async ({ page }) => {
   // Stas's Mac, 2026-11-25: full screen drew the yard at the phone's 185% of the page's width, and the sheet across it.
   const yard = () => page.evaluate(() => {
     const svg = document.querySelector(".lens.yard svg")!;
@@ -149,20 +149,20 @@ test("inside a native shell, «Где все» draws the yard for the page it is
   await open("where");
   const wide = await yard();
   expect(wide.width).toBeLessThanOrEqual(1728);
-  expect(wide.width / wide.feet).toBeGreaterThanOrEqual(10);
+  expect(wide.width / wide.feet).toBeGreaterThanOrEqual(8);
   expect(wide.width / wide.feet).toBeLessThanOrEqual(18);
   // A window too small for the whole yard keeps a name readable and scrolls, as the phone does.
-  await page.setViewportSize({ width: 700, height: 600 });
+  await page.setViewportSize({ width: 520, height: 600 });
   await open("where");
   const small = await yard();
-  expect(small.width / small.feet).toBeCloseTo(10, 1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeGreaterThan(700);
+  expect(small.width / small.feet).toBeCloseTo(8, 1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeGreaterThan(520);
   // The right page of the Mac's open book (CON-25) is taller than wide and no phone: full screen it
   // takes the window's scale, and in the narrowest book it is a phone's width and keeps the phone's.
   await page.setViewportSize({ width: 795, height: 950 });
   await open("where");
   const right = await yard();
-  expect(right.width / right.feet).toBeGreaterThanOrEqual(10);
+  expect(right.width / right.feet).toBeGreaterThanOrEqual(8);
   expect(right.width / right.feet).toBeLessThanOrEqual(18);
   expect(right.width).toBeLessThan(795 * 1.85);
   await page.setViewportSize({ width: 396, height: 560 });
@@ -196,4 +196,35 @@ test("inside a native shell, a die finish chosen on «Лист» is the one the 
   expect(roll).toBeGreaterThan(0);
   await host(page, lines.slice(0, roll + 1).map((r) => (r.event !== undefined ? { type: "event", seq: r.seq, event: r.event } : r.message)));
   await expect(page.locator("canvas[data-face]").first()).toHaveAttribute("data-finish", finish!);
+});
+
+test("«Где все» says what is not drawn yet by its own name: the place's plan, and the portrait of each one standing here with none (CON-26)", async ({ page }) => {
+  const open = async (fixture: string, to: number) => {
+    await page.goto(`/index.html?shell=native&show=where&replay=/fixtures/${fixture}&to=${to}&language=ru&handle=bren`);
+    await page.waitForFunction(() => window.__nat20?.done === true, undefined, { timeout: 20_000 });
+  };
+  await page.setViewportSize({ width: 676, height: 912 });
+  // The green: everyone here has a face, and the place's plan is not drawn.
+  await open("green.seat-wire.jsonl", 2);
+  await expect(page.locator('[data-missing="plan"]')).toHaveText("Нет плана места: the_silent_mill/green");
+  await expect(page.locator('[data-missing="faces"]')).toHaveCount(0);
+  await expect(page.locator(".lens .who.noface")).toHaveCount(0);
+  await expect(page.locator('.lens .who[data-handle="osric_hale"] image')).toHaveCount(1);
+  // The yard, recorded before places were told: no plan is named, and the wolf and the boss have no portrait.
+  await open("yard.seat-wire.jsonl", 74);
+  await expect(page.locator('[data-missing="plan"]')).toHaveCount(0);
+  const faces = (await page.locator('[data-missing="faces"]').textContent()) ?? "";
+  expect(faces.startsWith("Нет портретов: ")).toBe(true);
+  const files = faces.replace("Нет портретов: ", "").split(", ");
+  expect(files.length).toBeGreaterThan(0);
+  for (const file of files) expect(file).toMatch(/^[a-z_]+\.jpg$/);
+  expect(await page.locator(".lens .who.noface").count()).toBeGreaterThanOrEqual(files.length);
+  // A foe with no portrait is still ringed as a foe: the dashes do not take the ring's colour.
+  const ring = (selector: string) => page.locator(selector).first().evaluate((disc) => getComputedStyle(disc).stroke);
+  expect(await page.locator(".lens .who.hostile.noface").count()).toBeGreaterThan(0);
+  expect(await ring(".lens .who.hostile.noface .disc")).toBe(await ring(".lens .who.hostile:not(.noface) .disc"));
+  // The chip lies inside the page and off the people it names.
+  const chip = (await page.locator('[data-test="missing"]').boundingBox())!;
+  expect(chip.x).toBeGreaterThanOrEqual(0);
+  expect(chip.y + chip.height).toBeLessThanOrEqual(912);
 });

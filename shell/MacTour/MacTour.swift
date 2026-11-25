@@ -11,9 +11,9 @@
 // `testPictures` opens the window on recorded runs and keeps what it shows, light and dark: first
 // as it opens, one page at a time; then it makes an open window wide while the table is in it
 // (`-widen`), and the app must go on as an open book (CON-25); then wide from the start
-// (`-wide 1`): the story beside «Где все» or «Лист». Between them it leaves a table that does not
-// answer, by the line's button and by the menu. The tour above runs before it, in the window as it
-// opens.
+// (`-wide 1`): the story beside «Где все» or «Лист», and beside the picture of the place where the
+// table names one (CON-26). Between them it leaves a table that does not answer, by the line's
+// button and by the menu. The tour above runs before it, in the window as it opens.
 import XCTest
 
 final class MacTour: XCTestCase {
@@ -99,6 +99,8 @@ final class MacTour: XCTestCase {
     @MainActor
     func testPictures() {
         let yard = ["-replay", "yard.seat-wire.jsonl", "-to", "74"]
+        let green = ["-replay", "green.seat-wire.jsonl", "-to", "2"]
+        let road = ["-replay", "green.seat-wire.jsonl", "-to", "5"]
         let wide = ["-wide", "1"]
         let narrow: [(String, [String])] = [
             ("01-yard-turn-light", yard),
@@ -123,6 +125,18 @@ final class MacTour: XCTestCase {
             ("14-book-yard-list-light", yard + wide + ["-open", "moves"]),
             ("15-book-road-card-light", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17"] + wide),
             ("16-book-road-card-dark", ["-replay", "the-way-back-ru.seat-wire.jsonl", "-to", "17", "-dark", "1"] + wide),
+            // The green (CON-26): the picture of the place on the right page, and «Где все» with the
+            // faces of those standing there when the page is turned to it. The road after it, whose
+            // picture is not drawn: the placeholder that names it. A fight on that road: the page
+            // turns to «Где все» by itself, where the wolf has no portrait and the place no plan.
+            ("51-book-green-plate-light", green + wide),
+            ("52-book-green-plate-dark", green + wide + ["-dark", "1"]),
+            ("53-book-green-where-light", green + wide + ["-screen", "where"]),
+            ("54-book-green-where-dark", green + wide + ["-screen", "where", "-dark", "1"]),
+            ("55-book-road-unpainted-light", road + wide),
+            ("56-book-road-unpainted-dark", road + wide + ["-dark", "1"]),
+            ("57-book-road-fight-light", ["-replay", "green.seat-wire.jsonl"] + wide),
+            ("58-book-road-fight-dark", ["-replay", "green.seat-wire.jsonl", "-dark", "1"] + wide),
         ]
         shoot(book)
     }
@@ -145,6 +159,18 @@ final class MacTour: XCTestCase {
                 }
                 let right = app.descendants(matching: .any).matching(identifier: "book-right").firstMatch
                 XCTAssertEqual(right.exists, width >= 860, "\(name): a window \(width) points wide")
+            }
+            // The right page of a place the table names: its picture, or the placeholder that says
+            // which picture is not drawn, and neither in a fight or once the page is turned to «Где все».
+            let plate = app.descendants(matching: .any).matching(identifier: "plate").firstMatch
+            let unpainted = app.descendants(matching: .any).matching(identifier: "plate-missing").firstMatch
+            if name.contains("-plate-") {
+                XCTAssertTrue(plate.waitForExistence(timeout: 10), "\(name): the right page shows the picture of the place")
+            } else if name.contains("-unpainted-") {
+                XCTAssertTrue(unpainted.waitForExistence(timeout: 10), "\(name): the right page says which picture is not drawn")
+                XCTAssertFalse(plate.exists, "\(name): no picture stands for one that is not drawn")
+            } else {
+                XCTAssertFalse(plate.exists || unpainted.exists, "\(name): no picture where the table names no place, in a fight, or with the page turned")
             }
             if name.hasPrefix("01") {
                 // The game's menu, open over the turn: each move with its key.

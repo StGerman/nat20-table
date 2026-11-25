@@ -37,6 +37,10 @@ struct Words {
     /// The Mac's menu bar: the menu of the game's commands, and the command that opens the whole list.
     let game: String
     let whole: String
+    /// The picture of the scene's place (CON-26): its page in the Mac's open book, and what stands
+    /// there, over the place's name and the file's, while the picture is not drawn.
+    let picture: String
+    let noPlate: String
 
     static let ru = Words(
         linkHeader: "Ссылка на игру",
@@ -64,7 +68,9 @@ struct Words {
         playHere: "Играть здесь",
         send: "Отправить",
         game: "Игра",
-        whole: "Весь список"
+        whole: "Весь список",
+        picture: "Место",
+        noPlate: "Картина места не нарисована"
     )
 
     static let en = Words(
@@ -93,7 +99,9 @@ struct Words {
         playHere: "Play here",
         send: "Send",
         game: "Game",
-        whole: "The whole list"
+        whole: "The whole list",
+        picture: "The place",
+        noPlate: "The picture of the place is not drawn yet"
     )
 
     /// The table's language (`hello`, by way of the chrome state), or the phone's with no table.

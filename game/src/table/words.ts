@@ -540,6 +540,9 @@ export interface UiWords {
     /** «Где все»: the human's own token, and the ring of where they can walk this turn. */
     you: string;
     walk: string;
+    /** What is not drawn yet, before its own name (CON-26): the place's plan, the portraits of those here. */
+    noPlan: string;
+    noFaces: string;
     /** «Лист» before the seat has shown a sheet, or since the character changed: when a fresh one comes. */
     sheetLater: string;
     /** The die finish switch in «Лист» (the terminal has no die). */
@@ -698,6 +701,8 @@ export const UI_WORDS: Record<Language, UiWords> = {
       near: "Near",
       you: "you",
       walk: "You can get here this turn",
+      noPlan: "No plan of the place:",
+      noFaces: "No portraits:",
       sheetLater: "A fresh sheet comes when the table comes to you.",
       die: "Die",
       finish: { chrome: "mirror", wire: "wire", glass: "glass" },
@@ -850,6 +855,8 @@ export const UI_WORDS: Record<Language, UiWords> = {
       near: "Рядом",
       you: "вы",
       walk: "Сюда дойдёте за этот ход",
+      noPlan: "Нет плана места:",
+      noFaces: "Нет портретов:",
       sheetLater: "Свежий лист придёт, когда очередь дойдёт до вас.",
       die: "Кубик",
       finish: { chrome: "зеркальный", wire: "проволочный", glass: "стеклянный" },
