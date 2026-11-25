@@ -75,7 +75,7 @@ struct Tabs: View {
             case .moves:
                 MovesSheet(shell: shell)
             case .lines(let title, let rows):
-                LinesSheet(title: title, rows: rows)
+                LinesSheet(title: title, rows: rows, face: shell.face)
             }
         }
     }

@@ -231,3 +231,44 @@ test("«Где все» says what is not drawn yet by its own name: the place's 
   expect(chip.x).toBeGreaterThanOrEqual(0);
   expect(chip.y + chip.height).toBeLessThanOrEqual(912);
 });
+
+test("inside a native shell the story opens a new place with its picture from edge to edge of a phone, names the file of one not drawn yet, keeps only the name in an open book, and hands a person's card to the shell with their face (CON-27)", async ({ page }) => {
+  const open = async (to: number) => {
+    await page.goto(`/index.html?shell=native&show=story&replay=/fixtures/green.seat-wire.jsonl&to=${to}&language=ru&handle=bren`);
+    await page.waitForFunction(() => window.__nat20?.done === true, undefined, { timeout: 20_000 });
+  };
+  await page.setViewportSize({ width: 393, height: 700 });
+  // The green: its picture is drawn, and stands over the words that tell the place.
+  await open(2);
+  const green = page.locator('figure.plate[data-plate="the_silent_mill/green.jpg"]');
+  await expect(green.locator("figcaption")).toHaveText("Луг в Вендфорде");
+  const picture = green.locator("img");
+  await expect.poll(() => picture.evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0))).toBeGreaterThan(0);
+  const box = (await picture.boundingBox())!;
+  expect(box.x).toBe(0);
+  expect(box.width).toBe(393);
+  expect(box.height).toBeLessThanOrEqual(700 * 0.64 + 1);
+  expect(box.y + box.height).toBeLessThanOrEqual((await page.locator(".beat.narration").first().boundingBox())!.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(393);
+  // A name touched in the story: the card the shell is handed carries the face the page draws.
+  await page.locator('.name[data-person="osric_hale"]').first().click();
+  const card = (await posted(page)).filter((p) => p.type === "open").at(-1) as unknown as { what: string; name: string; face?: string };
+  expect(card.what).toBe("person");
+  expect(card.face).toMatch(/^data:image\/jpeg;base64,/);
+  // An open book has the picture on its right page: the story keeps the place's name only.
+  await page.evaluate(() => window.__nat20Shell!.book(true));
+  await expect(picture).toBeHidden();
+  await expect(green.locator("figcaption")).toBeVisible();
+  // The road: its picture is not drawn, and the story says which file that is, inside the page.
+  await open(5);
+  const road = page.locator('figure.plate[data-plate="the_silent_mill/mill-road.jpg"]');
+  await expect(road.locator("figcaption")).toHaveText("Дорога к мельнице");
+  const none = road.locator('[data-missing="plate"]');
+  await expect(none).toContainText("Картина места не нарисована");
+  await expect(none).toContainText("the_silent_mill/mill-road.jpg");
+  const frame = (await none.boundingBox())!;
+  expect(frame.x).toBeGreaterThanOrEqual(0);
+  expect(frame.x + frame.width).toBeLessThanOrEqual(393);
+  // The green's picture stays above, over its own words.
+  await expect(page.locator("figure.plate")).toHaveCount(2);
+});

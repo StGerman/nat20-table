@@ -51,6 +51,7 @@ struct PageScheme: URLSchemeHandler {
         case "css": return "text/css; charset=utf-8"
         case "jsonl": return "application/x-ndjson; charset=utf-8"
         case "json": return "application/json; charset=utf-8"
+        case "jpg": return "image/jpeg"
         default: return "application/octet-stream"
         }
     }

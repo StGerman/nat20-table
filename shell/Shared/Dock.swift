@@ -413,10 +413,18 @@ struct MovesSheet: View {
 struct LinesSheet: View {
     let title: String
     let rows: [String]
+    /// A person's card opens with their face, where the page has one (CON-27).
+    var face: String?
 
     var body: some View {
         NavigationStack {
             List {
+                if let face {
+                    Face(url: face)
+                        .frame(maxWidth: .infinity)
+                        .listRowSeparator(.hidden)
+                        .accessibilityHidden(true)
+                }
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                     Text(row)
                 }
@@ -425,6 +433,31 @@ struct LinesSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+/// A face the page hands over with a person's card: the data URL it draws the face from itself.
+/// The shell holds no portraits of its own.
+struct Face: View {
+    let url: String
+
+    var body: some View {
+        if let picture {
+            picture
+                .resizable()
+                .scaledToFill()
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
+        }
+    }
+
+    private var picture: Image? {
+        guard let comma = url.firstIndex(of: ","), let data = Data(base64Encoded: String(url[url.index(after: comma)...])) else { return nil }
+        #if os(macOS)
+        return NSImage(data: data).map { Image(nsImage: $0) }
+        #else
+        return UIImage(data: data).map { Image(uiImage: $0) }
+        #endif
     }
 }
 

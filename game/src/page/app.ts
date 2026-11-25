@@ -30,7 +30,7 @@ export interface AppProps {
 export interface Shell {
   /** Which content this web view draws. */
   show: "story" | "where" | "sheet" | "people";
-  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[] } | { what: "lines"; title: string; rows: string[] } | { what: "none" }): void;
+  open(what: { what: "rolls"; rolls: RollToken[] } | { what: "person"; name: string; rows: string[]; face?: string } | { what: "lines"; title: string; rows: string[] } | { what: "none" }): void;
 }
 
 type Options = Extract<TableEvent, { kind: "options" }>;
@@ -122,7 +122,9 @@ export function App({ view, send, settled, shell }: AppProps): ReactNode {
       const p = view.people.find((q) => q.id === id);
       if (!p) return;
       const [name, ...rows] = personCard(p, peopleWords(view)).slice(0, -1);
-      shell.open({ what: "person", name, rows });
+      // Their face goes with the card as the page draws it itself (CON-27): the shell holds no portraits.
+      const face = faceOf(p.id);
+      shell.open({ what: "person", name, rows, ...(face ? { face } : {}) });
     };
     const content =
       shell.show === "where" ? (looks ? h(Lens, { view, looks }) : null)
@@ -430,18 +432,27 @@ function CharSheet({ view, finish, choose, close }: { view: PageView; finish: Fi
 
 function Story({ view, open, pop }: { view: PageView; open(id: string): void; pop(p: Pop): void }): ReactNode {
   const box = useRef<HTMLElement>(null);
+  /** The picture of a place the page has already stopped at. */
+  const stopped = useRef<number | undefined>(undefined);
+  // A place that opened since the human last answered: its picture, which the story is read from.
+  const opener = view.story.find((line) => line.beat === "plate" && line.id >= view.fresh)?.id;
   // The newest line sits just above the dock: the column's bottom padding is the dock's height.
   useEffect(() => {
     const el = box.current;
     if (!el) return;
+    // A new place is read from its picture down (CON-27): the page stops at the picture once, when
+    // it comes, and whatever comes after is shown from the end as before.
+    const plate = opener !== undefined && stopped.current !== opener ? el.querySelector(`[data-row="${opener}"]`) : null;
+    if (opener !== undefined) stopped.current = opener;
     // Inside a native shell the document scrolls, so the shell's bars can follow it.
-    const down = () => (document.documentElement.classList.contains("native") ? scrollTo({ top: document.documentElement.scrollHeight }) : el.scrollTo?.({ top: el.scrollHeight }));
+    const end = () => (document.documentElement.classList.contains("native") ? scrollTo({ top: document.documentElement.scrollHeight }) : el.scrollTo?.({ top: el.scrollHeight }));
+    const down = () => (plate ? plate.scrollIntoView?.({ block: "start" }) : end());
     down();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(down);
     ro.observe(el.firstElementChild ?? el);
     return () => ro.disconnect();
-  }, [view.story.length, view.preview]);
+  }, [view.story.length, view.preview, opener]);
   return h(
     "section",
     { ref: box, className: "story", "aria-live": "polite", "aria-relevant": "additions" },
@@ -482,12 +493,30 @@ function Row({ line, now, view, open, pop }: { line: StoryLine; now: boolean; vi
       );
     case "place":
       return h("p", { className: cls, "data-row": line.id }, line.text);
+    case "plate":
+      return h(Plate, { line, cls, none: ui(view).page.noPlate });
     case "info":
       return h("div", { className: cls, "data-row": line.id }, line.title ? h("p", { className: "place" }, line.title) : null, line.text.split("\n").map((t, i) => h("p", { key: i }, spans(t, view.people, open))));
     case "fact":
     case "end":
       return h("p", { className: cls, "data-row": line.id }, spans(line.text, view.people, open), tokens(line.rolls));
   }
+}
+
+/**
+ * The picture a new place opens with (CON-27), the place's name lettered under it. A picture the
+ * page's files do not hold is a placeholder that says so over the file's name, as the Mac's right
+ * page does (CON-26): read off a picture of the screen, it tells which file to draw.
+ */
+function Plate({ line, cls, none }: { line: StoryLine; cls: string; none: string }): ReactNode {
+  const [gone, setGone] = useState(false);
+  const file = line.title ?? "";
+  return h(
+    "figure",
+    { className: `${cls}${gone ? " undrawn" : ""}`, "data-row": line.id, "data-plate": file },
+    gone ? h("div", { className: "plate-none", "data-missing": "plate" }, h("b", null, none), h("span", null, file)) : h("img", { src: `plates/${file}`, alt: "", draggable: false, onError: () => setGone(true) }),
+    h("figcaption", null, line.text),
+  );
 }
 
 /**
@@ -814,13 +843,13 @@ function PeopleList({ view, open, close }: { view: PageView; open(id: string): v
         "section",
         { key: title },
         h("h3", null, title),
-        people.map((p) => h("button", { key: p.id, type: "button", className: "person", "data-person": p.id, onClick: () => open(p.id) }, h("span", { className: "medal", "aria-hidden": true }, initial(p.name)), p.name)),
+        people.map((p) => h("button", { key: p.id, type: "button", className: "person", "data-person": p.id, onClick: () => open(p.id) }, h(Medal, { handle: p.id, name: p.name }), p.name)),
       ),
     ),
   );
 }
 
-/** "What your character knows" of one person: the terminal's person card, with their initial. */
+/** "What your character knows" of one person: the terminal's person card, with their face, or their initial where none is drawn. */
 function PersonCard({ view, id, close }: { view: PageView; id: string; close(): void }): ReactNode {
   const p = view.people.find((q) => q.id === id);
   if (!p) return null;
@@ -829,7 +858,7 @@ function PersonCard({ view, id, close }: { view: PageView; id: string; close(): 
   return h(
     "aside",
     { className: "person-card glass", role: "dialog", "aria-label": name, "data-test": "person-card", "data-person": id },
-    h("header", null, h("span", { className: "medal", "aria-hidden": true }, initial(p.name)), h("h2", null, name), h("button", { className: "close", onClick: close, "aria-label": ui(view).page.close }, "×")),
+    h("header", null, h(Medal, { handle: p.id, name: p.name }), h("h2", null, name), h("button", { className: "close", onClick: close, "aria-label": ui(view).page.close }, "×")),
     rows.map((row, i) => h("p", { key: i, className: row.startsWith(`${peopleWords(view).remembers}:`) ? "remembers" : "line" }, row)),
   );
 }

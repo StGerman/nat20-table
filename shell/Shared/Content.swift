@@ -25,6 +25,8 @@ final class Content {
     private var pumping = false
     /// The page is being loaded again (`recover`), and when it last was.
     private var recovering = false
+    /// The window is an open book (`book`): said again to a page that was loaded again.
+    private var asBook = false
     private var recovered: Date?
 
     /// `main` is the story's page: the one whose word on the controls the shell draws.
@@ -112,12 +114,22 @@ final class Content {
         }
     }
 
+    /// The window is an open book, with the picture of the place on its right page, or is not:
+    /// in a book the story keeps the place's name and does not draw the picture a second time.
+    func book(_ on: Bool) {
+        asBook = on
+        Task {
+            _ = try? await page.callJavaScript("if (window.__nat20Shell && window.__nat20Shell.book) window.__nat20Shell.book(on)", arguments: ["on": on])
+        }
+    }
+
     /// The page can take the host's lines now. A page that says so a second time was loaded again
     /// and holds nothing: what it was given before is gone with it.
     func isReady() {
         let again = ready || recovering
         ready = true
         recovering = false
+        if asBook { book(true) }
         if again {
             seq = 0
             waiting.removeAll()
