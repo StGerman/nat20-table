@@ -351,7 +351,8 @@ html.native:has(.win.show-where .lens.yard) body { overflow-x: auto; }
 /* The list of what is not drawn stays in a corner of the page while the yard scrolls under it. */
 .win.native .missing { position: fixed; left: 12px; bottom: 12px; max-width: calc(100vw - 24px); }
 .win.native .ambient { position: fixed; }
-.win.native .story { position: relative; inset: auto; overflow: visible; padding: 12px 20px 24px; }
+/* `--covered`: how much of the page's foot the shell's own controls stand over (its moves, the typing line). */
+.win.native .story { position: relative; inset: auto; overflow: visible; padding: 12px 20px calc(24px + var(--covered, 0px)); }
 /* A page as wide as a Mac's: the first line stands clear of the window's top, which in full screen has no title bar over it. */
 @media (min-width: 500px) { .win.native .story { padding-top: 36px; } }
 /* «Лист» keeps to a column a line can be read across, however wide the window. */
