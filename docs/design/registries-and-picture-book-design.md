@@ -1,6 +1,6 @@
 # People, places and the picture book: system design
 
-- **Status:** Proposed; accepted on merge
+- **Status:** Accepted (table #512, 2026-11-28); rows in `tasks/registries/`
 - **Date:** 2026-11-28, main bddb234
 - **Milestone:** `tasks/registries/milestone.md` (scope and exit criterion)
 - **Asked by:** Stas, 2026-11-28 («People and places registries merge with Picture-book milestone и внеси UI в scope этого milestone сразу, и подготовь /engineering:system-design»)
@@ -198,6 +198,8 @@ The page's tokens already match the prototype; the shell drifts (2026-11-27, Sta
 7. MAP-31: after each scripted death, s6 loads with its line for the dead, and s5 writes no `wenna_saved` beside `killed_wenna_thorne`.
 
 ## 9. Decisions for Stas
+
+All 13 taken as recommended (Stas, card, 2026-11-28 "Да, все"); §9.13 is decision 0101.
 
 1. **Name.** "People, places and the picture book" for the merged milestone, folder `tasks/registries/` unchanged. Recommended.
 2. **Pictures move into place records** and the pack's `plates/index.json` goes (§4.2). Recommended: one place, one record, no second list to keep in step.
