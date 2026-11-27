@@ -73,6 +73,15 @@ async function timed(id: string, run: () => Promise<string>): Promise<boolean> {
   }
 }
 
+/**
+ * The model of item 4: `SPIKE_MODEL`, else the one run.sh wrote beside the reports (the app is
+ * started with an empty environment, and a Finder launch passes none), else terra.
+ */
+function spikeModel(): string {
+  const file = path.join(reportDir, "spike-model");
+  return process.env.SPIKE_MODEL || (existsSync(file) ? readFileSync(file, "utf8").trim() : "") || "gpt-6.1-terra";
+}
+
 // Sign in with ChatGPT, the open-source local flow: no secret, a client id issued on first sign-in.
 const AUTH = "https://auth.openai.com/api/accounts";
 const API = "https://api.openai.com/v1";
@@ -91,8 +100,12 @@ function loadSecret<T>(file: string): T | undefined {
 }
 type Creds = { client_id: string; access_token: string; refresh_token?: string };
 
-/** Waits for one request on the loopback callback, with a deadline; `ready` runs once it listens. */
-function callback(ready: () => void, ms: number): Promise<Record<string, string>> {
+/**
+ * Waits on the loopback callback, with a deadline, for the request whose `state` is `state`; any
+ * other request there (a reloaded tab of an earlier attempt) is refused and the wait goes on.
+ * `ready` runs once it listens.
+ */
+function callback(state: string, ready: () => void, ms: number): Promise<Record<string, string>> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       server.close();
@@ -102,6 +115,11 @@ function callback(ready: () => void, ms: number): Promise<Record<string, string>
       const url = new URL(req.url ?? "/", REDIRECT);
       if (url.pathname !== "/auth/callback") {
         res.writeHead(404).end();
+        return;
+      }
+      if (url.searchParams.get("state") !== state) {
+        res.writeHead(400, { "content-type": "text/plain; charset=utf-8" }).end("This sign-in link is from an earlier attempt.");
+        log("callback with another state refused; still waiting");
         return;
       }
       res.writeHead(200, { "content-type": "text/plain; charset=utf-8" }).end("Done. You can close this tab.");
@@ -152,11 +170,11 @@ async function signIn(): Promise<{ creds: Creds; how: string }> {
     code_challenge: b64url(createHash("sha256").update(verifier).digest()),
   });
   const url = `${AUTH}/authorize?${params}`;
-  const answer = await callback(() => {
+  const answer = await callback(state, () => {
     log("opening the system browser for Sign in with ChatGPT");
     execFile("/usr/bin/open", [url], (error) => error && log(`open failed: ${error.message}`));
   }, 240_000);
-  if (!answer.code || answer.state !== state) throw new Error(`the callback brought no valid code (${answer.error ?? "state mismatch"})`);
+  if (!answer.code) throw new Error(`the callback brought no code (${answer.error ?? "no error given"})`);
   const clientId = answer.client_id ?? saved?.client_id;
   if (!clientId) throw new Error("the callback named no client id");
   const res = await fetch(`${AUTH}/oauth/token`, {
@@ -184,6 +202,7 @@ async function oneCall(token: string, model: string): Promise<string> {
   let text = "";
   let first: number | undefined;
   let usage: { input_tokens?: number; output_tokens?: number; input_tokens_details?: { cached_tokens?: number } } | undefined;
+  let completed = false;
   let buffer = "";
   const decoder = new TextDecoder();
   for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
@@ -203,10 +222,14 @@ async function oneCall(token: string, model: string): Promise<string> {
         first ??= Date.now() - t0;
         text += event.delta ?? "";
       }
-      if (event.type === "response.completed") usage = event.response?.usage;
-      if (event.type === "response.failed" || event.type === "error") throw new Error(`stream failed: ${JSON.stringify(event).slice(0, 300)}`);
+      if (event.type === "response.completed") {
+        completed = true;
+        usage = event.response?.usage;
+      }
+      if (event.type === "response.failed" || event.type === "response.incomplete" || event.type === "error") throw new Error(`stream failed: ${JSON.stringify(event).slice(0, 300)}`);
     }
   }
+  if (!completed || !usage) throw new Error(`the stream ended without response.completed and its usage (text so far «${text.trim()}»)`);
   if (!text) throw new Error("no text in the stream");
   return `${model}: answer «${text.trim()}»; first text ${first ?? "?"} ms; tokens in ${usage?.input_tokens ?? "?"} (cached ${usage?.input_tokens_details?.cached_tokens ?? "?"}), out ${usage?.output_tokens ?? "?"}`;
 }
@@ -312,7 +335,12 @@ await timed("2 bundled nat20-api-server answers hello", async () => {
 if (process.env.NAT20_SPIKE_NO_MODEL === "1") {
   // No browser and no account here: only that a signed bundle may listen on the loopback callback.
   await timed("3 Sign in with ChatGPT from the bundle", async () => {
-    const got = await callback(() => void fetch(`${REDIRECT}?code=ci&state=ci`).catch(() => undefined), 10_000);
+    const got = await callback("ci", () => {
+      // A stale callback first, which must be refused without ending the wait, then the right one.
+      void fetch(`${REDIRECT}?code=old&state=old`)
+        .then(() => fetch(`${REDIRECT}?code=ci&state=ci`))
+        .catch(() => undefined);
+    }, 10_000);
     if (got.code !== "ci") throw new Error("the loopback callback came back without its query");
     return `loopback callback on ${REDIRECT} reached the host; browser and account not tried (NAT20_SPIKE_NO_MODEL=1, CI)`;
   });
@@ -326,7 +354,7 @@ if (process.env.NAT20_SPIKE_NO_MODEL === "1") {
   });
   if (creds) {
     const token = creds.access_token;
-    await timed("4 one streamed ChatGPT call under the hardened runtime", () => oneCall(token, process.env.SPIKE_MODEL || "gpt-6.1-terra"));
+    await timed("4 one streamed ChatGPT call under the hardened runtime", () => oneCall(token, spikeModel()));
   } else {
     record({ id: "4 one streamed ChatGPT call under the hardened runtime", ok: false, detail: "not run: item 3 did not sign in" });
   }

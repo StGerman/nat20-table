@@ -29,6 +29,8 @@ case "$ENTITLEMENTS" in both|full|none) ;; *) echo "--entitlements takes both, f
 REPORTS="$HOME/Library/Application Support/glass-table-spike"
 mkdir -p "$REPORTS"
 LOG="$REPORTS/spike-$(date +%Y%m%d-%H%M%S).log"
+# The app gets an empty environment, so the model for item 4 goes to the host in a file.
+if [ -n "${SPIKE_MODEL:-}" ]; then printf '%s\n' "$SPIKE_MODEL" > "$REPORTS/spike-model"; else rm -f "$REPORTS/spike-model"; fi
 exec > >(tee "$LOG") 2>&1
 
 REPO="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
