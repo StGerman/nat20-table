@@ -8,13 +8,13 @@ size: M
 state: todo
 ---
 
-Glass Table design §8, §7 (§11 PR 9), as amended by the SwiftUI shell design §4 PR 7 and decision 0093; scope In 5. `Glass Table.app` in one DMG: the CON-23 Swift shell for the Mac, the compiled loop, `nat20-api-server` and the audit binaries (bundled since CON-19, table #450), the content as resources. One read-only data root for content and one writable folder for rosters and runs (defaults under `REPO` in `game/src/play/settings.ts` today; `REPO` in `game/src/paths.ts` comes from `import.meta.url`); the app starts the table server (CON-32) as its child and restarts it when it dies; a closed window leaves the game running and Cmd-Q quits through the page, so the party is saved (decision 0100). Each nested binary signed under the hardened runtime, the app notarised, the DMG built from a tag in the `release` workflow on a hosted macOS arm64 runner with the Developer ID and notary key as repository secrets (Stas, 2026-11-21 07:46Z, scope §9 question 2).
+Glass Table design §8, §7 (§11 PR 9), as amended by the SwiftUI shell design §4 PR 7 and decision 0093 and decision 0100; sign-in scope In 9. `Glass Table.app` in one DMG: the CON-23 Swift shell for the Mac, the compiled loop, `nat20-api-server` and the audit binaries (bundled since CON-19, table #450), the content as resources. One read-only data root for content and one writable folder for rosters and runs (defaults under `REPO` in `game/src/play/settings.ts` today; `REPO` in `game/src/paths.ts` comes from `import.meta.url`); the app starts the table server (CON-32) as its child and restarts it when it dies; a closed window leaves the game running and Cmd-Q quits through the page, so the party is saved (decision 0100). Each nested binary signed under the hardened runtime, the app notarised, the DMG built from a tag in the `release` workflow on a hosted macOS arm64 runner with the Developer ID and notary key as repository secrets (Stas, 2026-11-21 07:46Z, scope §9 question 2).
 
 The Mac shell itself (window, menu bar commands and keys) is CON-23, its own row: it needs no signing and no account, so it lands before this row's wait on them.
 
 Depends on: CON-20 (the report), CON-23, CON-32, AGT-147.
 
-Check (exit row 6): the DMG builds signed and notarised and starts the bundled loop and server with no checkout, Rust or Node, in CI on macOS arm64: test, no model; then Stas installs it and starts a scripted scene, 10 to 15 min: a person.
+Check (sign-in scope exit row 13): the DMG builds signed and notarised and starts the bundled loop and server with no checkout, Rust or Node, in CI on macOS arm64: test, no model; then Stas installs it and starts a scripted scene, 10 to 15 min: a person.
 
 ## Status
 
