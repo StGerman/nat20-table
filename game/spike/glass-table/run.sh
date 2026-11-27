@@ -54,7 +54,7 @@ echo "signing identity: $IDENTITY; notary profile: ${NOTARY:-none}; host entitle
 
 step "1 dependencies and the engine"
 cd "$REPO"
-[ -d node_modules/@anthropic-ai/claude-agent-sdk ] || npm ci
+[ -d node_modules/bun ] || npm ci
 # Bun comes with the repo's packages; a blocked install script leaves it without its program.
 "$BUN" --version >/dev/null 2>&1 || (cd node_modules/bun && node install.js)
 echo "bun $("$BUN" --version)"
@@ -117,10 +117,13 @@ alive() {
 }
 
 # Launches the app ($1: open, by this script, or finder, by a double-click), waits for the host's
-# report and prints it, then kills the app and looks for anything it started that outlived it. Fails
-# when no report came.
+# report and prints it, then ends the app ($2: quit, by SIGTERM, which the app takes as Cmd-Q, or
+# kill, by SIGKILL, which nothing in it can answer) and looks for anything it started that outlived
+# it. Fails when no report came.
 launch() {
-  local came=0 wait=120 hostlog app before name
+  local came=0 wait=120 hostlog app before name how="${2:-quit}"
+  # Sign in with ChatGPT waits up to 4 minutes for the browser on the first round.
+  [ "${NAT20_SPIKE_NO_MODEL:-}" = "1" ] || wait=300
   local -a pids
   touch "$BUILD/launched"
   if [ "$1" = "finder" ]; then
@@ -145,8 +148,7 @@ launch() {
     hostlog="$(fresh 'host-*.log')"
     if [ -n "$hostlog" ]; then cat "$hostlog"; else echo "(no host log: the host never started)"; fi
   fi
-  # The hard way out: the app is killed with a signal it cannot answer, so nothing in it cleans up.
-  # The host, the engine it keeps running and anything else under the app have to end by themselves.
+  # The report is written after item 6, so the window is already closed and the app still running.
   app="$(pgrep -f "$INSIDE/$NAME" | head -1)"
   if [ -z "$app" ]; then
     echo "(the app was not running any more)"
@@ -162,17 +164,25 @@ launch() {
       echo "$before" | grep -q "$name" || echo "MISSING before the kill: $name"
     done
   fi
-  kill -KILL "$app"
+  if [ "$how" = "kill" ]; then
+    # The hard way out: nothing in the app cleans up, so the host and the engine must end by themselves.
+    echo "ending the app with SIGKILL"
+    kill -KILL "$app"
+  else
+    # Cmd-Q's path (decision 0100): the app's terminate ends the host, and the host its engine.
+    echo "quitting the app (SIGTERM, which it takes as Cmd-Q)"
+    kill -TERM "$app"
+  fi
   for _ in $(seq 1 10); do
     [ -z "$(alive "${pids[@]}")" ] && break
     sleep 1
   done
   if [ -n "$(alive "${pids[@]}")" ]; then
-    echo "LEFT BEHIND 10 s after the app was killed:"
+    echo "LEFT BEHIND 10 s after the app was ended ($how):"
     alive "${pids[@]}"
     kill -KILL "${pids[@]}" 2>/dev/null || true
   else
-    echo "all ${#pids[@]} ended with the app"
+    echo "all ${#pids[@]} ended with the app ($how)"
   fi
   [ "$came" = 1 ]
 }
@@ -204,7 +214,7 @@ if [ "$ENTITLEMENTS" = "both" ]; then
     echo "skipped: signing again would undo the notarisation"
   else
     sign_all none
-    launch open || echo "round B gave no report: the compiled host does not run under the hardened runtime without its entitlements"
+    launch open kill || echo "round B gave no report: the compiled host does not run under the hardened runtime without its entitlements"
     echo
     echo "signed again as in round A, for the round below"
     sign_all full >/dev/null 2>&1

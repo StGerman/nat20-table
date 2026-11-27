@@ -1,7 +1,9 @@
 // Glass Table spike (CON-20, decision 0093): the Mac app's half of the question. A SwiftUI window
 // that starts the compiled host (../host.ts) from inside its own bundle, as the Mac shell will start
 // the table, reads the port and the token from the host's first line, connects its own socket, as
-// the shell's Wire does, and lists each item the host checked. It ends the host when it quits.
+// the shell's Wire does, and lists each item the host checked. Closing its window leaves the app
+// and the host running (decision 0100); the app ends the host when it quits, and SIGTERM quits it
+// as Cmd-Q does, so run.sh can check that path with no Automation permission.
 import AppKit
 import SwiftUI
 
@@ -86,6 +88,11 @@ final class Spike {
         }
     }
 
+    /// The window has closed: the host checks that the app is still there afterwards.
+    func windowClosed() {
+        socket?.send(.string(#"{"type":"window_closed"}"#)) { _ in }
+    }
+
     /// Ends the host with the app.
     func stop() {
         socket?.cancel(with: .goingAway, reason: nil)
@@ -122,6 +129,9 @@ final class Spike {
                     items = message.items ?? []
                 case "item":
                     if let item = message.item, !items.contains(where: { $0.id == item.id }) { items.append(item) }
+                case "close_window":
+                    // As the red button does: the window goes, and the app must stay.
+                    NSApp.windows.first(where: { $0.isVisible })?.performClose(nil)
                 case "done":
                     state = (message.all_ok == true ? "All items work. " : "Some items failed. ") + "Report: " + (message.report ?? "")
                 default:
@@ -136,11 +146,22 @@ final class Spike {
     }
 }
 
-/// Closing the window ends the app, and the app ends the host.
+/// Closing the window leaves the app running (decision 0100); quitting the app ends the host.
 @MainActor
 final class Closing: NSObject, NSApplicationDelegate {
+    private var term: DispatchSourceSignal?
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
+    }
+
+    /// SIGTERM quits the app the way Cmd-Q does, through `terminate`, so the host is ended in order.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        term = source
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -172,6 +193,7 @@ struct SpikeApp: App {
             .padding()
             .frame(minWidth: 640, minHeight: 420)
             .onAppear { spike.start() }
+            .onDisappear { spike.windowClosed() }
         }
     }
 }

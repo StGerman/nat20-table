@@ -1,8 +1,8 @@
 # The Glass Table spike (CON-20): builds the spike's Swift Mac app on a hosted Apple Silicon machine,
 # signs it ad-hoc under the hardened runtime with the compiled host and the engine inside it, and
 # launches it, so a build error is found here and not on Stas's evening at the Mac. Calls no model
-# (NAT20_SPIKE_NO_MODEL=1) and signs with no secret; the live call, the Developer ID and
-# notarisation are checked on his Mac. Not part of ci-ok.
+# (NAT20_SPIKE_NO_MODEL=1) and signs with no secret; the ChatGPT sign-in, the live call, the
+# Developer ID and notarisation are checked on his Mac. Not part of ci-ok.
 name: spike-glass-table
 
 on:
@@ -42,14 +42,16 @@ jobs:
       - name: Build, sign ad-hoc, launch through Launch Services twice, print the reports
         run: game/spike/glass-table/run.sh
       # Round A is the first report: the host signed with its entitlements. Round B, with none, is
-      # read by a person. No Claude Code is installed here, so items 3 and 4 fail by design. The app
-      # must not have been handed this step's own PATH: a double-clicked app has no shell PATH.
-      - name: Every item but the live call works, with no shell PATH, and nothing outlives the app
+      # read by a person. No ChatGPT account here: item 3 checks only the loopback callback and item 4
+      # is skipped, so item 4 fails by design. The app must not have been handed this step's own PATH:
+      # a double-clicked app has no shell PATH. Item 6: its window closed and it went on (decision 0100).
+      - name: Every item but the live call works, with no shell PATH, and the app outlives its window
         run: |
           reports="$HOME/Library/Application Support/glass-table-spike"
           node -e '
             const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-            const bad = r.items.filter((i) => !i.ok && !i.id.startsWith("3 ") && !i.id.startsWith("4 "));
+            const bad = r.items.filter((i) => !i.ok && !i.id.startsWith("4 "));
+            if (!r.items.some((i) => i.id.startsWith("6 "))) bad.push({ id: "6", detail: "missing from the report" });
             for (const i of bad) console.log("FAIL", i.id, i.detail);
             const first = r.items.find((i) => i.id.startsWith("1 "));
             const path = (first.detail.match(/PATH=(.*)$/) || [])[1] || "";

@@ -5,21 +5,25 @@
 //
 //   1. it runs as a compiled Bun file from the bundle, and what PATH the app was given;
 //   2. it starts the bundled `nat20-api-server` and gets `hello` with the schema these types expect;
-//   3. it finds the player's own Claude Code with no shell PATH (the SDK's bundled copy is never used);
-//   4. it makes one live model call through the Agent SDK, under the hardened runtime;
-//   5. it serves a WebSocket on 127.0.0.1 with a per-launch token, and the app's own socket connects.
+//   3. it signs in with ChatGPT from inside the bundle (Sign in with ChatGPT, the open-source flow):
+//      it opens the system browser itself and takes the callback on 127.0.0.1, or refreshes a sign-in
+//      an earlier round saved;
+//   4. it makes one streamed `/v1/responses` call on the player's ChatGPT plan, under the hardened runtime;
+//   5. it serves a WebSocket on 127.0.0.1 with a per-launch token, and the app's own socket connects;
+//   6. the app's window closes and the app and the host go on (decision 0100: the table server lives
+//      with the app, not its window).
 //
-// Item 4 calls a model on the Claude login of whoever runs it (decision 0036): never in a cloud
-// session, and CI sets NAT20_SPIKE_NO_MODEL=1 to skip it. Merges no game code: it reads the game's
-// agent environment and the engine client, and changes neither.
-import { spawnSync } from "node:child_process";
-import { randomBytes, timingSafeEqual } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+// Items 3 and 4 use the ChatGPT plan of whoever runs it: never in a cloud session. CI sets
+// NAT20_SPIKE_NO_MODEL=1: item 3 then checks only that the loopback callback reaches the host, and
+// item 4 is skipped. The sign-in follows the spike of 2026-11-21 (project files
+// `engine/siwc/spike.mjs`; sign-in design §5.4, §6). Merges no game code.
+import { execFile } from "node:child_process";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { homedir } from "node:os";
 import path from "node:path";
-import { query } from "@anthropic-ai/claude-agent-sdk";
 import { EngineClient } from "../../../packages/engine-client/src/index.ts";
-import { agentEnv } from "../../src/agents/env.ts";
 
 // Bun's own API, typed here so `tsc -p game` checks this file without Bun's types.
 declare const Bun: {
@@ -69,40 +73,142 @@ async function timed(id: string, run: () => Promise<string>): Promise<boolean> {
   }
 }
 
-/**
- * Where the player's own Claude Code may be, when the app has no shell PATH (launched from Finder,
- * PATH is `/usr/bin:/bin:/usr/sbin:/sbin`). In order: an explicit override, the native installer,
- * the old local install, Homebrew, npm's global prefix on Homebrew or /usr/local, then the user's
- * login shell as the last resort. Returns the path and which rule found it.
- */
-function findClaude(): { file: string; how: string } | undefined {
-  const home = homedir();
-  const candidates: Array<[string | undefined, string]> = [
-    [process.env.NAT20_CLAUDE_PATH, "NAT20_CLAUDE_PATH"],
-    [path.join(home, ".local", "bin", "claude"), "native installer (~/.local/bin)"],
-    [path.join(home, ".claude", "local", "claude"), "local install (~/.claude/local)"],
-    ["/opt/homebrew/bin/claude", "Homebrew (/opt/homebrew/bin)"],
-    ["/usr/local/bin/claude", "/usr/local/bin"],
-  ];
-  for (const [file, how] of candidates) if (file && existsSync(file)) return { file, how };
-  const shell = process.env.SHELL || "/bin/zsh";
-  const found = spawnSync(shell, ["-lic", "command -v claude"], { encoding: "utf8", timeout: 10_000 });
-  const file = found.stdout?.trim().split("\n").pop();
-  if (found.status === 0 && file && existsSync(file)) return { file, how: `login shell (${shell} -lic)` };
-  return undefined;
+// Sign in with ChatGPT, the open-source local flow: no secret, a client id issued on first sign-in.
+const AUTH = "https://auth.openai.com/api/accounts";
+const API = "https://api.openai.com/v1";
+const CALLBACK_PORT = 1455;
+const REDIRECT = `http://127.0.0.1:${CALLBACK_PORT}/auth/callback`;
+const SCOPE = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct";
+const siwcDir = path.join(reportDir, "siwc");
+const b64url = (buf: Buffer): string => buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+function saveSecret(file: string, value: unknown): void {
+  mkdirSync(siwcDir, { recursive: true, mode: 0o700 });
+  writeFileSync(path.join(siwcDir, file), JSON.stringify(value, null, 2), { mode: 0o600 });
+}
+function loadSecret<T>(file: string): T | undefined {
+  const at = path.join(siwcDir, file);
+  return existsSync(at) ? (JSON.parse(readFileSync(at, "utf8")) as T) : undefined;
+}
+type Creds = { client_id: string; access_token: string; refresh_token?: string };
+
+/** Waits for one request on the loopback callback, with a deadline; `ready` runs once it listens. */
+function callback(ready: () => void, ms: number): Promise<Record<string, string>> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      server.close();
+      reject(new Error(`no callback on ${REDIRECT} in ${ms / 1000} s`));
+    }, ms);
+    const server = createServer((req, res) => {
+      const url = new URL(req.url ?? "/", REDIRECT);
+      if (url.pathname !== "/auth/callback") {
+        res.writeHead(404).end();
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" }).end("Done. You can close this tab.");
+      clearTimeout(timer);
+      server.close();
+      resolve(Object.fromEntries(url.searchParams));
+    });
+    server.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    server.listen(CALLBACK_PORT, "127.0.0.1", ready);
+  });
 }
 
-/**
- * A `claude` from npm is a `#!/usr/bin/env node` script, and a Finder launch has no node on PATH.
- * Returns the PATH the model call needs: the app's own, plus node's folder when the file is a script.
- */
-function pathFor(claudeFile: string): { path: string; node?: string } {
-  const base = process.env.PATH || "/usr/bin:/bin:/usr/sbin:/sbin";
-  if (readFileSync(claudeFile).subarray(0, 2).toString() !== "#!") return { path: base };
-  const shell = process.env.SHELL || "/bin/zsh";
-  const known = ["/opt/homebrew/bin/node", "/usr/local/bin/node"].find((f) => existsSync(f));
-  const node = known ?? spawnSync(shell, ["-lic", "command -v node"], { encoding: "utf8", timeout: 10_000 }).stdout?.trim().split("\n").pop();
-  return node && existsSync(node) ? { path: `${path.dirname(node)}:${base}`, node } : { path: base };
+/** Item 3: a saved sign-in refreshed, or a new one through the system browser. Never logs a token. */
+async function signIn(): Promise<{ creds: Creds; how: string }> {
+  const host = loadSecret<{ ext_agent_host_id: string }>("host.json") ?? { ext_agent_host_id: `urn:uuid:${randomUUID()}` };
+  saveSecret("host.json", host);
+  const saved = loadSecret<Creds>("creds.json");
+  if (saved?.refresh_token && saved.client_id) {
+    const res = await fetch(`${AUTH}/oauth/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ grant_type: "refresh_token", client_id: saved.client_id, refresh_token: saved.refresh_token, resource: API }),
+    });
+    const body = (await res.json().catch(() => ({}))) as Partial<Creds> & { error?: string };
+    if (res.ok && body.access_token) {
+      const creds = { ...saved, ...body } as Creds;
+      saveSecret("creds.json", creds);
+      return { creds, how: "refreshed the sign-in an earlier round saved" };
+    }
+    log(`refresh refused (${res.status} ${body.error ?? ""}): signing in again`);
+  }
+  const verifier = b64url(randomBytes(32));
+  const state = b64url(randomBytes(16));
+  const params = new URLSearchParams({
+    client_id: saved?.client_id ?? "dynamic_agent_client",
+    ...(saved?.client_id ? {} : { agent_name_hint: "Fine Print" }),
+    ext_agent_host_id: host.ext_agent_host_id,
+    response_type: "code",
+    redirect_uri: REDIRECT,
+    scope: SCOPE,
+    resource: API,
+    state,
+    nonce: b64url(randomBytes(16)),
+    code_challenge_method: "S256",
+    code_challenge: b64url(createHash("sha256").update(verifier).digest()),
+  });
+  const url = `${AUTH}/authorize?${params}`;
+  const answer = await callback(() => {
+    log("opening the system browser for Sign in with ChatGPT");
+    execFile("/usr/bin/open", [url], (error) => error && log(`open failed: ${error.message}`));
+  }, 240_000);
+  if (!answer.code || answer.state !== state) throw new Error(`the callback brought no valid code (${answer.error ?? "state mismatch"})`);
+  const clientId = answer.client_id ?? saved?.client_id;
+  if (!clientId) throw new Error("the callback named no client id");
+  const res = await fetch(`${AUTH}/oauth/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "authorization_code", client_id: clientId, code: answer.code, code_verifier: verifier, redirect_uri: REDIRECT, resource: API }),
+  });
+  const body = (await res.json().catch(() => ({}))) as Partial<Creds> & { error?: string };
+  if (!res.ok || !body.access_token) throw new Error(`code exchange failed: ${res.status} ${body.error ?? ""}`);
+  const creds = { ...body, client_id: clientId } as Creds;
+  saveSecret("creds.json", creds);
+  return { creds, how: `signed in through the system browser, client ${clientId.slice(0, 10)}…` };
+}
+
+/** Item 4: one streamed Responses call; returns the text, the usage and the time to the first delta. */
+async function oneCall(token: string, model: string): Promise<string> {
+  const t0 = Date.now();
+  const res = await fetch(`${API}/responses`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ model, store: false, stream: true, instructions: "Ты проверка связи.", input: [{ role: "user", content: "Ответь одним словом: да." }] }),
+    signal: gone.signal,
+  });
+  if (!res.ok || !res.body) throw new Error(`${res.status}: ${(await res.text()).slice(0, 300)}`);
+  let text = "";
+  let first: number | undefined;
+  let usage: { input_tokens?: number; output_tokens?: number; input_tokens_details?: { cached_tokens?: number } } | undefined;
+  let buffer = "";
+  const decoder = new TextDecoder();
+  for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let at: number;
+    while ((at = buffer.indexOf("\n\n")) >= 0) {
+      const block = buffer.slice(0, at);
+      buffer = buffer.slice(at + 2);
+      const data = block
+        .split("\n")
+        .filter((l) => l.startsWith("data:"))
+        .map((l) => l.slice(5).trim())
+        .join("");
+      if (!data || data === "[DONE]") continue;
+      const event = JSON.parse(data) as { type: string; delta?: string; response?: { usage?: typeof usage; error?: unknown } };
+      if (event.type === "response.output_text.delta") {
+        first ??= Date.now() - t0;
+        text += event.delta ?? "";
+      }
+      if (event.type === "response.completed") usage = event.response?.usage;
+      if (event.type === "response.failed" || event.type === "error") throw new Error(`stream failed: ${JSON.stringify(event).slice(0, 300)}`);
+    }
+  }
+  if (!text) throw new Error("no text in the stream");
+  return `${model}: answer «${text.trim()}»; first text ${first ?? "?"} ms; tokens in ${usage?.input_tokens ?? "?"} (cached ${usage?.input_tokens_details?.cached_tokens ?? "?"}), out ${usage?.output_tokens ?? "?"}`;
 }
 
 function sameToken(given: string | null): boolean {
@@ -111,7 +217,9 @@ function sameToken(given: string | null): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+let reportFile: string | undefined;
 function writeReport(): string {
+  if (reportFile) return reportFile;
   const file = path.join(reportDir, `report-${new Date(started).toISOString().replace(/[:.]/g, "-")}.json`);
   const report = {
     spike: "CON-20",
@@ -121,6 +229,7 @@ function writeReport(): string {
     items,
   };
   writeFileSync(file, JSON.stringify(report, null, 2) + "\n");
+  reportFile = file;
   return file;
 }
 
@@ -154,6 +263,7 @@ const server = Bun.serve({
       if (message.type === "shell") {
         record({ id: "5 the app's socket connected with the token", ok: true, detail: message.client ?? "" });
       }
+      if (message.type === "window_closed") windowClosed = Date.now();
       ws.send(JSON.stringify({ type: "ack" }));
     },
     close() {
@@ -168,7 +278,14 @@ console.log(JSON.stringify({ port: server.port, token }));
 // Watched from here on, so an app that dies in the middle of a check leaves nothing behind.
 const gone = new AbortController();
 let engine: EngineClient | undefined;
+let windowClosed: number | undefined;
+let closeAsked: number | undefined;
 function end(): void {
+  // The app went while item 6 was waiting on it: closing its window ended it, which decision 0100 rules out.
+  if (closeAsked && !items.some((i) => i.id.startsWith("6 "))) {
+    record({ id: "6 the app and the host outlive the closed window", ok: false, detail: `the app ended ${Date.now() - closeAsked} ms after its window was asked to close` });
+    log(`report: ${writeReport()}`);
+  }
   gone.abort();
   engine?.close();
   process.exit(0);
@@ -192,54 +309,27 @@ await timed("2 bundled nat20-api-server answers hello", async () => {
   return `${binary}: contract ${version}, core ${engine_rev}, schema ${schema_sha256.slice(0, 12)} matches`;
 });
 
-const claude = findClaude();
-record(
-  claude
-    ? { id: "3 Claude Code found with no shell PATH", ok: true, detail: `${claude.file}, by ${claude.how}` }
-    : { id: "3 Claude Code found with no shell PATH", ok: false, detail: "not found in any known place, nor by the login shell" },
-);
-
 if (process.env.NAT20_SPIKE_NO_MODEL === "1") {
-  record({ id: "4 one live model call under the hardened runtime", ok: false, detail: "skipped: NAT20_SPIKE_NO_MODEL=1 (CI)" });
-} else if (claude) {
-  await timed("4 one live model call under the hardened runtime", async () => {
-    const env = { ...process.env, PATH: pathFor(claude.file).path };
-    const version = spawnSync(claude.file, ["--version"], { encoding: "utf8", timeout: 15_000, env });
-    if (version.status !== 0) throw new Error(`${claude.file} --version failed with PATH=${env.PATH}: ${version.stderr || version.error?.message}`);
-    const cwd = mkdtempSync(path.join(tmpdir(), "glass-table-spike-"));
-    let text = "";
-    let cost = 0;
-    let auth = "";
-    try {
-      for await (const message of query({
-        prompt: "Ответь одним словом: да.",
-        options: {
-          pathToClaudeCodeExecutable: claude.file,
-          abortController: gone,
-          model: process.env.SPIKE_MODEL || "claude-haiku-5-5",
-          maxTurns: 1,
-          tools: [],
-          settingSources: [],
-          cwd,
-          env: agentEnv(env),
-          systemPrompt: "Ты проверка связи.",
-        },
-      })) {
-        if (message.type === "system" && message.subtype === "init") auth = String((message as { apiKeySource?: string }).apiKeySource ?? "");
-        if (message.type === "result") {
-          if (message.subtype !== "success") throw new Error(`result ${message.subtype}`);
-          text = message.result;
-          cost = message.total_cost_usd;
-        }
-      }
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-    if (!text) throw new Error("no result text");
-    return `Claude Code ${version.stdout.trim()}; answer «${text.trim()}»; key source ${auth || "?"}; api-equivalent ${cost.toFixed(4)} USD`;
+  // No browser and no account here: only that a signed bundle may listen on the loopback callback.
+  await timed("3 Sign in with ChatGPT from the bundle", async () => {
+    const got = await callback(() => void fetch(`${REDIRECT}?code=ci&state=ci`).catch(() => undefined), 10_000);
+    if (got.code !== "ci") throw new Error("the loopback callback came back without its query");
+    return `loopback callback on ${REDIRECT} reached the host; browser and account not tried (NAT20_SPIKE_NO_MODEL=1, CI)`;
   });
+  record({ id: "4 one streamed ChatGPT call under the hardened runtime", ok: false, detail: "skipped: NAT20_SPIKE_NO_MODEL=1 (CI)" });
 } else {
-  record({ id: "4 one live model call under the hardened runtime", ok: false, detail: "not run: item 3 found no Claude Code" });
+  let creds: Creds | undefined;
+  await timed("3 Sign in with ChatGPT from the bundle", async () => {
+    const got = await signIn();
+    creds = got.creds;
+    return got.how;
+  });
+  if (creds) {
+    const token = creds.access_token;
+    await timed("4 one streamed ChatGPT call under the hardened runtime", () => oneCall(token, process.env.SPIKE_MODEL || "gpt-6.1-terra"));
+  } else {
+    record({ id: "4 one streamed ChatGPT call under the hardened runtime", ok: false, detail: "not run: item 3 did not sign in" });
+  }
 }
 
 // Give the app a moment to connect, then write the report whatever it shows.
@@ -247,6 +337,21 @@ const deadline = Date.now() + 20_000;
 while (!items.some((i) => i.id.startsWith("5 ")) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
 if (!items.some((i) => i.id.startsWith("5 "))) {
   record({ id: "5 the app's socket connected with the token", ok: false, detail: "no socket connected in 20 s after the checks" });
+}
+// 6: the app closes its own window, as the red button does, and must not end with it.
+if (shell) {
+  closeAsked = Date.now();
+  shell.send(JSON.stringify({ type: "close_window" }));
+  const wait = Date.now() + 5_000;
+  while (!windowClosed && Date.now() < wait) await new Promise((r) => setTimeout(r, 100));
+  await new Promise((r) => setTimeout(r, 3_000));
+  record(
+    windowClosed
+      ? { id: "6 the app and the host outlive the closed window", ok: true, detail: `window closed; app and host still running ${Date.now() - windowClosed} ms later` }
+      : { id: "6 the app and the host outlive the closed window", ok: false, detail: "the app did not report its window closed in 5 s" },
+  );
+} else {
+  record({ id: "6 the app and the host outlive the closed window", ok: false, detail: "not run: no app socket" });
 }
 const file = writeReport();
 shell?.send(JSON.stringify({ type: "done", report: file, all_ok: items.every((i) => i.ok) }));
