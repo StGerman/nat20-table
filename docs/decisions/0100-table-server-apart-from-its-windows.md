@@ -42,12 +42,12 @@ B. Sign-in forces the server onto the player's own computer, and B is the smalle
 
 ## Consequences
 
-- The seat wire goes to version 2: lobby, table state and stop messages; the run messages are unchanged. The wire never carries a token, an address, a plan name or a usage figure.
+- The seat wire goes to version 2: lobby, stop and seat messages, and `hello` without a run in the lobby; the run messages are unchanged. The wire never carries a token, an address, a plan name or a usage figure.
 - Closing the Mac window no longer sends `quit` or ends the app; Cmd-Q does, through the page, after which the server ends.
 - The server listens on loopback only; «Play on a phone» in the Mac menu opens a home-network listener whose token and port are kept until it is turned off.
 - The phone never signs in; account messages are taken from loopback only.
 - `npm run table` starts the same server in a checkout, so benches, CI and the terminal seat keep working.
-- Rows (after acceptance): CON-20 first; a new CON row for the server; AGT-144 merges into AGT-147; AGT-151 runs from the DMG; CON-20 and CON-21 rewritten (design §8).
+- Rows (after acceptance): CON-20 first and rewritten; a new CON row for the server; AGT-144 merges into AGT-147; CON-21 rewritten; AGT-151 runs from the DMG (design §9).
 - Decision 0016's rejection of a client on the engine contract stands; the engine stays private to the server.
 
 ## Revisit when
