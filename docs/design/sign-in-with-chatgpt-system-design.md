@@ -160,7 +160,7 @@ Security does not move from decision 0093, except that the network listener is n
 
 1. **Scope §2** gains: the table server (5.1), where it listens (5.2), seat wire v2 (5.3), the lobby built once on ChatGPT, the DMG with the server inside.
 2. **AGT-144 merges into AGT-147:** one lobby, built once, on ChatGPT.
-3. **New row, CON-28 "The table server lives between games"** (id provisional): 5.1 to 5.3, the driver that returns, the Mac shell's half of 5.1 (the window closes, the app stays; Cmd-Q quits through the page), and `shell/MacTour`'s window-close test turned the other way. **New row, CON-29 "The phone finds the table"** (id provisional): Bonjour announce and browse, the four-digit code, the phone's kept token; the phone's connect screen changes, so its lines go to Vera.
+3. **New row, CON-32 "The table server lives between games"**: 5.1 to 5.3, the driver that returns, the Mac shell's half of 5.1 (the window closes, the app stays; Cmd-Q quits through the page), and `shell/MacTour`'s window-close test turned the other way. **New row, CON-33 "The phone finds the table"**: Bonjour announce and browse, the four-digit code, the phone's kept token; the phone's connect screen changes, so its lines go to Vera.
 4. **CON-20** first: the harness extended to 5.1's lifetime and 5.4's sign-in; its Claude Code item dropped.
 5. **CON-21** builds the DMG with the server as a second signed program in the bundle.
 6. **AGT-151** runs from the DMG: one exit pair, on terra.
@@ -183,12 +183,12 @@ In order; 3 to 6 run side by side.
 4. AGT-150's first half: two Claude benches on at least 10 cards, on Stas's Mac, before the Claude loop goes.
 5. AGT-152, prompts in files.
 6. AGT-149, `ResponsesSession`.
-7. CON-28, the table server and wire v2; then AGT-147, the lobby.
+7. CON-32, the table server and wire v2, and CON-33; then AGT-147, the lobby.
 8. AGT-150's second half: the terra bench, Zoya and Vera on a sample.
 9. CON-21, the DMG.
 10. AGT-151, the exit pair.
 
-Cost: the scope's 9 to 12 thread-days, plus 3 to 4 for CON-28, 1 to 2 for CON-29 (the run-once driver is most of it) and the lobby moved in, less the Claude lobby no longer built (about 1). Claude's estimate, not calibrated; Yan prices it once the design is accepted.
+Cost: the scope's 9 to 12 thread-days, plus 3 to 4 for CON-32, 1 to 2 for CON-33 (the run-once driver is most of it) and the lobby moved in, less the Claude lobby no longer built (about 1). Claude's estimate, not calibrated; Yan prices it once the design is accepted.
 
 Waits on Stas:
 
