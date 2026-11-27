@@ -29,3 +29,5 @@ partial (table #499's stack). Built: all of the above. The Mill names six places
 Open: the pictures of the road and the yard; the wolf's portrait; a face for Gritch (a handle or a kind that names him); the corner line behind a switch before Friends and Family.
 
 Not checked: the page turning back to the picture when a fight ends (the recorded run ends in the fight); a window made narrow with the picture on its right page; the corner line on the phone under the dock; Stas's own Mac.
+
+Moved from Glass Table on 2026-11-28 (decision 0099: Glass Table closed without this row's open items). Now with People and places registries, where the pictures and the faces belong. Since the note above: the road and the yard are drawn (`/mnt/project-files/assets/generations/scenes-v1/picks/`, the road provisional) and not in the pack; the storeroom with the goblin who yielded shows only when a goblin surrendered in scene 3 (Stas, 2026-11-27), which needs a picture chosen by what happened.

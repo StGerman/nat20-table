@@ -19,3 +19,5 @@ Check (exit row 6): the DMG builds signed and notarised and starts the bundled l
 ## Status
 
 todo. Nothing on main. Stas said go for the milestone 2026-11-21 09:26Z; the Tauri shell this row named is dropped (decision 0093, table #482). Waits on Stas: the paid Apple Developer account (99 USD a year; the SwiftUI shell design §8 question 3 keeps it for the signed Mac app) and the signing secrets in the repository.
+
+Moved from Glass Table to Sign in with ChatGPT on 2026-11-28 (decision 0099: Glass Table closed without this row). The sign-in scope as accepted ends on one pair on one build and names no DMG: taking the signed app in needs an amendment to `docs/scope/sign-in-with-chatgpt-scope.md` that Stas accepts. Still waits on the paid Apple Developer account.
