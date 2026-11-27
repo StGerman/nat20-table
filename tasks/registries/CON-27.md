@@ -25,3 +25,5 @@ Check: the row is added once per place, above the narration that told it, and a 
 ## Status
 
 partial. Built: all of the above. Open: Stas's look at it on his phone; the face on the shell's own card has been compiled and never looked at; a campaign's scene held behind a road card (AGT-100) is already the place the seat names while the card is played, so its picture would come before its opening is told, here and on the Mac's right page (no pack with pictures is a campaign yet: to mend in the seat before one is).
+
+Moved from Glass Table on 2026-11-28 (decision 0099: Glass Table closed without this row's open items). Now with People and places registries. Stas saw the green's picture in the story on his own iPhone on 2026-11-27; the other open items stand.

@@ -19,7 +19,7 @@ Scope `docs/scope/sign-in-with-chatgpt-scope.md` §4, each row with its lowest l
 
 # Tasks
 
-In order: AGT-148, AGT-149 and AGT-152 (side by side), then AGT-150; AGT-147 once Glass Table's AGT-144 and AGT-148 are done; AGT-151 last. Decision 0091 (a full switch: Stas, 2026-11-21 11:08Z).
+In order: AGT-148, AGT-149 and AGT-152 (side by side), then AGT-150; AGT-147 once AGT-144 and AGT-148 are done; AGT-151 last. Moved in from Glass Table when it closed (decision 0099, 2026-11-28), not yet in the scope or the order: AGT-144 (the lobby), AGT-141's two open items, CON-20 (the report from Stas's Mac) and CON-21 (the signed DMG); the scope amendment and the design place them. Decision 0091 (a full switch: Stas, 2026-11-21 11:08Z).
 
 # Status
 
