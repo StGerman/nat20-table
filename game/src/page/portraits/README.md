@@ -1,9 +1,9 @@
 # Portraits
 
-The party's and the Goblin Warrior's faces on the page's rail: the levelled keeper avatars, cut to
-128 px. Stas generated them; the line every keeper set carries:
+The party's and the Goblin Warrior's faces on the page's rail: the v4 keeper avatars (Stas's pick,
+2026-11-24; in the app from 2026-11-27), each cut whole to 128 px.
 
-> Grok Bot native 2026-10-25 / fal nano-banana-2.1 2026-10-26; наши генерации; без WotC.
+> fal nano-banana-pro edit 2026-11-24, the earlier keeper busts as the reference; наши генерации; без WotC.
 
 `wolf.jpg`, every Wolf and the Wend road's grey wolf: Stas's pick of the wolf portraits (2026-11-25), cut to 128 px.
 
