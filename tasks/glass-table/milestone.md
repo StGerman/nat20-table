@@ -2,7 +2,7 @@
 type: Milestone
 title: "Glass Table (the Mac app)"
 description: "Stas opens an app from the Dock, sees the Glass Table, and plays a contract in it to the end, with every roll on screen in the engine log; no number until Stas gives one"
-state: done
+state: closed
 ---
 
 # Exit criterion
@@ -33,7 +33,7 @@ Beside the stack: CON-25 (the Mac's wide window as an open book; Stas's pick, 20
 
 # Status
 
-done 2026-11-28, closed by Stas without passing its exit (decision 0099; his words, 2026-11-27 23:22Z: «Я уже играл в Мельницу на iPhone, закрываем сейчас и пошли делать Sign-in + лобби»). Exit rows 1 to 3 are met by tests; row 9 on his word, with no run id recorded; rows 4 and 5 in part; rows 6 and 8 not at all (no DMG, no pair); row 7 in part (Vera read the level-up lines, AGT-146, and the shell's lines, CON-22; there is no lobby or stop card to read). What was open moved: AGT-144, AGT-141, CON-20 and CON-21 to Sign in with ChatGPT; CON-26 and CON-27 to People and places registries; AGT-143 to the backlog; AGT-145 is wont-do. The lines below are the status as it stood before the close.
+closed 2026-11-28 by Stas without passing its exit (decision 0099; his words, 2026-11-27 23:22Z: «Я уже играл в Мельницу на iPhone, закрываем сейчас и пошли делать Sign-in + лобби»). Exit rows 1 to 3 are met by tests; row 9 on his word, with no run id recorded; rows 4 and 5 in part; rows 6 and 8 not at all (no DMG, no pair); row 7 in part (Vera read the level-up lines, AGT-146, and the shell's lines, CON-22; there is no lobby or stop card to read). What was open moved: AGT-144, AGT-141, CON-20 and CON-21 to Sign in with ChatGPT; CON-26 and CON-27 to People and places registries; AGT-143 to the backlog; AGT-145 is wont-do. The lines below are the status as it stood before the close.
 
 Was: open, no number (scope header: "No number until Stas gives one"; `number` is left out of the front matter, so `npm run tasks` lists it after the numbered milestones). Rows written 2026-11-21 on main 6c5e205; Stas said go 2026-11-21 09:26Z. Order: Stas, 2026-11-21 07:29Z: Glass Table first, before «Камень A».
 

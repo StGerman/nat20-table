@@ -45,11 +45,11 @@ Yan's sweep of the milestone (2026-11-27, main bddb234): 18 tasks, 9 open, none 
 
 ## Decision
 
-A (Stas). Glass Table is done on 2026-11-28 without passing its exit. Decision 0043's pair is waived for this milestone: there was no build to pair on. The next pair is AGT-151's, and it covers what row 8 would have.
+A (Stas). Glass Table is closed on 2026-11-28 without passing its exit; its state is `closed`, as Milestone 12's is, not `done`. Decision 0043's pair is waived for this milestone: there was no build to pair on. The next pair is AGT-151's, and it covers what row 8 would have.
 
 ## Consequences
 
-- `tasks/glass-table/milestone.md` is `done`. AGT-155 is done on Stas's word, and its file says what was not recorded. AGT-145 is `wont-do`.
+- `tasks/glass-table/milestone.md` is `closed`. AGT-155 is done on Stas's word, and its file says what was not recorded. AGT-145 is `wont-do`.
 - Moved to `tasks/sign-in-with-chatgpt/`: AGT-144 (the lobby), AGT-141 (its two open items), CON-20 (the report from Stas's Mac) and CON-21 (the signed DMG). The sign-in scope as accepted names no DMG, so taking these in needs a scope amendment Stas accepts; the sign-in thread drafts it with its system design and rewrites the rows after his yes.
 - Moved to `tasks/registries/`: CON-26 and CON-27 (pictures and faces, P2). Moved to `tasks/backlog/`: AGT-143 (the moments, the road lens).
 - Not proven by any run or test: the app starting the bundled table with no checkout; a real phone locked and unlocked in a fight; the faces on the shell's own card.
