@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-28
-- **Decided by:** Stas asked for the choice inside the Sign in with ChatGPT design (2026-11-27 23:22Z, «можно разнести клиент и сервер но это решение должно уйти в Sign-In system-design»); Claude proposed option B in `docs/design/sign-in-with-chatgpt-system-design.md` §3; accepted on merge
+- **Decided by:** Stas picked B with Bonjour discovery and an application to OpenAI for hosted SIWC, card in the thread, 2026-11-28 («Mac + Bonjour, заявка в OpenAI»), after asking whether a hosted web service makes sense; he asked for the choice inside the Sign in with ChatGPT design (2026-11-27 23:22Z, «можно разнести клиент и сервер но это решение должно уйти в Sign-In system-design»); Claude proposed option B in `docs/design/sign-in-with-chatgpt-system-design.md` §3; accepted on merge
 
 ## Context
 
@@ -44,7 +44,8 @@ B. Sign-in forces the server onto the player's own computer, and B is the smalle
 
 - The seat wire goes to version 2: lobby, stop and seat messages, and `hello` without a run in the lobby; the run messages are unchanged. The wire never carries a token, an address, a plan name or a usage figure.
 - Closing the Mac window no longer sends `quit` or ends the app; Cmd-Q does, through the page, after which the server ends.
-- The server listens on loopback only; «Play on a phone» in the Mac menu opens a home-network listener whose token and port are kept until it is turned off.
+- The server listens on loopback only; «Play on a phone» in the Mac menu opens a home-network listener, announced over Bonjour, so the phone finds the table with no address; a phone is let in once by a code confirmed on the Mac, and its token and port are kept until the toggle is turned off.
+- An application for hosted SIWC goes to OpenAI now (Stas, 2026-11-28); C is its own milestone after the answer.
 - The phone never signs in; account messages are taken from loopback only.
 - `npm run table` starts the same server in a checkout, so benches, CI and the terminal seat keep working.
 - Rows (after acceptance): CON-20 first and rewritten; a new CON row for the server; AGT-144 merges into AGT-147; CON-21 rewritten; AGT-151 runs from the DMG (design §9).
@@ -52,7 +53,7 @@ B. Sign-in forces the server onto the player's own computer, and B is the smalle
 
 ## Revisit when
 
-- OpenAI opens hosted SIWC to us and a player with no Mac is planned: then C.
+- OpenAI approves the hosted SIWC application: then C, as its own milestone.
 - The phone should start a game while the Mac app is closed: then B′, as a launchd agent.
 - A second human at one table, or a seat outside the home network: then pairing and TLS, and the wire of 0016 and 0090 reopens.
 

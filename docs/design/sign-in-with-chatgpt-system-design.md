@@ -46,7 +46,7 @@ The open-source SIWC flow returns the browser to `http://127.0.0.1:<port>/auth/c
 | Record | Written by | Read by | Where | What the player sees of it |
 |---|---|---|---|---|
 | ChatGPT tokens (access, refresh), client id, host id | the server's sign-in adapter | the server's `ResponsesSession` | token file, mode 0600, the app's data folder | "Playing on your ChatGPT plan"; never a name, address, plan or figure |
-| Phone link: token and port | the server, when «Play on a phone» is turned on | the phone, once pasted | the data folder | the link and its QR code in the Mac menu while the toggle is on |
+| Phone token and port, Bonjour name | the server, when «Play on a phone» is turned on | the phone, after the code is confirmed on the Mac | the data folder; the phone keeps its token | the Mac's name and the four-digit code, once per phone |
 | Saved party | the loop, after every night and on every exit (API-45) | the lobby, `start` | the data folder | the lobby's saved-party line |
 | Run folder | the loop | audit, judge on Stas's Mac, `runs:upload` | the data folder | nothing |
 | Prompts | `npm run prompts:pull` | the loop | `game/prompts/`, in the app's resources | nothing |
@@ -80,7 +80,7 @@ The host of `play:demo --seat web` made to live between games.
 ### 5.2 Where it listens
 
 - **Loopback by default.** The Mac window connects with a token the app passes to the server at start; the Mac never shows a link screen.
-- **«Play on a phone»** in the Mac menu turns on a second listener on the home network and shows the link and a QR code. Its token and port are kept in the data folder, so a phone's saved link survives an app restart while the toggle stays on; turning it off and on again makes a new token. The token still crosses the home network unencrypted (decision 0093); pairing and TLS still come before anyone outside the project plays on a phone.
+- **«Play on a phone»** in the Mac menu turns on a second listener on the home network and announces it over Bonjour (`_fineprint._tcp`). The phone finds the table by itself: no address and no link to paste (Stas's pick, 2026-11-28). The first time, the phone shows the Mac's name and a four-digit code that the Mac shows too; once the player confirms it on the Mac, the phone keeps the token. Token and port are kept in the data folder, so a known phone reconnects after a restart; turning the toggle off and on again makes a new token and forgets the phones. The link screen stays for a browser in a checkout. The token still crosses the home network unencrypted (decision 0093); pairing and TLS still come before anyone outside the project plays on a phone.
 - **Account actions only from loopback.** `sign_in` and `sign_out` from a network socket are refused; the page words that as "sign in on your Mac".
 
 ### 5.3 Seat wire v2
@@ -160,7 +160,7 @@ Security does not move from decision 0093, except that the network listener is n
 
 1. **Scope §2** gains: the table server (5.1), where it listens (5.2), seat wire v2 (5.3), the lobby built once on ChatGPT, the DMG with the server inside.
 2. **AGT-144 merges into AGT-147:** one lobby, built once, on ChatGPT.
-3. **New row, CON-28 "The table server lives between games"** (id provisional): 5.1 to 5.3, the driver that returns, the Mac shell's half of 5.1 (the window closes, the app stays; Cmd-Q quits through the page), and `shell/MacTour`'s window-close test turned the other way.
+3. **New row, CON-28 "The table server lives between games"** (id provisional): 5.1 to 5.3, the driver that returns, the Mac shell's half of 5.1 (the window closes, the app stays; Cmd-Q quits through the page), and `shell/MacTour`'s window-close test turned the other way. **New row, CON-29 "The phone finds the table"** (id provisional): Bonjour announce and browse, the four-digit code, the phone's kept token; the phone's connect screen changes, so its lines go to Vera.
 4. **CON-20** first: the harness extended to 5.1's lifetime and 5.4's sign-in; its Claude Code item dropped.
 5. **CON-21** builds the DMG with the server as a second signed program in the bundle.
 6. **AGT-151** runs from the DMG: one exit pair, on terra.
@@ -169,7 +169,7 @@ Security does not move from decision 0093, except that the network listener is n
    - 9. In the lobby, two windows both get `lobby`, and neither is replaced until one sends `start`; a network socket's `sign_in` and `sign_out` are refused: test, no model (`game/test/seat-wire.test.ts`).
    - 10. Every lobby state and every `StopKind` puts up its line and button from a fake adapter; «Go on» after a stop puts the party where its card said (scripted scene, injected stop, reload): test, no model.
    - 11. The Mac window closed during an ask sends nothing, and Cmd-Q sends `quit` before the server ends: test on the macOS runner, no model.
-   - 12. The phone link's token and port survive an app restart while the toggle is on: test, no model.
+   - 12. The phone token and port survive an app restart while the toggle is on; the server announces itself over Bonjour only while the toggle is on, and a phone without a confirmed code gets no seat: test, no model. The iPhone finds Stas's Mac with no address typed: a person (Stas, at home).
    - 13. The DMG starts the server with no checkout, Rust or Node: CI on a hosted macOS arm64 runner (no model); then Stas installs it, signs in and plays a scripted scene (a person).
    Row 5 (Vera reads the lobby's lines) covers §7 and the mismatch line.
 
@@ -188,7 +188,7 @@ In order; 3 to 6 run side by side.
 9. CON-21, the DMG.
 10. AGT-151, the exit pair.
 
-Cost: the scope's 9 to 12 thread-days, plus 3 to 4 for CON-28 (the run-once driver is most of it) and the lobby moved in, less the Claude lobby no longer built (about 1). Claude's estimate, not calibrated; Yan prices it once the design is accepted.
+Cost: the scope's 9 to 12 thread-days, plus 3 to 4 for CON-28, 1 to 2 for CON-29 (the run-once driver is most of it) and the lobby moved in, less the Claude lobby no longer built (about 1). Claude's estimate, not calibrated; Yan prices it once the design is accepted.
 
 Waits on Stas:
 
@@ -198,7 +198,9 @@ Waits on Stas:
 4. Whether Start says what a game takes from the plan (about 15 to 25% of a five-hour window on terra, a guess until exit row 7 reads it).
 5. Evenings at his Mac: CON-20 (step 2), the Claude benches (step 4), the terra bench and Langfuse (step 8), the exit pair.
 
-Later, not in this milestone: the server outliving the app (B′, launchd) so the phone can start a game with the app closed; finding the table without a link (Bonjour); pairing and TLS; a resume inside a scene; a hosted server, when OpenAI opens hosted SIWC to us and a player with no Mac is planned.
+Stas's pick, 2026-11-28 (card «Где живёт сервер стола в этом milestone?»): the server stays on the Mac, the phone finds it over Bonjour, and an application for hosted SIWC goes to OpenAI now; a hosted server is its own milestone after OpenAI answers. Stas sends the application himself (OpenAI's interest form for hosted SIWC; the facts it needs: an open-source MIT project, a story game for a few friends, the Responses API with function tools, `store: false`).
+
+Later, not in this milestone: the server outliving the app (B′, launchd) so the phone can start a game with the app closed; TLS on the home network; a resume inside a scene; the hosted server (C), once OpenAI approves hosted SIWC.
 
 ## 11. Reads
 
