@@ -20,4 +20,7 @@ This needs a short design (who replaces whom, what the village remembers) and Zo
 
 ## Status
 
+On main bddb234 the engine already writes `killed_osric_hale`, `killed_bertil_pell` and `killed_wenna_thorne` (`crates/nat20-api-server/tests/deeds.rs`, after table #477). What is left is the reading side: no card reads the deeds, Scene 6 has no line for a dead reeve or miller, Scene 5 writes `wenna_saved` on a won fight even with Wenna dead, and Wenna is not a creature in Scene 5 (design `docs/design/registries-and-picture-book-design.md` §5.4).
+
+
 todo. Filed 2026-11-21 at Stas's ask («смерть старосты, мельника или Венны - добавь в TODO»), from the NPC art registry (`/mnt/project-files/assets/npc-registry.md`, §7). Not yet prioritised.
