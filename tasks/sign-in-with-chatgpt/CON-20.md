@@ -17,3 +17,5 @@ Depends on: CON-23.
 ## Status
 
 partial. The harness for the Swift app is on main and runs on a hosted Apple Silicon machine (Xcode 27 image, ad-hoc signature, hardened runtime, no model call): there the app starts the host from its bundle, the bundled engine answers `hello`, the app's socket connects with the token, the app is given no shell `PATH`, and the host and the engine it keeps running end when the app is killed. Open: the two items a hosted machine cannot check, Claude Code found with no shell `PATH` and one live model call, and the whole report from Stas's Mac. Waits on: one evening at Stas's Mac (`game/spike/glass-table/README.md`; the script is one command, the sitting about 30 min). Done when his report is in this file.
+
+Moved from Glass Table to Sign in with ChatGPT on 2026-11-28 (decision 0099: Glass Table closed without this row). Its open items, Claude Code found with no shell `PATH` and one live Claude call, lose their point after the full switch (decision 0091); the report from Stas's Mac is still owed, and the sign-in design says what it has to show on ChatGPT.

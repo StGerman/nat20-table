@@ -102,6 +102,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0093](0093-swiftui-shell-over-the-page.md) | The client's shell is SwiftUI over the same page, on the iPhone and the Mac; the page stays the only game logic; replaces 0090's Tauri shell | Proposed | 2026-11-22 | Stas (project chat, card); the hybrid shape on merge |
 | [0094](0094-contract-line-that-bites.md) | The next contract's last line is the short-purse rule, read aloud and quoted at the gate; a signing card only after `settle`; party order goes short; a pack may state the purse in days | Accepted | 2026-11-23 | Stas (thread, «Ок по всем») |
 | [0098](0098-story-type-and-page-marks.md) | The story is set in Literata with the drop cap in the same face; the page's marks are Lucide, always with a word; a roll is named "roll no. 11" on the page | Proposed | 2026-11-28 | Stas (thread); on merge |
+| [0099](0099-glass-table-closed-on-the-iphone-play.md) | Glass Table closes on Stas's iPhone play of the Mill, without the DMG and the exit pair; the lobby, the DMG and the report from his Mac move to Sign in with ChatGPT | Proposed | 2026-11-28 | Stas (thread, card); on merge |
 
 ## Open questions to watch
 
