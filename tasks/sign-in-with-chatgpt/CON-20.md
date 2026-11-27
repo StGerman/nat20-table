@@ -1,7 +1,7 @@
 ---
 type: Task
 id: CON-20
-title: "Spike: the Swift Mac app starts the compiled loop and the engine, signed, launched from Finder, one live model call"
+title: "Spike: the signed Swift Mac app starts the table server, which signs in with ChatGPT and makes one call"
 pri: P1
 dest: Ours
 size: S
@@ -14,8 +14,12 @@ The harness is `game/spike/glass-table/`: a Swift Mac app (`app/`) that starts t
 
 Depends on: CON-23.
 
+**As of 2026-11-28** (`docs/design/sign-in-with-chatgpt-system-design.md` §6, the design's biggest risk, so this row goes first): the stand-in host lives as long as the app, not one run (decision 0100), and adds the sign-in: from inside the signed bundle it opens the system browser with `open`, takes the SIWC callback on loopback (the spike's flow, project files `engine/siwc/spike.mjs`), and makes one streamed `/v1/responses` call on terra. The item "find Claude Code with no shell `PATH`" is dropped: no Claude at the table (decision 0091). If the signed server cannot open the browser or take the callback, the design returns to Stas before CON-32 is built.
+
 ## Status
 
 partial. The harness for the Swift app is on main and runs on a hosted Apple Silicon machine (Xcode 27 image, ad-hoc signature, hardened runtime, no model call): there the app starts the host from its bundle, the bundled engine answers `hello`, the app's socket connects with the token, the app is given no shell `PATH`, and the host and the engine it keeps running end when the app is killed. Open: the two items a hosted machine cannot check, Claude Code found with no shell `PATH` and one live model call, and the whole report from Stas's Mac. Waits on: one evening at Stas's Mac (`game/spike/glass-table/README.md`; the script is one command, the sitting about 30 min). Done when his report is in this file.
 
 Moved from Glass Table to Sign in with ChatGPT on 2026-11-28 (decision 0099: Glass Table closed without this row). Its open items, Claude Code found with no shell `PATH` and one live Claude call, lose their point after the full switch (decision 0091); the report from Stas's Mac is still owed, and the sign-in design says what it has to show on ChatGPT.
+
+2026-11-28: rewritten from the sign-in design (table #515). Stas's evening at the Mac now answers the old items and the sign-in in one sitting.
