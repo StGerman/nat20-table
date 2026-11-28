@@ -5,7 +5,7 @@ title: "Spike: the signed Swift Mac app starts the table server, which signs in 
 pri: P1
 dest: Ours
 size: S
-state: partial
+state: wont-do
 ---
 
 Re-pointed from Tauri to the Swift Mac app by decision 0093 (accepted with table #482, merged by Stas 2026-11-23T19:14:50Z): the question this row asked of a Tauri window is asked of the CON-23 shell built for the Mac (SwiftUI shell design §4 PR 7). The Mac app starts the Bun-compiled loop (`bun build --compile`) and `nat20-api-server` as bundled binaries, makes one live ChatGPT call under the hardened runtime (with the JIT entitlement if it needs one) after signing in through SIWC from inside the bundle, and is launched from Finder on Stas's Mac, where the app gets no shell `PATH`. Done means: a report, item by item, works or not, from Stas's Mac, ad-hoc signed first; the Developer ID and notarised half is CON-21's DMG. If the Swift Mac app cannot start the loop from a signed app, decision 0093 falls back to its option D (Tauri on the Mac) before CON-21 is built.
@@ -23,3 +23,5 @@ partial. The harness for the Swift app is on main and runs on a hosted Apple Sil
 Moved from Glass Table to Sign in with ChatGPT on 2026-11-28 (decision 0099: Glass Table closed without this row). Its open items, Claude Code found with no shell `PATH` and one live Claude call, lose their point after the full switch (decision 0091); the report from Stas's Mac is still owed, and the sign-in design says what it has to show on ChatGPT.
 
 2026-11-28: rewritten from the sign-in design (table #515). Stas's evening at the Mac now answers the old items and the sign-in in one sitting.
+
+2026-11-28, decision 0105: wont-do. Under 4a the table server holds no ChatGPT token and the player's device signs in (AGT-148), so this harness's server-side sign-in is the legacy path, and CON-38 removes it. Its extension, table #517, was closed unmerged at Stas's ask. What the hosted runs showed stays above: the signed Mac app starts the compiled host and the engine from its bundle, with no shell `PATH`. Whether a Mac app starts the server for a player with no Terminal is asked again with CON-21 and CON-39.
