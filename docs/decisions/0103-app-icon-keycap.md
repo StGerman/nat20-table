@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-28
-- **Decided by:** Stas, in the "Build the iPhone app in SwiftUI" thread, 2026-11-28: the keycap as the direction (08:24Z, with a 3D object icon as the reference), the orange key on a card (08:27Z), then five rounds on its form until "Давай теперь боковую грань ровной и готово" (08:47Z); accepted on merge
+- **Decided by:** Stas, in the "Build the iPhone app in SwiftUI" thread, 2026-11-28: the keycap as the direction (08:24Z, with a 3D object icon as the reference), the orange key on a card (08:27Z), then five rounds on its form until "Давай теперь боковую грань ровной и готово" (08:47Z); the touch-typing bump under the F, about 30% softer than first drawn (09:07Z); accepted on merge
 
 ## Context
 
@@ -27,7 +27,7 @@ The iPhone and Mac targets in `shell/` carried no icon, so both showed the syste
 
 ## Decision
 
-A (Stas). An orange key (`accent`) with the F in `glass-solid` fills the whole tile, with no ground around it: its walls are flat and their edge to the top face is slightly rounded; the top face is a dish shaped like an old television screen; one light falls from the upper left. The dark appearance is the same key in slate with the F in the dark `accent`. Clear and tinted are left to the system.
+A (Stas). An orange key (`accent`) with the F in `glass-solid` fills the whole tile, with no ground around it: its walls are flat and their edge to the top face is slightly rounded; the top face is a dish shaped like an old television screen; one light falls from the upper left. Under the F, as on a real keyboard, is the small raised bar a finger finds the home row by: the key's own plastic, as wide as the letter, halfway between the letter's foot and the top face's lower edge, with the F in the middle of the top face. Below 60 px it fades, as it does on a real key. The dark appearance is the same key in slate with the F in the dark `accent`. Clear and tinted are left to the system.
 
 ## Consequences
 

@@ -50,7 +50,7 @@ cat Local.xcconfig
 
 It should print one line, `DEVELOPMENT_TEAM = ` and ten characters. If Xcode says the bundle identifier is taken, change `APP_BUNDLE_ID` in `project.yml`.
 
-The app is named Fine Print, «Мелкий шрифт» on a phone set to Russian (`APP_NAME` in `project.yml`, `Shared/Names`). The project, target and scheme keep the working name `GlassTable`. Its icon is a keycap with the F of Fine Print (decision 0103): `Shared/Assets.xcassets/AppIcon.appiconset`, orange for the light appearance and slate for the dark one, and the Mac's sizes cut from the same square; the system rounds the corners itself.
+The app is named Fine Print, «Мелкий шрифт» on a phone set to Russian (`APP_NAME` in `project.yml`, `Shared/Names`). The project, target and scheme keep the working name `GlassTable`. Its icon is a keycap with the F of Fine Print and the touch-typing bump under it (decision 0103): `Shared/Assets.xcassets/AppIcon.appiconset`, orange for the light appearance and slate for the dark one, and the Mac's sizes cut from the same square; the system rounds the corners itself.
 
 ## Pictures and the UI test on CI
 
