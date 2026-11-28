@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-28
-- **Decided by:** Stas picked "4a: table server, device relays" on a card in the Sign in with ChatGPT thread, 2026-11-28, after the iPhone sign-in spike passed. Claude laid out the variants on the page "Где живёт стол" (https://claude.ai/artifact/CkzNe7mDgJvx8wektSNP3z) and recommended 4a. Accepted on merge.
+- **Decided by:** Stas picked "4a: table server, device relays" on a card in the Sign in with ChatGPT thread, 2026-11-28, after the iPhone sign-in spike passed. Claude laid out the variants on the page "Где живёт стол" (https://claude.ai/artifact/CkzNe7mDgJvx8wektSNP3z) and recommended 4a. Stas answered the brief's questions the same day (13:28Z): the iPhone first and then the Mac; the client in StGerman/nat20-app, new code kept apart from old, with the legacy cleaned up; no limit on a locked phone. Accepted on merge.
 
 ## Context
 
@@ -47,10 +47,12 @@ So the phone can sign in and make the call itself. What is still unchecked is Op
   - `DirectTransport` holds Stas's token on his Mac for benches and unattended all-AI runs. It is a developer tool and never shipped.
 - The relay wire is a second WebSocket at `/relay` on the seat's listener, with its own schema and hash. It carries no ChatGPT token, plan name or usage figure.
 - The page can never open `/relay` (Rule 3, structural): the relay has its own credential, a relay token apart from the seat's. It goes only into the link the Swift app reads (`--seat-lan`), and the Swift app never passes it to the page; a browser page's URL never has it. `/relay` refuses the seat token and any socket that sends an `Origin` header, which every browser WebSocket does and the Swift app's does not. A test shows that the seat token and a browser origin get no `call`.
-- A relay that drops in the middle of a call holds the turn. The call is resent once, with the same id and body, when a relay is back. A second drop, or no relay within the wait (proposed: 15 minutes), stops the run as `offline`.
+- A relay that drops in the middle of a call holds the turn, with no time limit: a locked phone is a pause, never an end. When a relay is back, every call with no `done` that was not cancelled is resent, with the same id and body. The game ends only by `quit`, by the server stopping, or by a time limit the run set.
+- The Swift client lives in StGerman/nat20-app, the iPhone first and then the Mac. It is new code, apart from this repo's. It loads the page that the table server serves, so no page is pinned across repos. Each seat or relay wire change is two PRs, this repo's first.
+- Legacy that 4a replaces leaves this repo in one cleanup PR, once the new client has played the exit on the phone: `shell/` and `shell.yml`, `game/spike/glass-table/` and `spike-glass-table.yml`, and server-side sign-in except as `DirectTransport`. Decision 0093's "one SwiftUI shell over the page" then holds for the nat20-app client.
 - From 0100, this replaces "The phone never signs in; account messages are taken from loopback only" and the token half of "owning sign-in". The rest of 0100 stands: the server lives apart from its windows; it owns lobby, party and runs; closing a window never ends a game; Bonjour and the phone toggle; B′ later.
 - Sign-in moves from the server to the Swift client. AGT-148 is rewritten for the client, from the spike's code. CON-20's harness, which signs in on the server, becomes the `DirectTransport` path.
-- Rows follow only after Stas accepts this record and the brief (StGerman/nat20-app `docs/brief.md`, nat20-app #1). Expected: AGT-148 and AGT-149 rewritten, a new CON row for the relay wire, CON-20 and CON-21 rewritten.
+- Rows follow only after Stas accepts this record and the brief (StGerman/nat20-app `docs/brief.md`, nat20-app #1). Expected: AGT-148 and AGT-149 rewritten, a new CON row for the relay wire, a cleanup row, CON-20 and CON-21 rewritten or closed.
 - Decision 0016's rejection of a client on the engine contract stands. The device never sees the engine.
 
 ## Revisit when
