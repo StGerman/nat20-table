@@ -105,6 +105,7 @@ Why the project is shaped the way it is: one record per decision that had real a
 | [0101](0101-picture-book-exit-on-scene-runs.md) | People, places and the picture book exits on scene-size live runs and Stas's iPhone game, not on 0043's all-AI pair | Proposed | 2026-11-28 | Stas (card, «Да, все»); on merge |
 | [0099](0099-glass-table-closed-on-the-iphone-play.md) | Glass Table closes on Stas's iPhone play of the Mill, without the DMG and the exit pair; the lobby, the DMG and the report from his Mac move to Sign in with ChatGPT | Proposed | 2026-11-28 | Stas (thread, card); on merge |
 | [0100](0100-table-server-apart-from-its-windows.md) | The table is a local server inside the Mac app that owns sign-in, lobby, party and runs; every window is a client over seat wire v2; closing a window never ends a game, quitting the app does | Proposed | 2026-11-28 | Stas (asked in thread); on merge |
+| [0102](0102-wend-turned-a-quarter.md) | The Wend is turned a quarter clockwise: the sea to the west, the Hollin Hills to the east, the Snake and the Free Host to the south; two edge ids keep their old names | Proposed | 2026-11-28 | Stas (thread); on merge |
 
 ## Open questions to watch
 

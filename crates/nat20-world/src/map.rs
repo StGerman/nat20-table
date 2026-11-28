@@ -37,7 +37,7 @@ pub struct Edge {
     pub id: String,
     /// The place the edge leaves from
     pub from: String,
-    /// What lies beyond, for the DM's prose ("the old road west")
+    /// What lies beyond, for the DM's prose ("the old road north")
     pub name: String,
     /// What will be generated there
     pub generate: Generate,
