@@ -1,6 +1,6 @@
 # 0100. The table is a local server that owns the player's records, apart from its windows
 
-- **Status:** Proposed
+- **Status:** Proposed; its token half (the server owns sign-in, "The phone never signs in") is superseded in part by [0105](0105-the-device-carries-the-model-call.md) once that is accepted; the rest stands
 - **Date:** 2026-11-28
 - **Decided by:** Stas picked B with Bonjour discovery and an application to OpenAI for hosted SIWC, card in the thread, 2026-11-28 («Mac + Bonjour, заявка в OpenAI»), after asking whether a hosted web service makes sense; he asked for the choice inside the Sign in with ChatGPT design (2026-11-27 23:22Z, «можно разнести клиент и сервер но это решение должно уйти в Sign-In system-design»); Claude proposed option B in `docs/design/sign-in-with-chatgpt-system-design.md` §3; accepted on merge
 
