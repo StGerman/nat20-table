@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-28
-- **Decided by:** Stas, thread, 2026-11-28: the gag (the party carries a stranger's old map); then his answers to Lev's eight questions, in Russian, translated by the calling thread: 1, 2, 5, 6 and 8 yes; 3 "doesn't matter"; 4 "by deed"; 7 no objection once the fields were explained; doodles in the margins and a name for the map's previous owner added the same day. Lev Neiman proposes the wording under Decision; accepted on merge.
+- **Decided by:** Stas, thread, 2026-11-28: the gag (the party carries a stranger's old map); then his answers to Lev's eight questions, in Russian, translated by the calling thread: 1, 2, 5, 6 and 8 yes; 3 "doesn't matter"; 4 "by deed"; 7 no objection once the fields were explained; doodles in the margins and a name for the map's previous owner added the same day. His answers to the second round, the same day: the owner stays unnamed, "the Dead Man" («Мертвец»); Zoya's doodle cap, with every drawing taking one of a place's three entries. Lev Neiman proposes the wording under Decision; accepted on merge.
 - **Supersedes:** [0077](0077-witnessed-deeds-on-a-card.md), rule 1 only. 0077 stays as written, and its rules 2 to 6 still govern `remembers` lines.
 
 ## Context
@@ -65,7 +65,7 @@ The margin notes follow these rules. Each is something a test can check:
    - Nothing else adds or strikes a note: not the Narrator's words (0071), and not `card_shown`.
    - A deed the engine writes from a death (`killed_<npc>`, `<id>_dead`) carries no line. Nor does an `own_move_<card>` deed, which does not say which outcome the move brought.
    - Stas's "by deed" (answer 4) is read as: the company's lines change by deed alone, and the stranger's notes still come with discovery.
-2. **Striking and the cap.** A note is struck if and only if a showing note has `over` equal to its id. At one place, only the newest note stands, and a place holds at most three notes.
+2. **Striking and the cap.** A note is struck if and only if a showing note has `over` equal to its id. At one place, only the newest note stands, and a place holds at most three entries, a drawing counting as one. A company drawing set over a note strikes it as a company line does, and its caption is the company's line.
 3. **Never ahead of the telling.** A company line reaches a seat only after the DM's narration of the outcome that wrote its deed has reached that seat.
 4. **True and false.**
    - A stranger's note may be stale. None is false at the start.
@@ -79,15 +79,18 @@ The margin notes follow these rules. Each is something a test can check:
 **Decided direction, content owed:**
 
 - **Doodles** (Stas): funny drawings in the margins. A doodle is a note that is drawn instead of written.
-  - It obeys rules 1 to 7: it has a hand and a trigger, it never shows at or points at an undiscovered place, it never runs ahead of the telling, and it carries no digit. Lev counts a doodle toward the three notes at a place; Zoya's second round caps doodles apart (one per hand at a place, six on a sheet, never over text). Stas picks.
+  - It obeys rules 1 to 7: it has a hand and a trigger, it never shows at or points at an undiscovered place, it never runs ahead of the telling, and it carries no digit.
+  - The cap (Stas): at most one doodle per hand at a place and six on a sheet, never over text, and each takes one of the place's three entries (rule 2).
   - A stranger's doodle that shows something is a claim, held to rule 4 like his notes. A company doodle shows only what was shown to the party.
   - A doodle never draws something a player could take for a map symbol: a place, a road, a crossing. A player reads a drawing on a map as the map, and Vera already went looking for a bridge the region sheet does not draw.
+  - One exception is proposed with the plain-signs sheets (Zoya's third round), and awaits Stas: the previous owner's drawing may stand on a place in place of its sign, as the fire ring does. There is then one mark, not two.
   - Doodles are our own drawings, CC-BY-4.0 (Rule 7). Zoya owes the first ones, and Vera reads each on a rendered sheet.
-- **The previous owner's name** (Stas): "the Dead Man" is the working placeholder, with a hook for later.
+- **The previous owner** (Stas): never named. "the Dead Man" («Мертвец») is what people called him.
   - Wherever a seat can see the name, it is player text, so Vera reads it.
   - A name is a setup. It sits on Zoya's board as owed until a card or a scene pays it off.
   - Until a card says who he was and why he lied, rule 4 holds and no note is a lie.
-  - Who he was is story, for Zoya and Stas. Zoya's second round (`worlds/wend/mapgen/notes/zoya-dead-man-doodles-2026-11-28.md`, project files) proposes Ivo, a salt-runner: his mark "Ivo's map. Hands off." sits in a corner of the region sheet, and his death stays with the Narrator until the pack that fills `salt_flats` pays it off. Awaits Stas.
+  - Who he was is story, for Zoya and Stas. Zoya's third round (`worlds/wend/mapgen/notes/zoya-dead-man-round3-2026-11-28.md`, project files): a salt-runner. His mark "Dead Man's map. Hands off." sits in a corner of the region sheet. Where and how he died stays with the Narrator until the pack that fills `salt_flats` pays it off.
+  - Stas's rumour that he died rich and nobody found the money: Zoya says yes, on conditions. A person tells it, never the map or the Narrator. It points only where a written pack pays it off, and it ships with that pack («Камень A»), or it is struck.
 
 ## Consequences
 
@@ -105,13 +108,13 @@ The margin notes follow these rules. Each is something a test can check:
   - No note carries a digit.
   - No stranger note is at an undiscovered place unless its `show` is that place.
   - Company lines over the same note use deeds that one card's choices write one at a time.
-  - No place can stack more than three notes.
+  - No place can stack more than three entries, drawings included; no place holds two drawings in one hand, and no sheet more than six.
 - **Content owed** (Zoya writes, Vera reads, before each line ships):
   - `farm_no_flock` waits for the flock line in the `note` of `gwyn_news` and `gwyn_cheese`.
   - fire_ring ships with its notice line in `fw_highsteads.md` and `twb_highsteads.md`, or is cut.
   - The fire ring's lit night and the old channel's `salt_flats` are owed rows on Zoya's board, with no carrier yet.
   - Vera's word questions: "a Saltmouth company" next to the party's own company, "tally stick", "Carry a crust", "Moved on a map", "the Dyke".
-  - The first doodles, and the Dead Man's hook.
+  - The Dead Man's money rumour, with «Камень A» or struck.
 - **The cost.** A deed with no line shows nothing on the map. A player can learn from the map which of these eight deeds the world kept. That is 0077's cost, on a short fixed list.
 - **Rows and sizes are Yan's.**
 
