@@ -9,7 +9,7 @@ Odda Vell, a grain factor from Saltmouth, buys the Highsteads' wheat every autum
 ## The truth (DM only)
 
 - Odda is honest and careful with coin. The contract is exactly what she said, and she pays it in full when the wagon arrives. If she dies on the road, her purse pays at the gate only if the Blades carried it in; the engine's arrival line says which. A Blade who falls on the road is paid for the days served; she says so if asked.
-- The goblins moving south are hungry, not hunting the party. They watch the slope track and take what is easy. The road cards bring them, and the wolves and men of the river road, as the engine draws them.
+- The goblins moving west are hungry, not hunting the party. They watch the slope track and take what is easy. The road cards bring them, and the wolves and men of the river road, as the engine draws them.
 - Nobody on the road knows more about the Hollow King than the rumour in the lore. The Barrow Oak is a place the hill folk avoid, except to push a copper into its roots; it is a hook for a later adventure, not for this one, and the route does not go there.
 
 ## Running this pack

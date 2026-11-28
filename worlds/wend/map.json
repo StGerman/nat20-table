@@ -65,7 +65,7 @@
             "market": true
         },
         {
-            "_comment": "A hollow oak on a barrow at the valley's northern edge. The Lair of Arachas.",
+            "_comment": "A hollow oak on a barrow at the valley's eastern edge. The Lair of Arachas.",
             "id": "barrow_oak",
             "name": "The Barrow Oak",
             "name_ru": "Курганный дуб",
@@ -73,7 +73,7 @@
             "pack_slot": "lair_of_arachas"
         },
         {
-            "_comment": "The salt flats across the old channel, east of Saltmouth: the road runs six miles to the old ferry landing, and the flats are crossed on foot at low tide (lore, The old channel). A free slot for the next pack.",
+            "_comment": "The salt flats across the old channel, south of Saltmouth: the road runs six miles to the old ferry landing, and the flats are crossed on foot at low tide (lore, The old channel). A free slot for the next pack.",
             "id": "salt_flats",
             "name": "The salt flats",
             "name_ru": "солончаки",
@@ -155,17 +155,17 @@
     ],
     "edges": [
         {
-            "_comment": "The caravans' road: the generated road to a far city leaves here. Closed in Milestone 9.",
+            "_comment": "The caravans' road: the generated road to a far city leaves here. Closed in Milestone 9. Its id predates the turn of the map (decision 0102): the road runs north.",
             "id": "old_road_west",
             "from": "wendford",
-            "name": "the old road west",
+            "name": "the old road north",
             "generate": "road"
         },
         {
-            "_comment": "Closed in Milestone 9.",
+            "_comment": "Closed in Milestone 9. Its id predates the turn of the map (decision 0102): the road runs south.",
             "id": "old_road_east",
             "from": "wendford",
-            "name": "the old road east",
+            "name": "the old road south",
             "generate": "road"
         }
     ]
