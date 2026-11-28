@@ -17,3 +17,5 @@ Check: scope §4 rows 8, 9 and 11, each a test with no model (row 11 on the macO
 ## Status
 
 todo. Written 2026-11-28 from the sign-in design (table #515, accepted by Stas's merge).
+
+2026-11-28, decision 0105: the server still lives between games, but it holds no token. `sign_in` and `sign_out` leave the seat wire, and the account state comes from the relay's `hello` and `signed_out` (CON-34). The Mac shell's half moves to the nat20-app client's Mac target (CON-39), so row 11's test runs there.

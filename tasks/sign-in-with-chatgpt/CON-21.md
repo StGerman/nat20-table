@@ -23,3 +23,5 @@ todo. Nothing on main. Stas said go for the milestone 2026-11-21 09:26Z; the Tau
 Moved from Glass Table to Sign in with ChatGPT on 2026-11-28 (decision 0099: Glass Table closed without this row). The sign-in scope as accepted ends on one pair on one build and names no DMG: taking the signed app in needs an amendment to `docs/scope/sign-in-with-chatgpt-scope.md` that Stas accepts. Still waits on the paid Apple Developer account.
 
 2026-11-28, from the sign-in design (table #515): the server is a second signed program in the bundle, beside the shell and `nat20-api-server`; the check is scope §4 row 13. Open with Stas (design §10 question 2): buy the Apple Developer account now, or build this row ad-hoc signed for the exit pair on his Mac and give notarisation its own row before Friends and Family (Claude's recommendation).
+
+2026-11-28, decision 0105: waits until after CON-37. Under 4a the exit runs from the iPhone, with the server started in a checkout on Stas's Mac. Who starts the server for a player with no Terminal (a Mac app, as this row says, or a hosted server) is decided after that exit, with CON-39. The old shell this row bundles is removed by CON-38.

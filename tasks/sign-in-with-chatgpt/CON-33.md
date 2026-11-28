@@ -17,3 +17,5 @@ Check: scope §4 row 12: token and port across a restart, Bonjour only while the
 ## Status
 
 todo. Written 2026-11-28. Beside it, outside the repo: Stas sends OpenAI's interest form for hosted SIWC; a hosted server is its own milestone after the answer (decision 0100).
+
+2026-11-28, decision 0105: still wanted, after CON-37. The phone's half lands in the nat20-app client; until then, the phone takes the `--seat-lan` link.
