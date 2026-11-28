@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-28
-- **Decided by:** Stas, thread, 2026-11-28: the gag (the party carries a stranger's old map); then his answers to Lev's eight questions, in Russian, translated by the calling thread: 1, 2, 5, 6 and 8 yes; 3 "doesn't matter"; 4 "by deed"; 7 no objection once the fields were explained; doodles in the margins and a name for the map's previous owner added the same day. His answers to the second round, the same day: the owner stays unnamed, "the Dead Man" («Мертвец»); Zoya's doodle cap, with every drawing taking one of a place's three entries; plain surveyor's signs for places, with the Dead Man drawing the fire ring and the barrow oak in place of their signs. Lev Neiman proposes the wording under Decision; accepted on merge.
+- **Decided by:** Stas, thread, 2026-11-28: the gag (the party carries a stranger's old map); then his answers to Lev's eight questions, in Russian, translated by the calling thread: 1, 2, 5, 6 and 8 yes; 3 "doesn't matter"; 4 "by deed"; 7 no objection once the fields were explained; doodles in the margins and a name for the map's previous owner added the same day. His answers to the second round, the same day: the owner stays unnamed, "the Dead Man" («Мертвец»); Zoya's doodle cap, with every drawing taking one of a place's three entries; plain surveyor's signs for places, with the Dead Man's drawing of the fire ring in place of its sign. Lev Neiman proposes the wording under Decision; accepted on merge.
 - **Supersedes:** [0077](0077-witnessed-deeds-on-a-card.md), rule 1 only. 0077 stays as written, and its rules 2 to 6 still govern `remembers` lines.
 
 ## Context
@@ -83,8 +83,7 @@ The margin notes follow these rules. Each is something a test can check:
   - The cap (Stas): at most one doodle per hand at a place and six on a sheet, never over text, and each takes one of the place's three entries (rule 2).
   - A stranger's doodle that shows something is a claim, held to rule 4 like his notes. A company doodle shows only what was shown to the party.
   - A doodle never draws something a player could take for a map symbol: a place, a road, a crossing. A player reads a drawing on a map as the map, and Vera already went looking for a bridge the region sheet does not draw.
-  - One exception (Stas took it with the plain-signs sheets, Zoya's third round): the previous owner's drawing may stand on a place in place of its sign, as the fire ring and the barrow oak do. There is then one mark, not two.
-  - The oak was Stas's call over Zoya's objection that a hollow oak on a rich dead man's map reads as an X. It hints at no money, and it stays owed on Zoya's board until the pack that holds the barrow oak.
+  - One exception (Stas took it with the plain-signs sheets, Zoya's third round): the previous owner's drawing may stand on a place in place of its sign, as the fire ring does. There is then one mark, not two. A drawing of the barrow oak was tried and cut (Stas).
   - Doodles are our own drawings, CC-BY-4.0 (Rule 7). Zoya owes the first ones, and Vera reads each on a rendered sheet.
 - **The previous owner** (Stas): never named. "the Dead Man" («Мертвец») is what people called him.
   - Wherever a seat can see the name, it is player text, so Vera reads it.
